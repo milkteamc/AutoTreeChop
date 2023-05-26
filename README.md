@@ -5,6 +5,7 @@ Discord: https://discord.gg/pyNS5xAvMs
 usage: `/autotreechop`  
 description: Toggle auto tree chop.  
 permission: `autotreechop.use`  
+## Config
 `config.yml`
 ```yml
 messages:
