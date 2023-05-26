@@ -1,6 +1,10 @@
 # AutoTreeChop
-為奶茶伺服器製作的連鎖砍樹插件。   
+A auto tree chopping plugin for milkteamc.  
 Discord: https://discord.gg/pyNS5xAvMs   
+## Permission and commands
+usage: `/autotreechop`  
+description: Toggle auto tree chop.  
+permission: `autotreechop.use`  
 `config.yml`
 ```yml
 messages:
