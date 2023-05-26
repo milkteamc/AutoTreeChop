@@ -131,7 +131,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                 material == Material.ACACIA_LOG ||
                 material == Material.DARK_OAK_LOG ||
                 material == Material.MANGROVE_LOG;
-        // material == Material.CHERRY_LOG; - For Minecraft 1.20
+                // material == Material.CHERRY_LOG; - For Minecraft 1.20
 
     }
 }
