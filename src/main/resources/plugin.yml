@@ -1,0 +1,17 @@
+name: AutoTreeChop
+version: '${version}'
+main: org.milkteamc.autotreechop.AutoTreeChop
+api-version: 1.19
+author: Maoyue
+description: A auto tree chopping plugin for milkteamc
+
+commands:
+  autotreechop:
+    description: Toggle auto tree chop.
+    usage: /autotreechop
+    permission: autotreechop.use
+
+permissions:
+  autotreechop.use:
+    description: Allows players to use the auto tree chop command.
+    default: op
