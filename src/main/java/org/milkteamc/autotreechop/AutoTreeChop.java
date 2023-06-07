@@ -23,6 +23,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     @Override
     public void onEnable() {
 
+
         getServer().getPluginManager().registerEvents(this, this);
         getCommand("autotreechop").setExecutor(this);
 
@@ -130,8 +131,8 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                 material == Material.JUNGLE_LOG ||
                 material == Material.ACACIA_LOG ||
                 material == Material.DARK_OAK_LOG ||
-                material == Material.MANGROVE_LOG;
-                // material == Material.CHERRY_LOG; - For Minecraft 1.20
+                material == Material.MANGROVE_LOG ||
+                material == Material.CHERRY_LOG;
 
     }
 }
