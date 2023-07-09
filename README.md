@@ -1,6 +1,6 @@
 # AutoTreeChop
 A auto tree chopping plugin for milkteamc.  
-Discord: https://discord.gg/pyNS5xAvMs   
+Discord: https://discord.gg/22DxRjrXRv   
 ## Permission and commands
 usage: `/autotreechop`  
 description: Toggle auto tree chop.  
