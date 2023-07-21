@@ -5,7 +5,6 @@ import org.bukkit.block.Block;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
@@ -17,8 +16,10 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecutor {
@@ -27,6 +28,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     private String enabledMessage;
     private String disabledMessage;
     private String noPermissionMessage;
+    private int maxUsesPerDay;
 
     @Override
     public void onEnable() {
@@ -42,6 +44,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         getConfig().addDefault("messages.enabled", "§a已開啟自動砍樹。");
         getConfig().addDefault("messages.disabled", "§c已關閉自動砍樹。");
         getConfig().addDefault("messages.no-permission", "§c你沒有權限使用此指令。");
+        getConfig().addDefault("max-uses-per-day", 15);
         getConfig().options().copyDefaults(true);
         saveConfig();
 
@@ -49,13 +52,13 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         enabledMessage = config.getString("messages.enabled");
         disabledMessage = config.getString("messages.disabled");
         noPermissionMessage = config.getString("messages.no-permission");
+        maxUsesPerDay = config.getInt("max-uses-per-day");
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
         if (cmd.getName().equalsIgnoreCase("autotreechop")) {
-            if (sender instanceof Player) {
-                Player player = (Player) sender;
+            if (sender instanceof Player player) {
 
                 if (!player.hasPermission("autotreechop.use")) {
                     player.sendMessage(noPermissionMessage);
@@ -64,6 +67,12 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
                 UUID playerUUID = player.getUniqueId();
                 PlayerConfig playerConfig = getPlayerConfig(playerUUID);
+
+                if (!player.hasPermission("autotreechop.vip") && playerConfig.getDailyUses() >= maxUsesPerDay) {
+                    player.sendMessage("你已達到每日使用次數限制...");
+                    return true;
+                }
+
                 boolean autoTreeChopEnabled = !playerConfig.isAutoTreeChopEnabled();
                 playerConfig.setAutoTreeChopEnabled(autoTreeChopEnabled);
 
@@ -99,6 +108,8 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                 } else {
                     player.getInventory().addItem(new ItemStack(material));
                 }
+
+                playerConfig.incrementDailyUses();
             }
         }
     }
@@ -146,27 +157,32 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     }
 
     private class PlayerConfig {
-        private final UUID playerUUID;
         private final File configFile;
         private final FileConfiguration config;
 
         private boolean autoTreeChopEnabled;
+        private int dailyUses;
+        private LocalDate lastUseDate;
 
         public PlayerConfig(UUID playerUUID) {
-            this.playerUUID = playerUUID;
             this.configFile = new File(getDataFolder() + "/cache", playerUUID.toString() + ".yml");
             this.config = YamlConfiguration.loadConfiguration(configFile);
             this.autoTreeChopEnabled = false;
+            this.dailyUses = 0;
+            this.lastUseDate = LocalDate.now();
             loadConfig();
-            this.autoTreeChopEnabled = false;
             saveConfig();
         }
 
         private void loadConfig() {
             if (configFile.exists()) {
                 autoTreeChopEnabled = config.getBoolean("autoTreeChopEnabled");
+                dailyUses = config.getInt("dailyUses");
+                lastUseDate = LocalDate.parse(Objects.requireNonNull(config.getString("lastUseDate")));
             } else {
                 config.set("autoTreeChopEnabled", autoTreeChopEnabled);
+                config.set("dailyUses", dailyUses);
+                config.set("lastUseDate", lastUseDate.toString());
                 saveConfig();
             }
         }
@@ -186,6 +202,27 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         public void setAutoTreeChopEnabled(boolean enabled) {
             this.autoTreeChopEnabled = enabled;
             config.set("autoTreeChopEnabled", enabled);
+            saveConfig();
+        }
+
+        public int getDailyUses() {
+            if (!lastUseDate.equals(LocalDate.now())) {
+                dailyUses = 0;
+                lastUseDate = LocalDate.now();
+                config.set("dailyUses", dailyUses);
+                config.set("lastUseDate", lastUseDate.toString());
+                saveConfig();
+            }
+            return dailyUses;
+        }
+
+        public void incrementDailyUses() {
+            if (!lastUseDate.equals(LocalDate.now())) {
+                dailyUses = 0;
+                lastUseDate = LocalDate.now();
+            }
+            dailyUses++;
+            config.set("dailyUses", dailyUses);
             saveConfig();
         }
     }
