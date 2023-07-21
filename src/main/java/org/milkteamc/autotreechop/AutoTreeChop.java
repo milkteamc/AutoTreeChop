@@ -28,6 +28,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     private String enabledMessage;
     private String disabledMessage;
     private String noPermissionMessage;
+    private String hitmaxusageMessage;
     private int maxUsesPerDay;
 
     @Override
@@ -44,7 +45,8 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         getConfig().addDefault("messages.enabled", "§a已開啟自動砍樹。");
         getConfig().addDefault("messages.disabled", "§c已關閉自動砍樹。");
         getConfig().addDefault("messages.no-permission", "§c你沒有權限使用此指令。");
-        getConfig().addDefault("max-uses-per-day", 15);
+        getConfig().addDefault("messages.hitmaxusage", "§c你已達到每日使用次數限制。");
+        getConfig().addDefault("max-uses-per-day", 50);
         getConfig().options().copyDefaults(true);
         saveConfig();
 
@@ -52,6 +54,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         enabledMessage = config.getString("messages.enabled");
         disabledMessage = config.getString("messages.disabled");
         noPermissionMessage = config.getString("messages.no-permission");
+        hitmaxusageMessage = config.getString("messages.hitmaxusage");
         maxUsesPerDay = config.getInt("max-uses-per-day");
     }
 
@@ -69,7 +72,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                 PlayerConfig playerConfig = getPlayerConfig(playerUUID);
 
                 if (!player.hasPermission("autotreechop.vip") && playerConfig.getDailyUses() >= maxUsesPerDay) {
-                    player.sendMessage("你已達到每日使用次數限制...");
+                    player.sendMessage(hitmaxusageMessage);
                     return true;
                 }
 
