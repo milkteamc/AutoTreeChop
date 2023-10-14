@@ -192,7 +192,14 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             } else {
                 config.set("autoTreeChopEnabled", autoTreeChopEnabled);
                 config.set("dailyUses", dailyUses);
-                config.set("lastUseDate", lastUseDate.toString());
+                String lastUseDateString = config.getString("lastUseDate");
+                if (lastUseDateString != null) {
+                    lastUseDate = LocalDate.parse(lastUseDateString);
+                } else {
+                    lastUseDate = LocalDate.now();
+                    config.set("lastUseDate", lastUseDate.toString());
+                    saveConfig();
+                }
                 saveConfig();
             }
         }
