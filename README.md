@@ -16,3 +16,4 @@ messages:
   no-permission: §c你沒有權限使用此指令。
   hitmaxusage: §c你已達到每日使用次數限制。
 ```
+![bstats](https://bstats.org/signatures/bukkit/AutoTreeChop.svg)
