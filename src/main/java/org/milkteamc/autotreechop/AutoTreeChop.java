@@ -1,5 +1,6 @@
 package org.milkteamc.autotreechop;
 
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.command.Command;
@@ -17,10 +18,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.io.File;
 import java.io.IOException;
 import java.time.LocalDate;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 
 public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecutor {
 
@@ -104,6 +102,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
             if (isLog(material)) {
                 event.setCancelled(true);
+                checkedLocations.clear();
                 chopTree(block);
 
                 if (player.getInventory().firstEmpty() == -1) {
@@ -117,27 +116,33 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         }
     }
 
+    private Set<Location> checkedLocations = new HashSet<>();
+
     private void chopTree(Block block) {
-        Block aboveBlock = block.getRelative(0, 1, 0);
-        if (isLog(aboveBlock.getType())) {
-            aboveBlock.breakNaturally();
-            chopTree(aboveBlock);
+        if (checkedLocations.contains(block.getLocation())) {
+            return;
+        }
+        checkedLocations.add(block.getLocation());
+
+        if (isLog(block.getType())) {
+            block.breakNaturally();
+        } else {
+            return;
         }
 
-        block.breakNaturally();
-
-        for (int xOffset = -1; xOffset <= 1; xOffset++) {
-            for (int zOffset = -1; zOffset <= 1; zOffset++) {
-                if (xOffset == 0 && zOffset == 0) {
-                    continue;
-                }
-                Block relativeBlock = block.getRelative(xOffset, 0, zOffset);
-                if (isLog(relativeBlock.getType())) {
+        for (int yOffset = -1; yOffset <= 1; yOffset++) {
+            for (int xOffset = -1; xOffset <= 1; xOffset++) {
+                for (int zOffset = -1; zOffset <= 1; zOffset++) {
+                    if (xOffset == 0 && yOffset == 0 && zOffset == 0) {
+                        continue;
+                    }
+                    Block relativeBlock = block.getRelative(xOffset, yOffset, zOffset);
                     chopTree(relativeBlock);
                 }
             }
         }
     }
+
 
     private boolean isLog(Material material) {
         return material == Material.OAK_LOG ||

@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/AutoTreeChop.main.iml" filepath="$PROJECT_DIR$/.idea/modules/AutoTreeChop.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/org.milkteamc.AutoTreeChop.main.iml" filepath="$PROJECT_DIR$/.idea/modules/org.milkteamc.AutoTreeChop.main.iml" />
     </modules>
   </component>
 </project>
