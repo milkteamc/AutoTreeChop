@@ -1,7 +1,7 @@
 name: AutoTreeChop
 version: '${version}'
 main: org.milkteamc.autotreechop.AutoTreeChop
-api-version: 1.19
+api-version: 1.17
 author: Maoyue
 description: A auto tree chopping plugin for milkteamc
 

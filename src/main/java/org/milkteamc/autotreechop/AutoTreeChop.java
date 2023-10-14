@@ -31,6 +31,8 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
     @Override
     public void onEnable() {
+        org.milkteamc.autotreechop.Metrics metrics = new Metrics(this, 20053); //bstats
+
         getServer().getPluginManager().registerEvents(this, this);
         getCommand("autotreechop").setExecutor(this);
 
