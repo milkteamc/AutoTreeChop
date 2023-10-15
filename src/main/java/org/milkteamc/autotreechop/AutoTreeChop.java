@@ -15,9 +15,7 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.*;
@@ -40,6 +38,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         getServer().getPluginManager().registerEvents(this, this);
         getCommand("autotreechop").setExecutor(this);
 
+        saveDefaultConfig();
         loadConfig();
 
         playerConfigs = new HashMap<>();
@@ -47,7 +46,6 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
     private void loadConfig() {
         File configFile = new File(getDataFolder(), "config.yml");
-
         if (!configFile.exists()) {
             try {
                 if (!configFile.getParentFile().exists()) {
@@ -56,40 +54,31 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                 configFile.createNewFile();
             } catch (IOException e) {
                 e.printStackTrace();
-                return; // If there's an error creating the file, exit the method.
+                return;
             }
         }
 
-        Map<String, String> configWithComments = new LinkedHashMap<>();
-        configWithComments.put("# AutoTreeChop by Maoyue", "");
-        configWithComments.put("# Discord support server: https://discord.gg/uQ4UXANnP2", "");
-        configWithComments.put("# Spigot Page: https://www.spigotmc.org/resources/113071", "");
-        configWithComments.put("", ""); // Empty line
-        configWithComments.put("# The number of times non-VIP players can chop down trees per day,", "");
-        configWithComments.put("# you can give everyone \"autotreechop.vip\" permission to disable it.", "");
-        configWithComments.put("max-uses-per-day", "50");
-        configWithComments.put("# Tree blocks that non-VIP players can chop down every day,", "");
-        configWithComments.put("# you can give everyone \"autotreechop.vip\" permission to disable it.", "");
-        configWithComments.put("max-blocks-per-day", "500");
-        configWithComments.put("", ""); // Empty line
-        configWithComments.put("# Plugin message", "");
-        configWithComments.put("messages:", "");
-        configWithComments.put("  enabled", "¡±aAuto tree chopping enabled.");
-        configWithComments.put("  disabled", "¡±cAuto tree chopping disabled.");
-        configWithComments.put("  no-permission", "¡±cYou don't have permission to use this command.");
-        configWithComments.put("  hitmaxusage", "¡±cYou've reached the daily usage limit.");
-        configWithComments.put("  hitmaxblock", "¡±cYou have reached your daily block breaking limit.");
+        FileConfiguration defaultConfig = new YamlConfiguration();
+        defaultConfig.set("messages.enabled", "¡±aAuto tree chopping enabled.");
+        defaultConfig.set("messages.disabled", "¡±cAuto tree chopping disabled.");
+        defaultConfig.set("messages.no-permission", "¡±cYou don't have permission to use this command.");
+        defaultConfig.set("messages.hitmaxusage", "¡±cYou've reached the daily usage limit.");
+        defaultConfig.set("messages.hitmaxblock", "¡±cYou have reached your daily block breaking limit.");
+        defaultConfig.set("max-uses-per-day", 50);
+        defaultConfig.set("max-blocks-per-day", 500);
 
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(configFile))) {
-            for (Map.Entry<String, String> entry : configWithComments.entrySet()) {
-                writer.write(entry.getKey() + (entry.getValue().isEmpty() ? "" : ": " + entry.getValue()));
-                writer.newLine();
+        FileConfiguration config = YamlConfiguration.loadConfiguration(configFile);
+        for (String key : defaultConfig.getKeys(true)) {
+            if (!config.contains(key)) {
+                config.set(key, defaultConfig.get(key));
             }
+        }
+
+        try {
+            config.save(configFile);
         } catch (IOException e) {
             e.printStackTrace();
         }
-
-        FileConfiguration config = YamlConfiguration.loadConfiguration(configFile);
 
         enabledMessage = config.getString("messages.enabled");
         disabledMessage = config.getString("messages.disabled");
