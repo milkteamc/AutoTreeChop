@@ -28,6 +28,9 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     private String noPermissionMessage;
     private String hitmaxusageMessage;
     private String hitmaxblockMessage;
+    private String usageMessage;
+    private String blocksBrokenMessage;
+
     private int maxUsesPerDay;
     private int maxBlocksPerDay;
 
@@ -64,6 +67,8 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         defaultConfig.set("messages.no-permission", "¡±cYou don't have permission to use this command.");
         defaultConfig.set("messages.hitmaxusage", "¡±cYou've reached the daily usage limit.");
         defaultConfig.set("messages.hitmaxblock", "¡±cYou have reached your daily block breaking limit.");
+        defaultConfig.set("messages.usage", "¡±aYou have used the AutoTreeChop %current_uses%/%max_uses% times today.");
+        defaultConfig.set("messages.blocks-broken", "¡±aYou have broken %current_blocks%/%max_blocks% blocks today.");
         defaultConfig.set("max-uses-per-day", 50);
         defaultConfig.set("max-blocks-per-day", 500);
 
@@ -85,6 +90,8 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         noPermissionMessage = config.getString("messages.no-permission");
         hitmaxusageMessage = config.getString("messages.hitmaxusage");
         hitmaxblockMessage = config.getString("messages.hitmaxblock");
+        usageMessage = config.getString("messages.usage");
+        blocksBrokenMessage = config.getString("messages.blocks-broken");
         maxUsesPerDay = config.getInt("max-uses-per-day");
         maxBlocksPerDay = config.getInt("max-blocks-per-day");
     }
@@ -94,16 +101,22 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         if (cmd.getName().equalsIgnoreCase("autotreechop")) {
             if (sender instanceof Player player) {
 
-                if (!player.hasPermission("autotreechop.use")) {
-                    player.sendMessage(noPermissionMessage);
-                    return true;
-                }
-
                 UUID playerUUID = player.getUniqueId();
                 PlayerConfig playerConfig = getPlayerConfig(playerUUID);
 
-                if (!player.hasPermission("autotreechop.vip") && playerConfig.getDailyUses() >= maxUsesPerDay) {
-                    player.sendMessage(hitmaxusageMessage);
+                if (args.length > 0 && args[0].equalsIgnoreCase("usage")) {
+                    String usageMsg = usageMessage.replace("%current_uses%", String.valueOf(playerConfig.getDailyUses()))
+                            .replace("%max_uses%", String.valueOf(maxUsesPerDay));
+                    player.sendMessage(usageMsg);
+
+                    String blocksMsg = blocksBrokenMessage.replace("%current_blocks%", String.valueOf(playerConfig.getDailyBlocksBroken()))
+                            .replace("%max_blocks%", String.valueOf(maxBlocksPerDay));
+                    player.sendMessage(blocksMsg);
+                    return true;
+                }
+
+                if (!player.hasPermission("autotreechop.use")) {
+                    player.sendMessage(noPermissionMessage);
                     return true;
                 }
 
@@ -116,7 +129,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                     player.sendMessage(disabledMessage);
                 }
             } else {
-                sender.sendMessage("Only player can use this command.");
+                sender.sendMessage("Only players can use this command.");
             }
             return true;
         }
