@@ -14,4 +14,7 @@ commands:
 permissions:
   autotreechop.use:
     description: Allows players to use the auto tree chop command.
+    default: true
+  autotreechop.vip:
+    description: VIP permission can ignore all limit.
     default: op
