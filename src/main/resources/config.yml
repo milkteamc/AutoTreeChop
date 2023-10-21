@@ -9,6 +9,9 @@ max-uses-per-day: 50
 # you can give everyone "autotreechop.vip" permission to disable it.
 max-blocks-per-day: 500
 
+# Use visual effect
+visual-effect: true
+
 # Plugin message
 messages:
   enabled: §aAuto tree chopping enabled.

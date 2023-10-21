@@ -30,6 +30,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     private String hitmaxblockMessage;
     private String usageMessage;
     private String blocksBrokenMessage;
+    private boolean VisualEffect;
 
     private int maxUsesPerDay;
     private int maxBlocksPerDay;
@@ -69,6 +70,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         defaultConfig.set("messages.hitmaxblock", "¡±cYou have reached your daily block breaking limit.");
         defaultConfig.set("messages.usage", "¡±aYou have used the AutoTreeChop %current_uses%/%max_uses% times today.");
         defaultConfig.set("messages.blocks-broken", "¡±aYou have broken %current_blocks%/%max_blocks% blocks today.");
+        defaultConfig.set("visual-effect", true);
         defaultConfig.set("max-uses-per-day", 50);
         defaultConfig.set("max-blocks-per-day", 500);
 
@@ -92,6 +94,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         hitmaxblockMessage = config.getString("messages.hitmaxblock");
         usageMessage = config.getString("messages.usage");
         blocksBrokenMessage = config.getString("messages.blocks-broken");
+        VisualEffect = config.getBoolean("visual-effect");
         maxUsesPerDay = config.getInt("max-uses-per-day");
         maxBlocksPerDay = config.getInt("max-blocks-per-day");
     }
@@ -148,23 +151,41 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         if (playerConfig.isAutoTreeChopEnabled() && isLog(material)) {
 
             if (!player.hasPermission("autotreechop.vip") && playerConfig.getDailyBlocksBroken() >= maxBlocksPerDay) {
-                player.sendMessage(hitmaxblockMessage);
+                sendMaxBlockLimitReachedMessage(player, block);
                 event.setCancelled(true);
                 return;
             }
+
+            showChopEffect(player, block);
 
             event.setCancelled(true);
             checkedLocations.clear();
             chopTree(block);
 
-            if (player.getInventory().firstEmpty() == -1) {
-                player.getWorld().dropItem(player.getLocation(), new ItemStack(material));
-            } else {
-                player.getInventory().addItem(new ItemStack(material));
-            }
+            addItemToInventoryOrDrop(player, material);
 
             playerConfig.incrementDailyUses();
             playerConfig.incrementDailyBlocksBroken();
+        }
+    }
+
+    // Sends a message to the player and shows a red particle effect indicating the block limit has been reached
+    private void sendMaxBlockLimitReachedMessage(Player player, Block block) {
+        player.sendMessage(hitmaxblockMessage);
+        player.getWorld().spawnParticle(org.bukkit.Particle.REDSTONE, block.getLocation().add(0.5, 0.5, 0.5), 50, 0.5, 0.5, 0.5, 0);
+    }
+
+    // Shows a green particle effect indicating the block has been chopped
+    private void showChopEffect(Player player, Block block) {
+        player.getWorld().spawnParticle(org.bukkit.Particle.VILLAGER_HAPPY, block.getLocation().add(0.5, 0.5, 0.5), 50, 0.5, 0.5, 0.5, 0);
+    }
+
+    // Adds the item to the player's inventory if there's space, otherwise drops it in the world
+    private void addItemToInventoryOrDrop(Player player, Material material) {
+        if (player.getInventory().firstEmpty() == -1) {
+            player.getWorld().dropItem(player.getLocation(), new ItemStack(material));
+        } else {
+            player.getInventory().addItem(new ItemStack(material));
         }
     }
 
