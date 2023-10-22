@@ -31,6 +31,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     private String usageMessage;
     private String blocksBrokenMessage;
     private boolean VisualEffect;
+    private boolean toolDamage;
 
     private int maxUsesPerDay;
     private int maxBlocksPerDay;
@@ -71,6 +72,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         defaultConfig.set("messages.usage", "¡±aYou have used the AutoTreeChop %current_uses%/%max_uses% times today.");
         defaultConfig.set("messages.blocks-broken", "¡±aYou have broken %current_blocks%/%max_blocks% blocks today.");
         defaultConfig.set("visual-effect", true);
+        defaultConfig.set("toolDamage", true);
         defaultConfig.set("max-uses-per-day", 50);
         defaultConfig.set("max-blocks-per-day", 500);
 
@@ -95,6 +97,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         usageMessage = config.getString("messages.usage");
         blocksBrokenMessage = config.getString("messages.blocks-broken");
         VisualEffect = config.getBoolean("visual-effect");
+        toolDamage = config.getBoolean("toolDamage");
         maxUsesPerDay = config.getInt("max-uses-per-day");
         maxBlocksPerDay = config.getInt("max-blocks-per-day");
     }
@@ -156,7 +159,17 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                 return;
             }
 
-            showChopEffect(player, block);
+            if (!player.hasPermission("autotreechop.vip") && playerConfig.dailyUses >= maxUsesPerDay) {
+                player.sendMessage(hitmaxusageMessage);
+            }
+
+            if (VisualEffect) {
+                showChopEffect(player, block);
+            }
+
+            if (toolDamage) {
+                damageTool(player, 1);
+            }
 
             event.setCancelled(true);
             checkedLocations.clear();
@@ -189,7 +202,20 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         }
     }
 
-    private Set<Location> checkedLocations = new HashSet<>();
+    // Method to reduce the durability value of tools
+    private void damageTool(Player player, int amount) {
+        ItemStack tool = player.getInventory().getItemInMainHand();
+        if (tool != null && tool.getType().getMaxDurability() > 0) {
+            int newDurability = tool.getDurability() + amount;
+            if (newDurability > tool.getType().getMaxDurability()) {
+                player.getInventory().setItemInMainHand(null);
+            } else {
+                tool.setDurability((short) newDurability);
+            }
+        }
+    }
+
+        private Set<Location> checkedLocations = new HashSet<>();
 
     private void chopTree(Block block) {
         if (checkedLocations.contains(block.getLocation())) {

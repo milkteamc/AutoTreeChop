@@ -8,12 +8,25 @@ permission: `autotreechop.use`
 ## Config
 `config.yml`
 ```yml
-max-uses-per-day: 50
+name: AutoTreeChop
+version: '${version}'
+main: org.milkteamc.autotreechop.AutoTreeChop
+api-version: 1.17
+author: Maoyue
+description: A auto tree chopping plugin for milkteamc
 
-messages:
-  enabled: §a已開啟自動砍樹。
-  disabled: §c已關閉自動砍樹。
-  no-permission: §c你沒有權限使用此指令。
-  hitmaxusage: §c你已達到每日使用次數限制。
+commands:
+  autotreechop:
+    description: Toggle auto tree chop.
+    usage: /autotreechop
+    permission: autotreechop.use
+
+permissions:
+  autotreechop.use:
+    description: Allows players to use the auto tree chop command.
+    default: true
+  autotreechop.vip:
+    description: VIP permission can ignore all limit.
+    default: op
 ```
 ![bstats](https://bstats.org/signatures/bukkit/AutoTreeChop.svg)
