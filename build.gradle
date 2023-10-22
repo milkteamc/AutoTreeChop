@@ -1,5 +1,6 @@
 plugins {
     id 'java'
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
 }
 
 group = 'org.milkteamc'
@@ -15,10 +16,15 @@ repositories {
         name = "sonatype"
         url = "https://oss.sonatype.org/content/groups/public/"
     }
+    maven {
+        name = "jeff-media-public"
+        url = "https://repo.jeff-media.com/public/"
+    }
 }
 
 dependencies {
     compileOnly "org.spigotmc:spigot-api:1.20-R0.1-SNAPSHOT"
+    implementation "com.jeff_media:SpigotUpdateChecker:3.0.3" // 使用 implementation
 }
 
 def targetJavaVersion = 17
@@ -44,4 +50,10 @@ processResources {
     filesMatching('plugin.yml') {
         expand props
     }
+}
+
+shadowJar {
+    configurations = [project.configurations.runtimeClasspath]
+
+    relocate 'com.jeff_media.updatechecker', 'org.milkteamc.updatechecker'
 }

@@ -1,5 +1,8 @@
 package org.milkteamc.autotreechop;
 
+import com.jeff_media.updatechecker.UpdateCheckSource;
+import com.jeff_media.updatechecker.UpdateChecker;
+import com.jeff_media.updatechecker.UserAgentBuilder;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -36,6 +39,8 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     private int maxUsesPerDay;
     private int maxBlocksPerDay;
 
+    private static final String SPIGOT_RESOURCE_ID = "20053";
+
     @Override
     public void onEnable() {
         org.milkteamc.autotreechop.Metrics metrics = new Metrics(this, 20053); //bstats
@@ -45,6 +50,15 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
         saveDefaultConfig();
         loadConfig();
+
+        new UpdateChecker(this, UpdateCheckSource.SPIGOT, SPIGOT_RESOURCE_ID) // You can also use Spiget instead of Spigot - Spiget's API is usually much faster up to date.
+                .checkEveryXHours(24) // Check every 24 hours
+                .setDonationLink("https://paypal.me/Maoyue914")
+                .setChangelogLink(SPIGOT_RESOURCE_ID) // Same as for the Download link: URL or Spigot Resource ID
+                .setNotifyOpsOnJoin(true) // Notify OPs on Join when a new version is found (default)
+                .setNotifyByPermissionOnJoin("autotreechop.updatechecker") // Also notify people on join with this permission
+                .setUserAgent(new UserAgentBuilder().addPluginNameAndVersion())
+                .checkNow(); // And check right now
 
         playerConfigs = new HashMap<>();
     }
