@@ -26,5 +26,10 @@
       <option name="name" value="sonatype" />
       <option name="url" value="https://oss.sonatype.org/content/groups/public/" />
     </remote-repository>
+    <remote-repository>
+      <option name="id" value="jeff-media-public" />
+      <option name="name" value="jeff-media-public" />
+      <option name="url" value="https://repo.jeff-media.com/public/" />
+    </remote-repository>
   </component>
 </project>
