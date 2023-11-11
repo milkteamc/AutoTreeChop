@@ -125,12 +125,12 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                 PlayerConfig playerConfig = getPlayerConfig(playerUUID);
 
                 if (args.length > 0 && args[0].equalsIgnoreCase("usage")) {
-                    String usageMsg = usageMessage.replace("%current_uses%", String.valueOf(playerConfig.getDailyUses()))
-                            .replace("%max_uses%", String.valueOf(maxUsesPerDay));
+                    String usageMsg = usageMessage.replace("{current_uses}", String.valueOf(playerConfig.getDailyUses()))
+                            .replace("{max_uses}", String.valueOf(maxUsesPerDay));
                     player.sendMessage(usageMsg);
 
-                    String blocksMsg = blocksBrokenMessage.replace("%current_blocks%", String.valueOf(playerConfig.getDailyBlocksBroken()))
-                            .replace("%max_blocks%", String.valueOf(maxBlocksPerDay));
+                    String blocksMsg = blocksBrokenMessage.replace("{current_blocks}", String.valueOf(playerConfig.getDailyBlocksBroken()))
+                            .replace("{max_blocks}", String.valueOf(maxBlocksPerDay));
                     player.sendMessage(blocksMsg);
                     return true;
                 }
