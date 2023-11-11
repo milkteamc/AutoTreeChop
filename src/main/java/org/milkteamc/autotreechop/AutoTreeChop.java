@@ -181,18 +181,13 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                 showChopEffect(player, block);
             }
 
-            if (toolDamage) {
-                damageTool(player, 1);
-            }
-
             event.setCancelled(true);
             checkedLocations.clear();
-            chopTree(block);
+            chopTree(block, player);
 
             addItemToInventoryOrDrop(player, material);
 
             playerConfig.incrementDailyUses();
-            playerConfig.incrementDailyBlocksBroken();
         }
     }
 
@@ -231,7 +226,9 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
         private Set<Location> checkedLocations = new HashSet<>();
 
-    private void chopTree(Block block) {
+    private void chopTree(Block block, Player player) {
+        UUID playerUUID = player.getUniqueId();
+        PlayerConfig playerConfig = getPlayerConfig(playerUUID);
         if (checkedLocations.contains(block.getLocation())) {
             return;
         }
@@ -249,8 +246,12 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                     if (xOffset == 0 && yOffset == 0 && zOffset == 0) {
                         continue;
                     }
+                    playerConfig.incrementDailyBlocksBroken();
+                    if (toolDamage) {
+                        damageTool(player, 1);
+                    }
                     Block relativeBlock = block.getRelative(xOffset, yOffset, zOffset);
-                    chopTree(relativeBlock);
+                    chopTree(relativeBlock, player);
                 }
             }
         }
