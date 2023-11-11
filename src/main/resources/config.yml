@@ -6,6 +6,7 @@
 # The number of times non-VIP players can chop down trees per day,
 # you can give everyone "autotreechop.vip" permission to disable it.
 max-uses-per-day: 50
+
 # Tree blocks that non-VIP players can chop down every day,
 # you can give everyone "autotreechop.vip" permission to disable it.
 max-blocks-per-day: 500
