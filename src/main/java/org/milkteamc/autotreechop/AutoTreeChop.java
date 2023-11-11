@@ -240,15 +240,16 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             return;
         }
 
+        playerConfig.incrementDailyBlocksBroken();
+        if (toolDamage) {
+            damageTool(player, 1);
+        }
+
         for (int yOffset = -1; yOffset <= 1; yOffset++) {
             for (int xOffset = -1; xOffset <= 1; xOffset++) {
                 for (int zOffset = -1; zOffset <= 1; zOffset++) {
                     if (xOffset == 0 && yOffset == 0 && zOffset == 0) {
                         continue;
-                    }
-                    playerConfig.incrementDailyBlocksBroken();
-                    if (toolDamage) {
-                        damageTool(player, 1);
                     }
                     Block relativeBlock = block.getRelative(xOffset, yOffset, zOffset);
                     chopTree(relativeBlock, player);
