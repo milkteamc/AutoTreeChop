@@ -3,6 +3,7 @@ package org.milkteamc.autotreechop;
 import com.jeff_media.updatechecker.UpdateCheckSource;
 import com.jeff_media.updatechecker.UpdateChecker;
 import com.jeff_media.updatechecker.UserAgentBuilder;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -50,6 +51,13 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
         saveDefaultConfig();
         loadConfig();
+
+        if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
+            new AutoTreeChopExpansion(this).register();
+            getLogger().info("PlaceholderAPI expansion for AutoTreeChop has been registered.");
+        } else {
+            getLogger().warning("PlaceholderAPI not found. Placeholder expansion for AutoTreeChop will not work.");
+        }
 
         new UpdateChecker(this, UpdateCheckSource.SPIGOT, SPIGOT_RESOURCE_ID) // You can also use Spiget instead of Spigot - Spiget's API is usually much faster up to date.
                 .checkEveryXHours(24) // Check every 24 hours
@@ -278,6 +286,15 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         }
         return playerConfig;
     }
+
+    public int getPlayerDailyUses(UUID playerUUID) {
+        return getPlayerConfig(playerUUID).getDailyUses();
+    }
+
+    public int getPlayerDailyBlocksBroken(UUID playerUUID) {
+        return getPlayerConfig(playerUUID).getDailyBlocksBroken();
+    }
+
 
     private class PlayerConfig {
         private final File configFile;

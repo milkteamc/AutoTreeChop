@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'org.milkteamc'
-version = '1.0.6-SNAPSHOT'
+version = '1.0.7-SNAPSHOT'
 
 repositories {
     mavenCentral()
@@ -20,11 +20,15 @@ repositories {
         name = "jeff-media-public"
         url = "https://repo.jeff-media.com/public/"
     }
+    maven {
+        url = 'https://repo.extendedclip.com/content/repositories/placeholderapi/'
+    }
 }
 
 dependencies {
     compileOnly "org.spigotmc:spigot-api:1.20-R0.1-SNAPSHOT"
-    implementation "com.jeff_media:SpigotUpdateChecker:3.0.3" // 使用 implementation
+    implementation "com.jeff_media:SpigotUpdateChecker:3.0.3"
+    compileOnly 'me.clip:placeholderapi:2.11.5'
 }
 
 def targetJavaVersion = 17
