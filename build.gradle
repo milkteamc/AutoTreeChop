@@ -56,12 +56,6 @@ processResources {
     }
 }
 
-shadowJar {
-    configurations = [project.configurations.runtimeClasspath]
-
-    relocate 'com.jeff_media.updatechecker', 'org.milkteamc.updatechecker'
-}
-
 tasks.build {
     dependsOn("shadowJar")
 }
@@ -69,6 +63,9 @@ tasks.build {
 
 tasks.shadowJar {
     archiveFileName = "AutoTreeChop-${version}.jar"
+    configurations = [project.configurations.runtimeClasspath]
+
+    relocate 'com.jeff_media.updatechecker', 'org.milkteamc.updatechecker'
 }
 
 tasks.jar {
