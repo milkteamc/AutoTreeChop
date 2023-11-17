@@ -100,8 +100,8 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         defaultConfig.set("toolDamage", true);
         defaultConfig.set("max-uses-per-day", 50);
         defaultConfig.set("max-blocks-per-day", 500);
-        defaultConfig.set("stopChoppingIfNotConnected", true);
-        defaultConfig.set("stopChoppingIfDifferentTypes", true);
+        defaultConfig.set("stopChoppingIfNotConnected", false);
+        defaultConfig.set("stopChoppingIfDifferentTypes", false);
 
         FileConfiguration config = YamlConfiguration.loadConfiguration(configFile);
         for (String key : defaultConfig.getKeys(true)) {
@@ -127,8 +127,8 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         toolDamage = config.getBoolean("toolDamage");
         maxUsesPerDay = config.getInt("max-uses-per-day");
         maxBlocksPerDay = config.getInt("max-blocks-per-day");
-        stopChoppingIfNotConnected = config.getBoolean("stopChoppingIfNotConnected", true);
-        stopChoppingIfDifferentTypes = config.getBoolean("stopChoppingIfDifferentTypes", true);
+        stopChoppingIfNotConnected = config.getBoolean("stopChoppingIfNotConnected", false);
+        stopChoppingIfDifferentTypes = config.getBoolean("stopChoppingIfDifferentTypes", false);
     }
 
     @Override
