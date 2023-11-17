@@ -83,7 +83,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                 }
                 configFile.createNewFile();
             } catch (IOException e) {
-                e.printStackTrace();
+                getLogger().warning("An error occurred:" + e);
                 return;
             }
         }
@@ -113,7 +113,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         try {
             config.save(configFile);
         } catch (IOException e) {
-            e.printStackTrace();
+            getLogger().warning("An error occurred:" + e);
         }
 
         enabledMessage = config.getString("messages.enabled");
@@ -398,7 +398,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             try {
                 config.save(configFile);
             } catch (IOException e) {
-                e.printStackTrace();
+                getLogger().warning("An error occurred:" + e);
             }
         }
 
