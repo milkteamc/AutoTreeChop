@@ -40,6 +40,9 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     private int maxUsesPerDay;
     private int maxBlocksPerDay;
 
+    private boolean stopChoppingIfNotConnected;
+    private boolean stopChoppingIfDifferentTypes;
+
     private static final String SPIGOT_RESOURCE_ID = "20053";
 
     @Override
@@ -97,6 +100,8 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         defaultConfig.set("toolDamage", true);
         defaultConfig.set("max-uses-per-day", 50);
         defaultConfig.set("max-blocks-per-day", 500);
+        defaultConfig.set("stopChoppingIfNotConnected", true);
+        defaultConfig.set("stopChoppingIfDifferentTypes", true);
 
         FileConfiguration config = YamlConfiguration.loadConfiguration(configFile);
         for (String key : defaultConfig.getKeys(true)) {
@@ -122,6 +127,8 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         toolDamage = config.getBoolean("toolDamage");
         maxUsesPerDay = config.getInt("max-uses-per-day");
         maxBlocksPerDay = config.getInt("max-blocks-per-day");
+        stopChoppingIfNotConnected = config.getBoolean("stopChoppingIfNotConnected", true);
+        stopChoppingIfDifferentTypes = config.getBoolean("stopChoppingIfDifferentTypes", true);
     }
 
     @Override
@@ -190,6 +197,12 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             }
 
             event.setCancelled(true);
+            checkedLocations.clear();
+            if (stopChoppingIfNotConnected) {
+                chopTree(block, player);
+            } else {
+                chopTreeConnectedBlocks(block, player);
+            }
             checkedLocations.clear();
             chopTree(block, player);
 
@@ -260,10 +273,53 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                         continue;
                     }
                     Block relativeBlock = block.getRelative(xOffset, yOffset, zOffset);
+                    if (stopChoppingIfDifferentTypes && !isSameType(block.getType(), relativeBlock.getType())) {
+                        continue;
+                    }
                     chopTree(relativeBlock, player);
                 }
             }
         }
+    }
+
+    private void chopTreeConnectedBlocks(Block block, Player player) {
+        UUID playerUUID = player.getUniqueId();
+        PlayerConfig playerConfig = getPlayerConfig(playerUUID);
+        if (checkedLocations.contains(block.getLocation())) {
+            return;
+        }
+        checkedLocations.add(block.getLocation());
+
+        if (isLog(block.getType())) {
+            block.breakNaturally();
+        } else {
+            return;
+        }
+
+        playerConfig.incrementDailyBlocksBroken();
+        if (toolDamage) {
+            damageTool(player, 1);
+        }
+
+        for (int yOffset = -1; yOffset <= 1; yOffset++) {
+            for (int xOffset = -1; xOffset <= 1; xOffset++) {
+                for (int zOffset = -1; zOffset <= 1; zOffset++) {
+                    if (xOffset == 0 && yOffset == 0 && zOffset == 0) {
+                        continue;
+                    }
+                    Block relativeBlock = block.getRelative(xOffset, yOffset, zOffset);
+                    if (stopChoppingIfDifferentTypes && !isSameType(block.getType(), relativeBlock.getType())) {
+                        continue;
+                    }
+                    chopTreeConnectedBlocks(relativeBlock, player);
+                }
+            }
+        }
+    }
+
+    // Add a new method to check if two block types are the same
+    private boolean isSameType(Material type1, Material type2) {
+        return type1 == type2;
     }
 
 

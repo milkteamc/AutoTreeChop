@@ -17,7 +17,13 @@ visual-effect: true
 # damage tool when chopping tree
 toolDamage: true
 
-# Plugin message
+# Stop chopping if the blocks are not connected (not part of the same tree)
+stopChoppingIfNotConnected: false
+
+# Stop chopping if the blocks are of different types
+stopChoppingIfDifferentTypes: false
+
+# Plugin messages
 messages:
   enabled: §aAuto tree chopping enabled.
   disabled: §cAuto tree chopping disabled.

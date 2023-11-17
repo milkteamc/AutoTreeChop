@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'org.milkteamc'
-version = '1.0.7-SNAPSHOT'
+version = '1.0.8'
 
 repositories {
     mavenCentral()
@@ -60,4 +60,17 @@ shadowJar {
     configurations = [project.configurations.runtimeClasspath]
 
     relocate 'com.jeff_media.updatechecker', 'org.milkteamc.updatechecker'
+}
+
+tasks.build {
+    dependsOn("shadowJar")
+}
+
+
+tasks.shadowJar {
+    archiveFileName = "AutoTreeChop-${version}.jar"
+}
+
+tasks.jar {
+    archiveFileName = "AutoTreeChop-${version}-original.jar"
 }
