@@ -23,5 +23,5 @@ permissions:
     description: Send Update notify to player.
     default: op
   autotreechop.other:
-    description: Send Update notify to player.
+    description: Allows players to switch other's AutoTreeChop status.
     default: op
