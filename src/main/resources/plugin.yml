@@ -22,3 +22,6 @@ permissions:
   autotreechop.updatechecker:
     description: Send Update notify to player.
     default: op
+  autotreechop.other:
+    description: Send Update notify to player.
+    default: op

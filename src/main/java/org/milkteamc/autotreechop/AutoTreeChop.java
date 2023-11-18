@@ -18,6 +18,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.io.IOException;
@@ -34,6 +35,9 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     private String hitmaxblockMessage;
     private String usageMessage;
     private String blocksBrokenMessage;
+    private String enabledByOtherMessage;
+    private String disabledByOtherMessage;
+    private String consoleName;
     private boolean VisualEffect;
     private boolean toolDamage;
 
@@ -74,8 +78,28 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         playerConfigs = new HashMap<>();
     }
 
-    private void loadConfig() {
+    private FileConfiguration loadConfig() {
         File configFile = new File(getDataFolder(), "config.yml");
+        FileConfiguration defaultConfig;
+
+        defaultConfig = new YamlConfiguration();
+        defaultConfig.set("messages.enabled", "¡±aAuto tree chopping enabled.");
+        defaultConfig.set("messages.disabled", "¡±cAuto tree chopping disabled.");
+        defaultConfig.set("messages.no-permission", "¡±cYou don't have permission to use this command.");
+        defaultConfig.set("messages.hitmaxusage", "¡±cYou've reached the daily usage limit.");
+        defaultConfig.set("messages.hitmaxblock", "¡±cYou have reached your daily block breaking limit.");
+        defaultConfig.set("messages.usage", "¡±aYou have used the AutoTreeChop {current_uses}/{max_uses} times today.");
+        defaultConfig.set("messages.blocks-broken", "¡±aYou have broken {current_blocks}/{max_blocks} blocks today.");
+        defaultConfig.set("messages.enabledByOther", "¡±aAuto tree chopping enabled by {player}.");
+        defaultConfig.set("messages.disabledByOther", "¡±cAuto tree chopping disabled by {player}.");
+        defaultConfig.set("messages.consoleName", "console");
+        defaultConfig.set("visual-effect", true);
+        defaultConfig.set("toolDamage", true);
+        defaultConfig.set("max-uses-per-day", 50);
+        defaultConfig.set("max-blocks-per-day", 500);
+        defaultConfig.set("stopChoppingIfNotConnected", false);
+        defaultConfig.set("stopChoppingIfDifferentTypes", false);
+
         if (!configFile.exists()) {
             try {
                 if (!configFile.getParentFile().exists()) {
@@ -84,24 +108,9 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                 configFile.createNewFile();
             } catch (IOException e) {
                 getLogger().warning("An error occurred:" + e);
-                return;
+                return defaultConfig;
             }
         }
-
-        FileConfiguration defaultConfig = new YamlConfiguration();
-        defaultConfig.set("messages.enabled", "¡±aAuto tree chopping enabled.");
-        defaultConfig.set("messages.disabled", "¡±cAuto tree chopping disabled.");
-        defaultConfig.set("messages.no-permission", "¡±cYou don't have permission to use this command.");
-        defaultConfig.set("messages.hitmaxusage", "¡±cYou've reached the daily usage limit.");
-        defaultConfig.set("messages.hitmaxblock", "¡±cYou have reached your daily block breaking limit.");
-        defaultConfig.set("messages.usage", "¡±aYou have used the AutoTreeChop %current_uses%/%max_uses% times today.");
-        defaultConfig.set("messages.blocks-broken", "¡±aYou have broken %current_blocks%/%max_blocks% blocks today.");
-        defaultConfig.set("visual-effect", true);
-        defaultConfig.set("toolDamage", true);
-        defaultConfig.set("max-uses-per-day", 50);
-        defaultConfig.set("max-blocks-per-day", 500);
-        defaultConfig.set("stopChoppingIfNotConnected", false);
-        defaultConfig.set("stopChoppingIfDifferentTypes", false);
 
         FileConfiguration config = YamlConfiguration.loadConfiguration(configFile);
         for (String key : defaultConfig.getKeys(true)) {
@@ -123,23 +132,105 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         hitmaxblockMessage = config.getString("messages.hitmaxblock");
         usageMessage = config.getString("messages.usage");
         blocksBrokenMessage = config.getString("messages.blocks-broken");
+        enabledByOtherMessage = config.getString("messages.enabledByOther");
+        disabledByOtherMessage = config.getString("messages.disabledByOther");
+        consoleName = config.getString("messages.consoleName");
         VisualEffect = config.getBoolean("visual-effect");
         toolDamage = config.getBoolean("toolDamage");
         maxUsesPerDay = config.getInt("max-uses-per-day");
         maxBlocksPerDay = config.getInt("max-blocks-per-day");
         stopChoppingIfNotConnected = config.getBoolean("stopChoppingIfNotConnected", false);
         stopChoppingIfDifferentTypes = config.getBoolean("stopChoppingIfDifferentTypes", false);
+
+        return config;
+    }
+
+    @Override
+    public List<String> onTabComplete(@NotNull CommandSender sender, Command cmd, @NotNull String alias, String[] args) {
+        List<String> completions = new ArrayList<>();
+
+        if (cmd.getName().equalsIgnoreCase("autotreechop")) {
+            if (args.length == 1) {
+
+                completions.add("usage");
+                if (sender.hasPermission("autotreechop.other") || sender.hasPermission("autotreechop.op")) {
+                    for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
+                        completions.add(onlinePlayer.getName());
+                    }
+                }
+                if (sender.hasPermission("autotreechop.op")) {
+                    completions.add("reload");
+                }
+
+                return completions;
+            }
+        }
+
+        return null;
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
         if (cmd.getName().equalsIgnoreCase("autotreechop")) {
+            PlayerConfig playerConfig;
+
             if (sender instanceof Player player) {
+                // Check if the player has the required permission
+                if (!player.hasPermission("autotreechop.use")) {
+                    player.sendMessage(noPermissionMessage);
+                    return true;
+                }
 
-                UUID playerUUID = player.getUniqueId();
-                PlayerConfig playerConfig = getPlayerConfig(playerUUID);
+                // Check if the user provided a player name
+                if (args.length > 1) {
+                    // Get the target player
+                    Player targetPlayer = Bukkit.getPlayer(args[1]);
 
+                    // Check if the target player is online
+                    if (targetPlayer != null) {
+                        // Check if the sender has the required permission to toggle other players' state
+                        if (player.hasPermission("autotreechop.other") || player.hasPermission("autotreechop.op")) {
+                            UUID targetUUID = targetPlayer.getUniqueId();
+                            playerConfig = getPlayerConfig(targetUUID);
+
+                            boolean autoTreeChopEnabled = !playerConfig.isAutoTreeChopEnabled();
+                            playerConfig.setAutoTreeChopEnabled(autoTreeChopEnabled);
+
+                            if (autoTreeChopEnabled) {
+                                String enabledByOtherMsg = enabledByOtherMessage.replace("{player}", player.getName());
+
+                                player.sendMessage("Auto tree chopping enabled for " + targetPlayer.getName());
+                                targetPlayer.sendMessage(enabledByOtherMsg);
+                            } else {
+                                String disabledByOtherMsg = disabledByOtherMessage.replace("{player}", player.getName());
+
+                                player.sendMessage("Auto tree chopping disabled for " + targetPlayer.getName());
+                                targetPlayer.sendMessage(disabledByOtherMsg);
+                            }
+                        } else {
+                            player.sendMessage(noPermissionMessage);
+                        }
+                    } else {
+                        player.sendMessage("Player not found: " + args[1]);
+                    }
+                    return true;
+                }
+
+                // Inside the onCommand method
+                if (args.length == 1 && args[0].equalsIgnoreCase("reload")) {
+                    if (sender.hasPermission("autotreechop.reload")) {
+                        loadConfig();
+                        sender.sendMessage("Config reloaded successfully.");
+                    } else {
+                        sender.sendMessage(noPermissionMessage);
+                    }
+                    return true;
+                }
+
+
+                // If the user provided "usage" as an argument
                 if (args.length > 0 && args[0].equalsIgnoreCase("usage")) {
+                    playerConfig = getPlayerConfig(player.getUniqueId()); // Get playerConfig for sender
                     String usageMsg = usageMessage.replace("{current_uses}", String.valueOf(playerConfig.getDailyUses()))
                             .replace("{max_uses}", String.valueOf(maxUsesPerDay));
                     player.sendMessage(usageMsg);
@@ -148,23 +239,49 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                             .replace("{max_blocks}", String.valueOf(maxBlocksPerDay));
                     player.sendMessage(blocksMsg);
                     return true;
-                }
-
-                if (!player.hasPermission("autotreechop.use")) {
-                    player.sendMessage(noPermissionMessage);
-                    return true;
-                }
-
-                boolean autoTreeChopEnabled = !playerConfig.isAutoTreeChopEnabled();
-                playerConfig.setAutoTreeChopEnabled(autoTreeChopEnabled);
-
-                if (autoTreeChopEnabled) {
-                    player.sendMessage(enabledMessage);
                 } else {
-                    player.sendMessage(disabledMessage);
+                    // Toggle the state for the sender
+                    playerConfig = getPlayerConfig(player.getUniqueId()); // Get playerConfig for sender
+                    boolean autoTreeChopEnabled = !playerConfig.isAutoTreeChopEnabled();
+                    playerConfig.setAutoTreeChopEnabled(autoTreeChopEnabled);
+
+                    if (autoTreeChopEnabled) {
+                        player.sendMessage(enabledMessage);
+                    } else {
+                        player.sendMessage(disabledMessage);
+                    }
                 }
             } else {
-                sender.sendMessage("Only players can use this command.");
+                if (args.length > 0) {
+                    // Get the target player
+                    Player targetPlayer = Bukkit.getPlayer(args[0]);
+
+                    // Check if the target player is online
+                    if (targetPlayer != null) {
+                            UUID targetUUID = targetPlayer.getUniqueId();
+                            playerConfig = getPlayerConfig(targetUUID);
+
+                            boolean autoTreeChopEnabled = !playerConfig.isAutoTreeChopEnabled();
+                            playerConfig.setAutoTreeChopEnabled(autoTreeChopEnabled);
+
+                            if (autoTreeChopEnabled) {
+                                String enabledByOtherMsg = enabledByOtherMessage.replace("{player}", consoleName);
+
+                                getLogger().info("Auto tree chopping enabled for " + targetPlayer.getName());
+                                targetPlayer.sendMessage(enabledByOtherMsg);
+                            } else {
+                                String disabledByOtherMsg = disabledByOtherMessage.replace("{player}", consoleName);
+
+                                getLogger().info("Auto tree chopping disabled for " + targetPlayer.getName());
+                                targetPlayer.sendMessage(disabledByOtherMsg);
+                            }
+                    } else {
+                        getLogger().warning("Player not found: " + args[1]);
+                    }
+                    return true;
+                } else {
+                    sender.sendMessage("Only players can use this command.");
+                }
             }
             return true;
         }
