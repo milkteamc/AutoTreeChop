@@ -65,17 +65,10 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         } else {
             getLogger().warning("PlaceholderAPI not found. Placeholder expansion for AutoTreeChop will not work.");
         }
-
-        new UpdateChecker(this, UpdateCheckSource.SPIGOT, SPIGOT_RESOURCE_ID) // You can also use Spiget instead of Spigot - Spiget's API is usually much faster up to date.
-                .checkEveryXHours(24) // Check every 24 hours
-                .setDonationLink("https://ko-fi.com/maoyue")
-                .setChangelogLink(SPIGOT_RESOURCE_ID) // Same as for the Download link: URL or Spigot Resource ID
-                .setNotifyOpsOnJoin(true) // Notify OPs on Join when a new version is found (default)
-                .setNotifyByPermissionOnJoin("autotreechop.updatechecker") // Also notify people on join with this permission
-                .setUserAgent(new UserAgentBuilder().addPluginNameAndVersion())
-                .checkNow(); // And check right now
-
-        playerConfigs = new HashMap<>();
+        catch (Exception e) {
+            return false;
+        }
+        return true;
     }
 
     private FileConfiguration loadConfig() {
@@ -327,6 +320,17 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
             playerConfig.incrementDailyUses();
         }
+    }
+
+    private void CheckUpdate() {
+        new UpdateChecker(this, UpdateCheckSource.SPIGOT, SPIGOT_RESOURCE_ID) // You can also use Spiget instead of Spigot - Spiget's API is usually much faster up to date.
+                .checkEveryXHours(24) // Check every 24 hours
+                .setDonationLink("https://ko-fi.com/maoyue")
+                .setChangelogLink(SPIGOT_RESOURCE_ID) // Same as for the Download link: URL or Spigot Resource ID
+                .setNotifyOpsOnJoin(true) // Notify OPs on Join when a new version is found (default)
+                .setNotifyByPermissionOnJoin("autotreechop.updatechecker") // Also notify people on join with this permission
+                .setUserAgent(new UserAgentBuilder().addPluginNameAndVersion())
+                .checkNow(); // And check right now
     }
 
     // Sends a message to the player and shows a red particle effect indicating the block limit has been reached

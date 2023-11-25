@@ -5,6 +5,7 @@ api-version: 1.17
 author: Maoyue
 description: A auto tree chopping plugin for milkteamc
 softdepend: [PlaceholderAPI]
+folia-supported: true
 
 commands:
   autotreechop:
