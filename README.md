@@ -31,3 +31,5 @@ dependencies {
 	   implementation 'com.github.milkteamc:AutoTreeChop:master-SNAPSHOT'
 }
 ```
+### Usage
+[AutoTreeChopAPI.java](https://github.com/milkteamc/AutoTreeChop/blob/master/src/main/java/org/milkteamc/autotreechop/AutoTreeChopAPI.java)
