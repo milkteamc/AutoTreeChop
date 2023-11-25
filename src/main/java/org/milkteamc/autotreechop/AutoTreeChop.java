@@ -22,12 +22,12 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.io.IOException;
-import java.time.LocalDate;
 import java.util.*;
 
 public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecutor {
 
     private Map<UUID, PlayerConfig> playerConfigs;
+    private AutoTreeChopAPI api;
     private String enabledMessage;
     private String disabledMessage;
     private String noPermissionMessage;
@@ -49,21 +49,10 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
     private static final String SPIGOT_RESOURCE_ID = "20053";
 
-    @Override
-    public void onEnable() {
-        org.milkteamc.autotreechop.Metrics metrics = new Metrics(this, 20053); //bstats
-
-        getServer().getPluginManager().registerEvents(this, this);
-        getCommand("autotreechop").setExecutor(this);
-
-        saveDefaultConfig();
-        loadConfig();
-
-        if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
-            new AutoTreeChopExpansion(this).register();
-            getLogger().info("PlaceholderAPI expansion for AutoTreeChop has been registered.");
-        } else {
-            getLogger().warning("PlaceholderAPI not found. Placeholder expansion for AutoTreeChop will not work.");
+    // Check if server is using Folia
+    private static Boolean isFolia() {
+        try {
+            Class.forName("io.papermc.paper.threadedregions.ThreadedRegionizer");
         }
         catch (Exception e) {
             return false;
@@ -281,6 +270,32 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         return false;
     }
 
+    @Override
+    public void onEnable() {
+        org.milkteamc.autotreechop.Metrics metrics = new Metrics(this, 20053); //bstats
+
+        getServer().getPluginManager().registerEvents(this, this);
+        getCommand("autotreechop").setExecutor(this);
+
+        saveDefaultConfig();
+        loadConfig();
+
+        if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
+            new AutoTreeChopExpansion(this).register();
+            getLogger().info("PlaceholderAPI expansion for AutoTreeChop has been registered.");
+        } else {
+            getLogger().warning("PlaceholderAPI not found. Placeholder expansion for AutoTreeChop will not work.");
+        }
+
+        if(!isFolia()) {
+            CheckUpdate();
+        } else {
+            getLogger().warning("It seen you are using Folia, some function may not work.");
+        }
+        api = new AutoTreeChopAPI(this);
+        playerConfigs = new HashMap<>();
+    }
+
     @EventHandler
     public void onBlockBreak(BlockBreakEvent event) {
         Player player = event.getPlayer();
@@ -298,8 +313,9 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                 return;
             }
 
-            if (!player.hasPermission("autotreechop.vip") && playerConfig.dailyUses >= maxUsesPerDay) {
+            if (!player.hasPermission("autotreechop.vip") && playerConfig.getDailyUses() >= maxUsesPerDay) {
                 player.sendMessage(hitmaxusageMessage);
+                return;
             }
 
             if (VisualEffect) {
@@ -472,107 +488,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         return getPlayerConfig(playerUUID).getDailyBlocksBroken();
     }
 
-
-    private class PlayerConfig {
-        private final File configFile;
-        private final FileConfiguration config;
-
-        private boolean autoTreeChopEnabled;
-        private int dailyUses;
-        private int dailyBlocksBroken;
-        private LocalDate lastUseDate;
-
-        public PlayerConfig(UUID playerUUID) {
-            this.configFile = new File(getDataFolder() + "/cache", playerUUID.toString() + ".yml");
-            this.config = YamlConfiguration.loadConfiguration(configFile);
-            this.autoTreeChopEnabled = false;
-            this.dailyUses = 0;
-            this.dailyBlocksBroken = 0;
-            this.lastUseDate = LocalDate.now();
-            loadConfig();
-            saveConfig();
-        }
-
-        private void loadConfig() {
-            if (configFile.exists()) {
-                autoTreeChopEnabled = config.getBoolean("autoTreeChopEnabled");
-                dailyUses = config.getInt("dailyUses");
-                dailyBlocksBroken = config.getInt("dailyBlocksBroken", 0);
-                lastUseDate = LocalDate.parse(Objects.requireNonNull(config.getString("lastUseDate")));
-            } else {
-                config.set("autoTreeChopEnabled", autoTreeChopEnabled);
-                config.set("dailyUses", dailyUses);
-                config.set("dailyBlocksBroken", dailyBlocksBroken);
-                String lastUseDateString = config.getString("lastUseDate");
-                if (lastUseDateString != null) {
-                    lastUseDate = LocalDate.parse(lastUseDateString);
-                } else {
-                    lastUseDate = LocalDate.now();
-                    config.set("lastUseDate", lastUseDate.toString());
-                    saveConfig();
-                }
-                saveConfig();
-            }
-        }
-
-        private void saveConfig() {
-            try {
-                config.save(configFile);
-            } catch (IOException e) {
-                getLogger().warning("An error occurred:" + e);
-            }
-        }
-
-        public boolean isAutoTreeChopEnabled() {
-            return autoTreeChopEnabled;
-        }
-
-        public void setAutoTreeChopEnabled(boolean enabled) {
-            this.autoTreeChopEnabled = enabled;
-            config.set("autoTreeChopEnabled", enabled);
-            saveConfig();
-        }
-
-        public int getDailyUses() {
-            if (!lastUseDate.equals(LocalDate.now())) {
-                dailyUses = 0;
-                lastUseDate = LocalDate.now();
-                config.set("dailyUses", dailyUses);
-                config.set("lastUseDate", lastUseDate.toString());
-                saveConfig();
-            }
-            return dailyUses;
-        }
-
-        public void incrementDailyUses() {
-            if (!lastUseDate.equals(LocalDate.now())) {
-                dailyUses = 0;
-                lastUseDate = LocalDate.now();
-            }
-            dailyUses++;
-            config.set("dailyUses", dailyUses);
-            saveConfig();
-        }
-        public int getDailyBlocksBroken() {
-            if (!lastUseDate.equals(LocalDate.now())) {
-                dailyBlocksBroken = 0;
-                lastUseDate = LocalDate.now();
-                config.set("dailyBlocksBroken", dailyBlocksBroken);
-                config.set("lastUseDate", lastUseDate.toString());
-                saveConfig();
-            }
-            return dailyBlocksBroken;
-        }
-
-        public void incrementDailyBlocksBroken() {
-            if (!lastUseDate.equals(LocalDate.now())) {
-                dailyBlocksBroken = 0;
-                lastUseDate = LocalDate.now();
-            }
-            dailyBlocksBroken++;
-            config.set("dailyBlocksBroken", dailyBlocksBroken);
-            saveConfig();
-        }
-
+    public AutoTreeChopAPI getAPI() {
+        return api;
     }
 }
