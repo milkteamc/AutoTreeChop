@@ -471,10 +471,10 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                 material == Material.CHERRY_LOG;
     }
 
-    private PlayerConfig getPlayerConfig(UUID playerUUID) {
+    PlayerConfig getPlayerConfig(UUID playerUUID) {
         PlayerConfig playerConfig = playerConfigs.get(playerUUID);
         if (playerConfig == null) {
-            playerConfig = new PlayerConfig(playerUUID);
+            playerConfig = new PlayerConfig(playerUUID, getDataFolder());
             playerConfigs.put(playerUUID, playerConfig);
         }
         return playerConfig;
