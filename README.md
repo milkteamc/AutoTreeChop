@@ -1,4 +1,5 @@
 # AutoTreeChop
+## All introduction are in Spigot page
 A auto tree chopping plugin for milkteamc.  
 Discord: https://discord.gg/uQ4UXANnP2  
 Spigot page: https://www.spigotmc.org/resources/113071/
