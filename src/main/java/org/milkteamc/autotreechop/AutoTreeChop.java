@@ -43,53 +43,29 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     private AutoTreeChopAPI api;
 
     public static final Message ENABLED_MESSAGE = new MessageBuilder("enabled")
-            .withDefault("<positive>Auto tree chopping enabled.</positive>")
-            .withTranslation(Locale.GERMAN, "<positive>Auto-Baumfällen aktiviert.</positive>")
-            .build();
+            .withDefault("<positive>Auto tree chopping enabled.</positive>").build();
     public static final Message DISABLED_MESSAGE = new MessageBuilder("disabled")
-            .withDefault("<negative>Auto tree chopping disabled.</negative>")
-            .withTranslation(Locale.GERMAN, "<negative>Auto-Baumfällen deaktiviert.</negative>")
-            .build();
+            .withDefault("<negative>Auto tree chopping disabled.</negative>").build();
     public static final Message NO_PERMISSION_MESSAGE = new MessageBuilder("no-permission")
-            .withDefault("<negative>You don't have permission to use this command.</negative>")
-            .withTranslation(Locale.GERMAN, "<negative>Dazu hast du keine Berechtigung</negative>")
-            .build();
+            .withDefault("<negative>You don't have permission to use this command.</negative>").build();
     public static final Message HIT_MAX_USAGE_MESSAGE = new MessageBuilder("hitmaxusage")
-            .withDefault("<negative>You've reached the daily usage limit.</negative>")
-            .withTranslation(Locale.GERMAN, "<negative>Du hast dein Tageslimit zum Auto-Baumfällen erreicht.</negative>")
-            .build();
+            .withDefault("<negative>You've reached the daily usage limit.</negative>").build();
     public static final Message HIT_MAX_BLOCK_MESSAGE = new MessageBuilder("hitmaxblock")
-            .withDefault("<negative>You have reached your daily block breaking limit.</negative>")
-            .withTranslation(Locale.GERMAN, "<negative>Du hast dein tägliches Blocklimit zum Auto-Baumfällen erreicht.</negative>")
-            .build();
+            .withDefault("<negative>You have reached your daily block breaking limit.</negative>").build();
     public static final Message USAGE_MESSAGE = new MessageBuilder("usage")
-            .withDefault("<positive>You have used the AutoTreeChop <current_uses>/<max_uses> times today.</positive>")
-            .withTranslation(Locale.GERMAN, "<positive>Du hast Auto-Baumfällen heute <current_uses>/<max_uses> mal verwendet.</positive>")
-            .build();
+            .withDefault("<positive>You have used the AutoTreeChop <current_uses>/<max_uses> times today.</positive>").build();
     public static final Message BLOCKS_BROKEN_MESSAGE = new MessageBuilder("blocks-broken")
-            .withDefault("<positive>You have broken <current_blocks>/<max_blocks> blocks today.</positive>")
-            .withTranslation(Locale.GERMAN, "<positive>Du hast heute <current_blocks>/<max_blocks> Blöcke gefällt.</positive>")
-            .build();
+            .withDefault("<positive>You have broken <current_blocks>/<max_blocks> blocks today.</positive>").build();
     public static final Message ENABLED_BY_OTHER_MESSAGE = new MessageBuilder("enabledByOther")
-            .withDefault("<positive>Auto tree chopping enabled by <player>.</positive>")
-            .withTranslation(Locale.GERMAN, "<positive>Auto-Baumfällen aktiviert durch <player></positive>")
-            .build();
+            .withDefault("<positive>Auto tree chopping enabled by <player>.</positive>").build();
     public static final Message ENABLED_FOR_OTHER_MESSAGE = new MessageBuilder("enabledForOther")
-            .withDefault("<positive>Auto tree chopping enabled for <player></positive>")
-            .withTranslation(Locale.GERMAN, "<positive>Auto-Baumfällen aktiviert für <player></positive>")
-            .build();
+            .withDefault("<positive>Auto tree chopping enabled for <player></positive>").build();
     public static final Message DISABLED_BY_OTHER_MESSAGE = new MessageBuilder("disabledByOther")
-            .withDefault("<negative>Auto tree chopping disabled by <player>.</negative>")
-            .withTranslation(Locale.GERMAN, "<negative>Auto-Baumfällen deaktiviert durch <player>.</negative>")
-            .build();
+            .withDefault("<negative>Auto tree chopping disabled by <player>.</negative>").build();
     public static final Message DISABLED_FOR_OTHER_MESSAGE = new MessageBuilder("disabledForOther")
-            .withDefault("<negative>Auto tree chopping disabled for <player></negative>")
-            .withTranslation(Locale.GERMAN, "<negative>Auto-Baumfällen deaktiviert für <player></negative>")
-            .build();
+            .withDefault("<negative>Auto tree chopping disabled for <player></negative>").build();
     public static final Message CONSOLE_NAME = new MessageBuilder("consoleName")
-            .withDefault("console")
-            .withTranslation(Locale.GERMAN, "Konsole")
-            .build();
+            .withDefault("console").build();
 
     private boolean VisualEffect;
     private boolean toolDamage;
@@ -358,7 +334,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         // If already exists, this will only write missing values into these files.
         translations.addMessages(TranslationsFramework.messageFieldsFromClass(AutoTreeChop.class));
         translations.saveLocale(Locale.ENGLISH);
-        translations.saveLocale(Locale.GERMAN);
+        saveResource("lang/de.properties", false);
         // Now load all written and also all pre-existing translations (in case the user added some)
         translations.loadLocales();
 
