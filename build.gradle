@@ -24,12 +24,19 @@ repositories {
     maven {
         url = 'https://repo.extendedclip.com/content/repositories/placeholderapi/'
     }
+    maven {
+        url = "https://nexus.leonardbausenwein.de/repository/maven-public/"
+    }
 }
 
 dependencies {
     compileOnly "org.spigotmc:spigot-api:1.20-R0.1-SNAPSHOT"
     implementation "com.jeff_media:SpigotUpdateChecker:3.0.3"
     compileOnly 'me.clip:placeholderapi:2.11.5'
+    implementation "de.cubbossa:Translations:3.0.0"
+    implementation "net.kyori:adventure-api:4.11.0"
+    implementation "net.kyori:adventure-platform-bukkit:4.1.2"
+    implementation "net.kyori:adventure-text-minimessage:4.11.0"
 }
 
 def targetJavaVersion = 17
@@ -65,8 +72,11 @@ tasks.build {
 tasks.shadowJar {
     archiveFileName = "AutoTreeChop-${version}.jar"
     configurations = [project.configurations.runtimeClasspath]
+    minimize()
 
-    relocate 'com.jeff_media.updatechecker', 'org.milkteamc.updatechecker'
+    relocate 'com.jeff_media.updatechecker', 'org.milkteamc.autotreechop.libs.updatechecker'
+    relocate 'net.kyori', 'org.milkteamc.autotreechop.libs'
+    relocate 'de.cubbossa', 'org.milkteamc.autotreechop.libs'
 }
 
 tasks.jar {
