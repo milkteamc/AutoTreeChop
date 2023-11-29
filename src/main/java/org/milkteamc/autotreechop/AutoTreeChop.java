@@ -121,8 +121,8 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         toolDamage = config.getBoolean("toolDamage");
         maxUsesPerDay = config.getInt("max-uses-per-day");
         maxBlocksPerDay = config.getInt("max-blocks-per-day");
-        stopChoppingIfNotConnected = config.getBoolean("stopChoppingIfNotConnected", false);
-        stopChoppingIfDifferentTypes = config.getBoolean("stopChoppingIfDifferentTypes", false);
+        stopChoppingIfNotConnected = config.getBoolean("stopChoppingIfNotConnected");
+        stopChoppingIfDifferentTypes = config.getBoolean("stopChoppingIfDifferentTypes");
 
         return config;
     }
