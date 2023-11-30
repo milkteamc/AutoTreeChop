@@ -142,8 +142,8 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         toolDamage = config.getBoolean("toolDamage");
         maxUsesPerDay = config.getInt("max-uses-per-day");
         maxBlocksPerDay = config.getInt("max-blocks-per-day");
-        stopChoppingIfNotConnected = config.getBoolean("stopChoppingIfNotConnected", false);
-        stopChoppingIfDifferentTypes = config.getBoolean("stopChoppingIfDifferentTypes", false);
+        stopChoppingIfNotConnected = config.getBoolean("stopChoppingIfNotConnected");
+        stopChoppingIfDifferentTypes = config.getBoolean("stopChoppingIfDifferentTypes");
         Object locale = config.get("locale");
         if (locale instanceof String s) {
             this.locale = Locale.forLanguageTag(s);
@@ -151,7 +151,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         else if (locale instanceof Locale l) {
             this.locale = l;
         }
-
+      
         return config;
     }
 
