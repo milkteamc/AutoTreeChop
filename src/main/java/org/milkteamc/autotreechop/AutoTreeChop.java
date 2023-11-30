@@ -340,10 +340,10 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         // Let's make <negative> a resolver for red color and <positive> for green.
         // We can simply modify the styles.properties file to change the whole look and feel of the plugin.
         if (!translations.getStyleSet().containsKey("negative")) {
-            translations.getStyleSet().put("negative", (MessageStyle) Style.style(NamedTextColor.RED));
+            translations.getStyleSet().put("negative", Style.style(NamedTextColor.RED));
         }
         if (!translations.getStyleSet().containsKey("positive")) {
-            translations.getStyleSet().put("positive", (MessageStyle) Style.style(NamedTextColor.GREEN));
+            translations.getStyleSet().put("positive", Style.style(NamedTextColor.GREEN));
         }
         // Save potential changes
         translations.saveStyles();
