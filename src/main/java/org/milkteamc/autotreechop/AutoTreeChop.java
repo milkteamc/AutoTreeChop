@@ -3,10 +3,7 @@ package org.milkteamc.autotreechop;
 import com.jeff_media.updatechecker.UpdateCheckSource;
 import com.jeff_media.updatechecker.UpdateChecker;
 import com.jeff_media.updatechecker.UserAgentBuilder;
-import de.cubbossa.translations.Message;
-import de.cubbossa.translations.MessageBuilder;
-import de.cubbossa.translations.Translations;
-import de.cubbossa.translations.TranslationsFramework;
+import de.cubbossa.translations.*;
 import de.cubbossa.translations.persistent.PropertiesMessageStorage;
 import de.cubbossa.translations.persistent.PropertiesStyleStorage;
 import net.kyori.adventure.platform.AudienceProvider;
@@ -335,6 +332,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         translations.addMessages(TranslationsFramework.messageFieldsFromClass(AutoTreeChop.class));
         translations.saveLocale(Locale.ENGLISH);
         saveResource("lang/de.properties", false);
+        saveResource("lang/zh.properties", false);
         // Now load all written and also all pre-existing translations (in case the user added some)
         translations.loadLocales();
 
@@ -342,10 +340,10 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         // Let's make <negative> a resolver for red color and <positive> for green.
         // We can simply modify the styles.properties file to change the whole look and feel of the plugin.
         if (!translations.getStyleSet().containsKey("negative")) {
-            translations.getStyleSet().put("negative", Style.style(NamedTextColor.RED));
+            translations.getStyleSet().put("negative", (MessageStyle) Style.style(NamedTextColor.RED));
         }
         if (!translations.getStyleSet().containsKey("positive")) {
-            translations.getStyleSet().put("positive", Style.style(NamedTextColor.GREEN));
+            translations.getStyleSet().put("positive", (MessageStyle) Style.style(NamedTextColor.GREEN));
         }
         // Save potential changes
         translations.saveStyles();
