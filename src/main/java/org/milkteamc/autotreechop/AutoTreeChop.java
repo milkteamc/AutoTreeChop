@@ -16,9 +16,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.minimessage.tag.resolver.Formatter;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.Material;
+import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -29,6 +27,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
@@ -191,10 +190,40 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                     return true;
                 }
 
+                // Inside the onCommand method
+                if (args.length == 1 && args[0].equalsIgnoreCase("reload")) {
+                    if (sender.hasPermission("autotreechop.reload")) {
+                        loadConfig();
+
+                        translations.loadStyles();
+                        translations.loadLocales();
+
+                        sender.sendMessage("Config reloaded successfully.");
+                    } else {
+                        sendMessage(sender, NO_PERMISSION_MESSAGE);
+                    }
+                    return true;
+                }
+
+
+                // If the user provided "usage" as an argument
+                if (args.length > 0 && args[0].equalsIgnoreCase("usage")) {
+                    playerConfig = getPlayerConfig(player.getUniqueId()); // Get playerConfig for sender
+                    sendMessage(player, USAGE_MESSAGE.formatted(
+                            Formatter.number("current_uses", playerConfig.getDailyUses()),
+                            Formatter.number("max_uses", maxUsesPerDay)
+                    ));
+                    sendMessage(player, BLOCKS_BROKEN_MESSAGE.formatted(
+                            Formatter.number("current_blocks", playerConfig.getDailyBlocksBroken()),
+                            Formatter.number("max_blocks", maxBlocksPerDay)
+                    ));
+                    return true;
+                }
+
                 // Check if the user provided a player name
-                if (args.length > 1) {
+                if (args.length > 0) {
                     // Get the target player
-                    Player targetPlayer = Bukkit.getPlayer(args[1]);
+                    Player targetPlayer = Bukkit.getPlayer(args[0]);
 
                     // Check if the target player is online
                     if (targetPlayer != null) {
@@ -225,38 +254,8 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                             sendMessage(player, NO_PERMISSION_MESSAGE);
                         }
                     } else {
-                        player.sendMessage("Player not found: " + args[1]);
+                        player.sendMessage("Player not found: " + args[0]);
                     }
-                    return true;
-                }
-
-                // Inside the onCommand method
-                if (args.length == 1 && args[0].equalsIgnoreCase("reload")) {
-                    if (sender.hasPermission("autotreechop.reload")) {
-                        loadConfig();
-
-                        translations.loadStyles();
-                        translations.loadLocales();
-
-                        sender.sendMessage("Config reloaded successfully.");
-                    } else {
-                        sendMessage(sender, NO_PERMISSION_MESSAGE);
-                    }
-                    return true;
-                }
-
-
-                // If the user provided "usage" as an argument
-                if (args.length > 0 && args[0].equalsIgnoreCase("usage")) {
-                    playerConfig = getPlayerConfig(player.getUniqueId()); // Get playerConfig for sender
-                    sendMessage(player, USAGE_MESSAGE.formatted(
-                            Formatter.number("current_uses", playerConfig.getDailyUses()),
-                            Formatter.number("max_uses", maxUsesPerDay)
-                    ));
-                    sendMessage(player, BLOCKS_BROKEN_MESSAGE.formatted(
-                            Formatter.number("current_blocks", playerConfig.getDailyBlocksBroken()),
-                            Formatter.number("max_blocks", maxBlocksPerDay)
-                    ));
                     return true;
                 } else {
                     // Toggle the state for the sender
@@ -270,6 +269,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                         sendMessage(player, DISABLED_MESSAGE);
                     }
                 }
+
             } else {
                 if (args.length > 0) {
                     // Get the target player
@@ -431,7 +431,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     // Sends a message to the player and shows a red particle effect indicating the block limit has been reached
     private void sendMaxBlockLimitReachedMessage(Player player, Block block) {
         sendMessage(player, HIT_MAX_BLOCK_MESSAGE);
-        player.getWorld().spawnParticle(org.bukkit.Particle.REDSTONE, block.getLocation().add(0.5, 0.5, 0.5), 50, 0.5, 0.5, 0.5, 0);
+        player.getWorld().spawnParticle(org.bukkit.Particle.REDSTONE, block.getLocation().add(0.5, 0.5, 0.5), 50, 0.5, 0.5, 0.5, 0, new Particle.DustOptions(Color.RED, 1));
     }
 
     // Shows a green particle effect indicating the block has been chopped
@@ -441,11 +441,31 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
     // Adds the item to the player's inventory if there's space, otherwise drops it in the world
     private void addItemToInventoryOrDrop(Player player, Material material) {
-        if (player.getInventory().firstEmpty() == -1) {
-            player.getWorld().dropItem(player.getLocation(), new ItemStack(material));
-        } else {
-            player.getInventory().addItem(new ItemStack(material));
+        Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
+            boolean hasEnoughSpace = hasEnoughSpace(player.getInventory(), material, 1);
+            Bukkit.getScheduler().runTask(this, () -> {
+                if (hasEnoughSpace) {
+                    player.getWorld().dropItem(player.getLocation(), new ItemStack(material));
+                } else {
+                    player.getInventory().addItem(new ItemStack(material));
+                }
+            });
+        });
+    }
+
+    // Check if player have enough space to store material
+    private boolean hasEnoughSpace(Inventory inventory, Material material, int quantity) {
+        int availableSpace = 0;
+
+        for (ItemStack item : inventory.getContents()) {
+            if (item == null || item.getType() == Material.AIR) {
+                availableSpace += material.getMaxStackSize();
+            } else if (item.getType() == material && item.getAmount() < item.getMaxStackSize()) {
+                availableSpace += (item.getMaxStackSize() - item.getAmount());
+            }
         }
+
+        return availableSpace >= quantity;
     }
 
     // Method to reduce the durability value of tools
