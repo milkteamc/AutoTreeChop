@@ -1,63 +1,91 @@
 package org.milkteamc.autotreechop;
 
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.Bukkit;
 
-import java.io.File;
-import java.io.IOException;
+import java.sql.*;
 import java.time.LocalDate;
-import java.util.Objects;
 import java.util.UUID;
+import java.util.logging.Level;
 
 import static org.bukkit.Bukkit.getLogger;
 
 public class PlayerConfig {
 
-    private final File configFile;
-    private final FileConfiguration config;
+    private final UUID playerUUID;
+    private Connection connection;
     private boolean autoTreeChopEnabled;
     private int dailyUses;
     private int dailyBlocksBroken;
     private LocalDate lastUseDate;
 
-    public PlayerConfig(UUID playerUUID, File dataFolder) {
-        this.configFile = new File(dataFolder + "/cache", playerUUID.toString() + ".yml");
-        this.config = YamlConfiguration.loadConfiguration(configFile);
-        this.autoTreeChopEnabled = false;
-        this.dailyUses = 0;
-        this.dailyBlocksBroken = 0;
-        this.lastUseDate = LocalDate.now();
+    public PlayerConfig(UUID playerUUID) {
+        this.playerUUID = playerUUID;
+        this.connection = establishConnection();
+        createTable();
         loadConfig();
-        saveConfig();
     }
 
-    private void loadConfig() {
-        if (configFile.exists()) {
-            autoTreeChopEnabled = config.getBoolean("autoTreeChopEnabled");
-            dailyUses = config.getInt("dailyUses");
-            dailyBlocksBroken = config.getInt("dailyBlocksBroken", 0);
-            lastUseDate = LocalDate.parse(Objects.requireNonNull(config.getString("lastUseDate")));
-        } else {
-            config.set("autoTreeChopEnabled", autoTreeChopEnabled);
-            config.set("dailyUses", dailyUses);
-            config.set("dailyBlocksBroken", dailyBlocksBroken);
-            String lastUseDateString = config.getString("lastUseDate");
-            if (lastUseDateString != null) {
-                lastUseDate = LocalDate.parse(lastUseDateString);
-            } else {
-                lastUseDate = LocalDate.now();
-                config.set("lastUseDate", lastUseDate.toString());
-                saveConfig();
-            }
-            saveConfig();
+    private Connection establishConnection() {
+        try {
+            Class.forName("org.sqlite.JDBC");
+            String dbUrl = "jdbc:sqlite:plugins/AutoTreeChop/player_data.db"; // Adjust the path as needed
+            return DriverManager.getConnection(dbUrl);
+        } catch (ClassNotFoundException | SQLException e) {
+            getLogger().warning("Error establishing SQLite connection: " + e.getMessage());
+            return null;
         }
     }
 
-    private void saveConfig() {
-        try {
-            config.save(configFile);
-        } catch (IOException e) {
-            getLogger().warning("An error occurred:" + e);
+    private void createTable() {
+        try (Connection connection = openConnection()) {
+            try (PreparedStatement statement = connection.prepareStatement(
+                    "CREATE TABLE IF NOT EXISTS player_data (" +
+                            "uuid TEXT PRIMARY KEY," +
+                            "autoTreeChopEnabled BOOLEAN," +
+                            "dailyUses INT," +
+                            "dailyBlocksBroken INT," +
+                            "lastUseDate TEXT);")) {
+                statement.executeUpdate();
+            } catch (SQLException e) {
+                getLogger().warning("Error creating SQLite table: " + e.getMessage());
+            }
+        } catch (SQLException e) {
+            getLogger().warning("Error creating SQLite table: " + e.getMessage());
+        }
+    }
+
+    private void loadConfig() {
+        try (PreparedStatement statement = connection.prepareStatement("SELECT * FROM player_data WHERE uuid = ?")) {
+            statement.setString(1, playerUUID.toString());
+            ResultSet resultSet = statement.executeQuery();
+
+            if (resultSet.next()) {
+                autoTreeChopEnabled = resultSet.getBoolean("autoTreeChopEnabled");
+                dailyUses = resultSet.getInt("dailyUses");
+                dailyBlocksBroken = resultSet.getInt("dailyBlocksBroken");
+                lastUseDate = LocalDate.parse(resultSet.getString("lastUseDate"));
+            } else {
+                autoTreeChopEnabled = false;
+                dailyUses = 0;
+                dailyBlocksBroken = 0;
+                lastUseDate = LocalDate.now();
+
+                try (PreparedStatement insertStatement = connection.prepareStatement(
+                        "INSERT INTO player_data (uuid, autoTreeChopEnabled, dailyUses, dailyBlocksBroken, lastUseDate) VALUES (?, ?, ?, ?, ?)")) {
+                    insertStatement.setString(1, playerUUID.toString());
+                    insertStatement.setBoolean(2, autoTreeChopEnabled);
+                    insertStatement.setInt(3, dailyUses);
+                    insertStatement.setInt(4, dailyBlocksBroken);
+                    insertStatement.setString(5, lastUseDate.toString());
+                    insertStatement.executeUpdate();
+                } catch (SQLException e) {
+                    getLogger().warning("Error inserting player data into SQLite: " + e.getMessage());
+                }
+            }
+        } catch (SQLException e) {
+            getLogger().warning("Error loading player data from SQLite: " + e.getMessage());
+        } finally {
+            closeConnection(); // Close the connection after loading config
         }
     }
 
@@ -67,49 +95,93 @@ public class PlayerConfig {
 
     public void setAutoTreeChopEnabled(boolean enabled) {
         this.autoTreeChopEnabled = enabled;
-        config.set("autoTreeChopEnabled", enabled);
-        saveConfig();
+        updateConfig();
     }
 
     public int getDailyUses() {
-        if (!lastUseDate.equals(LocalDate.now())) {
-            dailyUses = 0;
-            lastUseDate = LocalDate.now();
-            config.set("dailyUses", dailyUses);
-            config.set("lastUseDate", lastUseDate.toString());
-            saveConfig();
-        }
+        checkAndUpdateDate();
         return dailyUses;
     }
 
     public void incrementDailyUses() {
-        if (!lastUseDate.equals(LocalDate.now())) {
-            dailyUses = 0;
-            lastUseDate = LocalDate.now();
-        }
+        checkAndUpdateDate();
         dailyUses++;
-        config.set("dailyUses", dailyUses);
-        saveConfig();
+        updateConfig();
     }
+
     public int getDailyBlocksBroken() {
-        if (!lastUseDate.equals(LocalDate.now())) {
-            dailyBlocksBroken = 0;
-            lastUseDate = LocalDate.now();
-            config.set("dailyBlocksBroken", dailyBlocksBroken);
-            config.set("lastUseDate", lastUseDate.toString());
-            saveConfig();
-        }
+        checkAndUpdateDate();
         return dailyBlocksBroken;
     }
 
-    public void incrementDailyBlocksBroken() {
-        if (!lastUseDate.equals(LocalDate.now())) {
-            dailyBlocksBroken = 0;
-            lastUseDate = LocalDate.now();
+    private void initializeSQLiteTables(Connection connection) {
+        try (Statement statement = connection.createStatement()) {
+            String createTableQuery = "CREATE TABLE IF NOT EXISTS player_data (" +
+                    "uuid VARCHAR(36) PRIMARY KEY," +
+                    "autoTreeChopEnabled BOOLEAN," +
+                    "dailyUses INT," +
+                    "dailyBlocksBroken INT," +
+                    "lastUseDate VARCHAR(10)" +
+                    ")";
+            statement.executeUpdate(createTableQuery);
+        } catch (SQLException e) {
+            getLogger().warning("Error initializing SQLite tables: " + e.getMessage());
         }
-        dailyBlocksBroken++;
-        config.set("dailyBlocksBroken", dailyBlocksBroken);
-        saveConfig();
     }
 
+    public void incrementDailyBlocksBroken() {
+        checkAndUpdateDate();
+        dailyBlocksBroken++;
+        updateConfig();
+    }
+
+    private void checkAndUpdateDate() {
+        if (!lastUseDate.equals(LocalDate.now())) {
+            dailyUses = 0;
+            dailyBlocksBroken = 0;
+            lastUseDate = LocalDate.now();
+            updateConfig();
+        }
+    }
+
+    private void updateConfig() {
+        try (Connection connection = openConnection()) {
+            try (PreparedStatement statement = connection.prepareStatement(
+                    "UPDATE player_data SET autoTreeChopEnabled = ?, dailyUses = ?, dailyBlocksBroken = ?, lastUseDate = ? WHERE uuid = ?")) {
+                statement.setBoolean(1, autoTreeChopEnabled);
+                statement.setInt(2, dailyUses);
+                statement.setInt(3, dailyBlocksBroken);
+                statement.setString(4, lastUseDate.toString());
+                statement.setString(5, playerUUID.toString());
+                statement.executeUpdate();
+            } catch (SQLException e) {
+                getLogger().warning("Error updating player data in SQLite: " + e.getMessage());
+            }
+        } catch (SQLException e) {
+            getLogger().warning("Error updating player data in SQLite: " + e.getMessage());
+        }
+    }
+
+    private Connection openConnection() {
+        try {
+            if (connection == null || connection.isClosed()) {
+                Class.forName("org.sqlite.JDBC");
+                String dbUrl = "jdbc:sqlite:plugins/AutoTreeChop/player_data.db";
+                connection = DriverManager.getConnection(dbUrl);
+            }
+        } catch (ClassNotFoundException | SQLException e) {
+            Bukkit.getLogger().log(Level.WARNING, "Error opening SQLite connection: " + e.getMessage());
+        }
+        return connection;
+    }
+
+    private void closeConnection() {
+        if (connection != null) {
+            try {
+                connection.close();
+            } catch (SQLException e) {
+                Bukkit.getLogger().log(Level.WARNING, "Error closing SQLite connection: " + e.getMessage());
+            }
+        }
+    }
 }

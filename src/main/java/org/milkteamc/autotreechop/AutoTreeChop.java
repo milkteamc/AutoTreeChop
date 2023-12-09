@@ -3,7 +3,10 @@ package org.milkteamc.autotreechop;
 import com.jeff_media.updatechecker.UpdateCheckSource;
 import com.jeff_media.updatechecker.UpdateChecker;
 import com.jeff_media.updatechecker.UserAgentBuilder;
-import de.cubbossa.translations.*;
+import de.cubbossa.translations.Message;
+import de.cubbossa.translations.MessageBuilder;
+import de.cubbossa.translations.Translations;
+import de.cubbossa.translations.TranslationsFramework;
 import de.cubbossa.translations.persistent.PropertiesMessageStorage;
 import de.cubbossa.translations.persistent.PropertiesStyleStorage;
 import net.kyori.adventure.platform.AudienceProvider;
@@ -550,7 +553,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     PlayerConfig getPlayerConfig(UUID playerUUID) {
         PlayerConfig playerConfig = playerConfigs.get(playerUUID);
         if (playerConfig == null) {
-            playerConfig = new PlayerConfig(playerUUID, getDataFolder());
+            playerConfig = new PlayerConfig(playerUUID);
             playerConfigs.put(playerUUID, playerConfig);
         }
         return playerConfig;
