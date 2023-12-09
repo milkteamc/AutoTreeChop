@@ -1,11 +1,8 @@
 package org.milkteamc.autotreechop;
 
-import org.bukkit.Bukkit;
-
 import java.sql.*;
 import java.time.LocalDate;
 import java.util.UUID;
-import java.util.logging.Level;
 
 import static org.bukkit.Bukkit.getLogger;
 
@@ -37,21 +34,17 @@ public class PlayerConfig {
     }
 
     private void createTable() {
-        try (Connection connection = openConnection()) {
-            try (PreparedStatement statement = connection.prepareStatement(
-                    "CREATE TABLE IF NOT EXISTS player_data (" +
-                            "uuid TEXT PRIMARY KEY," +
-                            "autoTreeChopEnabled BOOLEAN," +
-                            "dailyUses INT," +
-                            "dailyBlocksBroken INT," +
-                            "lastUseDate TEXT);")) {
-                statement.executeUpdate();
+        try (PreparedStatement statement = connection.prepareStatement(
+                "CREATE TABLE IF NOT EXISTS player_data (" +
+                        "uuid TEXT PRIMARY KEY," +
+                        "autoTreeChopEnabled BOOLEAN," +
+                        "dailyUses INT," +
+                        "dailyBlocksBroken INT," +
+                        "lastUseDate TEXT);")) {
+            statement.executeUpdate();
             } catch (SQLException e) {
                 getLogger().warning("Error creating SQLite table: " + e.getMessage());
             }
-        } catch (SQLException e) {
-            getLogger().warning("Error creating SQLite table: " + e.getMessage());
-        }
     }
 
     private void loadConfig() {
@@ -84,8 +77,6 @@ public class PlayerConfig {
             }
         } catch (SQLException e) {
             getLogger().warning("Error loading player data from SQLite: " + e.getMessage());
-        } finally {
-            closeConnection(); // Close the connection after loading config
         }
     }
 
@@ -145,43 +136,16 @@ public class PlayerConfig {
     }
 
     private void updateConfig() {
-        try (Connection connection = openConnection()) {
-            try (PreparedStatement statement = connection.prepareStatement(
-                    "UPDATE player_data SET autoTreeChopEnabled = ?, dailyUses = ?, dailyBlocksBroken = ?, lastUseDate = ? WHERE uuid = ?")) {
-                statement.setBoolean(1, autoTreeChopEnabled);
-                statement.setInt(2, dailyUses);
-                statement.setInt(3, dailyBlocksBroken);
-                statement.setString(4, lastUseDate.toString());
-                statement.setString(5, playerUUID.toString());
-                statement.executeUpdate();
+        try (PreparedStatement statement = connection.prepareStatement(
+                "UPDATE player_data SET autoTreeChopEnabled = ?, dailyUses = ?, dailyBlocksBroken = ?, lastUseDate = ? WHERE uuid = ?")) {
+            statement.setBoolean(1, autoTreeChopEnabled);
+            statement.setInt(2, dailyUses);
+            statement.setInt(3, dailyBlocksBroken);
+            statement.setString(4, lastUseDate.toString());
+            statement.setString(5, playerUUID.toString());
+            statement.executeUpdate();
             } catch (SQLException e) {
                 getLogger().warning("Error updating player data in SQLite: " + e.getMessage());
             }
-        } catch (SQLException e) {
-            getLogger().warning("Error updating player data in SQLite: " + e.getMessage());
-        }
-    }
-
-    private Connection openConnection() {
-        try {
-            if (connection == null || connection.isClosed()) {
-                Class.forName("org.sqlite.JDBC");
-                String dbUrl = "jdbc:sqlite:plugins/AutoTreeChop/player_data.db";
-                connection = DriverManager.getConnection(dbUrl);
-            }
-        } catch (ClassNotFoundException | SQLException e) {
-            Bukkit.getLogger().log(Level.WARNING, "Error opening SQLite connection: " + e.getMessage());
-        }
-        return connection;
-    }
-
-    private void closeConnection() {
-        if (connection != null) {
-            try {
-                connection.close();
-            } catch (SQLException e) {
-                Bukkit.getLogger().log(Level.WARNING, "Error closing SQLite connection: " + e.getMessage());
-            }
-        }
     }
 }
