@@ -404,14 +404,11 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             event.setCancelled(true);
             checkedLocations.clear();
             if (stopChoppingIfNotConnected) {
-                chopTree(block, player);
-            } else {
                 chopTreeConnectedBlocks(block, player);
+            } else {
+                chopTree(block, player);
             }
             checkedLocations.clear();
-            chopTree(block, player);
-
-            addItemToInventoryOrDrop(player, material);
 
             playerConfig.incrementDailyUses();
         }
@@ -437,20 +434,6 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     // Shows a green particle effect indicating the block has been chopped
     private void showChopEffect(Player player, Block block) {
         player.getWorld().spawnParticle(org.bukkit.Particle.VILLAGER_HAPPY, block.getLocation().add(0.5, 0.5, 0.5), 50, 0.5, 0.5, 0.5, 0);
-    }
-
-    // Adds the item to the player's inventory if there's space, otherwise drops it in the world
-    private void addItemToInventoryOrDrop(Player player, Material material) {
-        Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
-            boolean hasEnoughSpace = hasEnoughSpace(player.getInventory(), material, 1);
-            Bukkit.getScheduler().runTask(this, () -> {
-                if (hasEnoughSpace) {
-                    player.getWorld().dropItem(player.getLocation(), new ItemStack(material));
-                } else {
-                    player.getInventory().addItem(new ItemStack(material));
-                }
-            });
-        });
     }
 
     // Check if player have enough space to store material
