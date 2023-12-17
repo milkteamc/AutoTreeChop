@@ -1,5 +1,6 @@
 package org.milkteamc.autotreechop;
 
+import cn.handyplus.lib.adapter.HandySchedulerUtil;
 import com.jeff_media.updatechecker.UpdateCheckSource;
 import com.jeff_media.updatechecker.UpdateChecker;
 import com.jeff_media.updatechecker.UserAgentBuilder;
@@ -27,7 +28,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
-import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
@@ -35,6 +35,8 @@ import org.jetbrains.annotations.NotNull;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+
+import static cn.handyplus.lib.adapter.HandySchedulerUtil.isFolia;
 
 public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecutor {
 
@@ -79,17 +81,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     private AudienceProvider audienceProvider;
     private Translations translations;
 
-    private static final String SPIGOT_RESOURCE_ID = "20053";
-
-    // Check if server is using Folia
-    private static Boolean isFolia() {
-        try {
-            Class.forName("io.papermc.paper.threadedregions.ThreadedRegionizer");
-        } catch (Exception e) {
-            return false;
-        }
-        return true;
-    }
+    private static final String SPIGOT_RESOURCE_ID = "113071";
 
     public void sendMessage(CommandSender sender, ComponentLike message) {
         if (sender instanceof Player player) {
@@ -360,6 +352,8 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             getLogger().warning("PlaceholderAPI not found. Placeholder expansion for AutoTreeChop will not work.");
         }
 
+        HandySchedulerUtil.init(this);
+
         if (!isFolia()) {
             CheckUpdate();
         } else {
@@ -436,21 +430,6 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         player.getWorld().spawnParticle(org.bukkit.Particle.VILLAGER_HAPPY, block.getLocation().add(0.5, 0.5, 0.5), 50, 0.5, 0.5, 0.5, 0);
     }
 
-    // Check if player have enough space to store material
-    private boolean hasEnoughSpace(Inventory inventory, Material material, int quantity) {
-        int availableSpace = 0;
-
-        for (ItemStack item : inventory.getContents()) {
-            if (item == null || item.getType() == Material.AIR) {
-                availableSpace += material.getMaxStackSize();
-            } else if (item.getType() == material && item.getAmount() < item.getMaxStackSize()) {
-                availableSpace += (item.getMaxStackSize() - item.getAmount());
-            }
-        }
-
-        return availableSpace >= quantity;
-    }
-
     // Method to reduce the durability value of tools
     private void damageTool(Player player, int amount) {
         ItemStack tool = player.getInventory().getItemInMainHand();
@@ -485,20 +464,22 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             damageTool(player, 1);
         }
 
-        for (int yOffset = -1; yOffset <= 1; yOffset++) {
-            for (int xOffset = -1; xOffset <= 1; xOffset++) {
-                for (int zOffset = -1; zOffset <= 1; zOffset++) {
-                    if (xOffset == 0 && yOffset == 0 && zOffset == 0) {
-                        continue;
+        HandySchedulerUtil.runTaskAsynchronously(() -> {
+            for (int yOffset = -1; yOffset <= 1; yOffset++) {
+                for (int xOffset = -1; xOffset <= 1; xOffset++) {
+                    for (int zOffset = -1; zOffset <= 1; zOffset++) {
+                        if (xOffset == 0 && yOffset == 0 && zOffset == 0) {
+                            continue;
+                        }
+                        Block relativeBlock = block.getRelative(xOffset, yOffset, zOffset);
+                        if (stopChoppingIfDifferentTypes && !isSameType(block.getType(), relativeBlock.getType())) {
+                            continue;
+                        }
+                        HandySchedulerUtil.runTask(() -> chopTree(relativeBlock, player));
                     }
-                    Block relativeBlock = block.getRelative(xOffset, yOffset, zOffset);
-                    if (stopChoppingIfDifferentTypes && !isSameType(block.getType(), relativeBlock.getType())) {
-                        continue;
-                    }
-                    chopTree(relativeBlock, player);
                 }
             }
-        }
+        });
     }
 
     private void chopTreeConnectedBlocks(Block block, Player player) {
@@ -520,20 +501,22 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             damageTool(player, 1);
         }
 
-        for (int yOffset = -1; yOffset <= 1; yOffset++) {
-            for (int xOffset = -1; xOffset <= 1; xOffset++) {
-                for (int zOffset = -1; zOffset <= 1; zOffset++) {
-                    if (xOffset == 0 && yOffset == 0 && zOffset == 0) {
-                        continue;
+        HandySchedulerUtil.runTaskAsynchronously(() -> {
+            for (int yOffset = -1; yOffset <= 1; yOffset++) {
+                for (int xOffset = -1; xOffset <= 1; xOffset++) {
+                    for (int zOffset = -1; zOffset <= 1; zOffset++) {
+                        if (xOffset == 0 && yOffset == 0 && zOffset == 0) {
+                            continue;
+                        }
+                        Block relativeBlock = block.getRelative(xOffset, yOffset, zOffset);
+                        if (stopChoppingIfDifferentTypes && !isSameType(block.getType(), relativeBlock.getType())) {
+                            continue;
+                        }
+                        HandySchedulerUtil.runTask(() -> chopTree(relativeBlock, player));
                     }
-                    Block relativeBlock = block.getRelative(xOffset, yOffset, zOffset);
-                    if (stopChoppingIfDifferentTypes && !isSameType(block.getType(), relativeBlock.getType())) {
-                        continue;
-                    }
-                    chopTreeConnectedBlocks(relativeBlock, player);
                 }
             }
-        }
+        });
     }
 
     // Add a new method to check if two block types are the same
