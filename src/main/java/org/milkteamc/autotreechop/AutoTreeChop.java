@@ -412,7 +412,8 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         new UpdateChecker(this, UpdateCheckSource.SPIGOT, SPIGOT_RESOURCE_ID) // You can also use Spiget instead of Spigot - Spiget's API is usually much faster up to date.
                 .checkEveryXHours(24) // Check every 24 hours
                 .setDonationLink("https://ko-fi.com/maoyue")
-                .setChangelogLink(SPIGOT_RESOURCE_ID) // Same as for the Download link: URL or Spigot Resource ID
+                .setChangelogLink("https://modrinth.com/plugin/autotreechop/version/latest") // Same as for the Download link: URL or Spigot Resource ID
+                .setDownloadLink("https://modrinth.com/plugin/autotreechop/version/latest")
                 .setNotifyOpsOnJoin(true) // Notify OPs on Join when a new version is found (default)
                 .setNotifyByPermissionOnJoin("autotreechop.updatechecker") // Also notify people on join with this permission
                 .setUserAgent(new UserAgentBuilder().addPluginNameAndVersion())
