@@ -34,7 +34,10 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
 import java.util.*;
+import java.util.logging.Level;
 
 import static cn.handyplus.lib.adapter.HandySchedulerUtil.isFolia;
 
@@ -354,10 +357,11 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
         HandySchedulerUtil.init(this);
 
-        if (!isFolia()) {
-            CheckUpdate();
-        } else {
+        if (isFolia()) {
             getLogger().warning("It seen you are using Folia, some function may not work.");
+            foliaUpdateChecker();
+        } else {
+            spigotUpdateChecker();
         }
         api = new AutoTreeChopAPI(this);
         playerConfigs = new HashMap<>();
@@ -408,7 +412,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         }
     }
 
-    private void CheckUpdate() {
+    private void spigotUpdateChecker() {
         new UpdateChecker(this, UpdateCheckSource.SPIGOT, SPIGOT_RESOURCE_ID) // You can also use Spiget instead of Spigot - Spiget's API is usually much faster up to date.
                 .checkEveryXHours(24) // Check every 24 hours
                 .setDonationLink("https://ko-fi.com/maoyue")
@@ -418,6 +422,44 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                 .setNotifyByPermissionOnJoin("autotreechop.updatechecker") // Also notify people on join with this permission
                 .setUserAgent(new UserAgentBuilder().addPluginNameAndVersion())
                 .checkNow(); // And check right now
+    }
+
+    private void foliaUpdateChecker() {
+        try {
+
+            if (this.getDescription().getVersion().contains("SNAPSHOT")) {
+                this.getLogger().warning("You are using a beta version!");
+                return;
+            }
+
+            InputStream inputStream = new URL(("https://api.spigotmc.org/legacy/update.php?resource=113071"))
+                    .openStream();
+            Scanner scanner = new Scanner(inputStream);
+            String version = scanner.next();
+
+            scanner.close();
+
+            String[] currentParts = this.getDescription().getVersion().split("\\.");
+
+            String[] latestParts = version.split("\\.");
+
+            int minLength = Math.min(currentParts.length, latestParts.length);
+
+            for (int i = 0; i < minLength; i++) {
+
+                int currentPart = Integer.parseInt(currentParts[i]);
+
+                int latestPart = Integer.parseInt(latestParts[i]);
+
+                if (currentPart < latestPart) {
+                    this.getLogger().warning("A new update available: " + version);
+                    this.getLogger().warning("Download now: https://modrinth.com/plugin/autotreechop/version/latest/");
+                }
+            }
+        } catch (Exception e) {
+            this.getLogger().log(Level.WARNING,
+                    ChatColor.RED + "Cannot check for plugin version: " + e.getMessage());
+        }
     }
 
     // Sends a message to the player and shows a red particle effect indicating the block limit has been reached
@@ -465,7 +507,25 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             damageTool(player, 1);
         }
 
-        HandySchedulerUtil.runTaskAsynchronously(() -> {
+        // Async in Bukkit, but use sync method in Folia, because async system cause some issues for Folia.
+        if (!isFolia()) {
+            HandySchedulerUtil.runTaskAsynchronously(() -> {
+                for (int yOffset = -1; yOffset <= 1; yOffset++) {
+                    for (int xOffset = -1; xOffset <= 1; xOffset++) {
+                        for (int zOffset = -1; zOffset <= 1; zOffset++) {
+                            if (xOffset == 0 && yOffset == 0 && zOffset == 0) {
+                                continue;
+                            }
+                            Block relativeBlock = block.getRelative(xOffset, yOffset, zOffset);
+                            if (stopChoppingIfDifferentTypes && !isSameType(block.getType(), relativeBlock.getType())) {
+                                continue;
+                            }
+                            HandySchedulerUtil.runTask(() -> chopTree(relativeBlock, player));
+                        }
+                    }
+                }
+            });
+        } else {
             for (int yOffset = -1; yOffset <= 1; yOffset++) {
                 for (int xOffset = -1; xOffset <= 1; xOffset++) {
                     for (int zOffset = -1; zOffset <= 1; zOffset++) {
@@ -476,11 +536,11 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                         if (stopChoppingIfDifferentTypes && !isSameType(block.getType(), relativeBlock.getType())) {
                             continue;
                         }
-                        HandySchedulerUtil.runTask(() -> chopTree(relativeBlock, player));
+                        chopTree(relativeBlock, player);
                     }
                 }
             }
-        });
+        }
     }
 
     private void chopTreeConnectedBlocks(Block block, Player player) {
@@ -502,7 +562,24 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             damageTool(player, 1);
         }
 
-        HandySchedulerUtil.runTaskAsynchronously(() -> {
+        if (!isFolia()) {
+            HandySchedulerUtil.runTaskAsynchronously(() -> {
+                for (int yOffset = -1; yOffset <= 1; yOffset++) {
+                    for (int xOffset = -1; xOffset <= 1; xOffset++) {
+                        for (int zOffset = -1; zOffset <= 1; zOffset++) {
+                            if (xOffset == 0 && yOffset == 0 && zOffset == 0) {
+                                continue;
+                            }
+                            Block relativeBlock = block.getRelative(xOffset, yOffset, zOffset);
+                            if (stopChoppingIfDifferentTypes && !isSameType(block.getType(), relativeBlock.getType())) {
+                                continue;
+                            }
+                            HandySchedulerUtil.runTask(() -> chopTreeConnectedBlocks(relativeBlock, player));
+                        }
+                    }
+                }
+            });
+        } else {
             for (int yOffset = -1; yOffset <= 1; yOffset++) {
                 for (int xOffset = -1; xOffset <= 1; xOffset++) {
                     for (int zOffset = -1; zOffset <= 1; zOffset++) {
@@ -513,11 +590,11 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                         if (stopChoppingIfDifferentTypes && !isSameType(block.getType(), relativeBlock.getType())) {
                             continue;
                         }
-                        HandySchedulerUtil.runTask(() -> chopTree(relativeBlock, player));
+                        chopTreeConnectedBlocks(relativeBlock, player);
                     }
                 }
             }
-        });
+        }
     }
 
     // Add a new method to check if two block types are the same
