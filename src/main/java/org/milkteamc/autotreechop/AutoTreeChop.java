@@ -94,6 +94,24 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         audienceProvider.console().sendMessage(message);
     }
 
+    private static final List<String> SUPPORTED_VERSIONS = Arrays.asList(
+            "1.20.4-R0.1-SNAPSHOT",
+            "1.20.3-R0.1-SNAPSHOT",
+            "1.20.2-R0.1-SNAPSHOT",
+            "1.20.1-R0.1-SNAPSHOT",
+            "1.20-R0.1-SNAPSHOT",
+            "1.19.4-R0.1-SNAPSHOT",
+            "1.19.3-R0.1-SNAPSHOT",
+            "1.19.2-R0.1-SNAPSHOT",
+            "1.19.1-R0.1-SNAPSHOT",
+            "1.19-R0.1-SNAPSHOT",
+            "1.18.2-R0.1-SNAPSHOT",
+            "1.18.1-R0.1-SNAPSHOT",
+            "1.18-R0.1-SNAPSHOT",
+            "1.17.1-R0.1-SNAPSHOT",
+            "1.17-R0.1-SNAPSHOT"
+    );
+
     private FileConfiguration loadConfig() {
         File configFile = new File(getDataFolder(), "config.yml");
         FileConfiguration defaultConfig;
@@ -308,6 +326,12 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
     @Override
     public void onEnable() {
+        if (!SUPPORTED_VERSIONS.contains(this.getServer().getBukkitVersion())) {
+            getLogger().warning("Your Minecraft version is may have some issues, we only fully support "
+                    + String.join(", ", SUPPORTED_VERSIONS));
+            getLogger().warning("Report any issue to our GitHub: https://github.com/milkteamc/AutoTreeChop/issues");
+        }
+
         org.milkteamc.autotreechop.Metrics metrics = new Metrics(this, 20053); //bstats
 
         getServer().getPluginManager().registerEvents(this, this);
