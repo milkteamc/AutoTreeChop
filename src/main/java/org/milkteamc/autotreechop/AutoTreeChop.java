@@ -4,18 +4,17 @@ import cn.handyplus.lib.adapter.HandySchedulerUtil;
 import com.jeff_media.updatechecker.UpdateCheckSource;
 import com.jeff_media.updatechecker.UpdateChecker;
 import com.jeff_media.updatechecker.UserAgentBuilder;
-import de.cubbossa.translations.Message;
-import de.cubbossa.translations.MessageBuilder;
-import de.cubbossa.translations.Translations;
-import de.cubbossa.translations.TranslationsFramework;
-import de.cubbossa.translations.persistent.PropertiesMessageStorage;
-import de.cubbossa.translations.persistent.PropertiesStyleStorage;
+import de.cubbossa.tinytranslations.Message;
+import de.cubbossa.tinytranslations.MessageBuilder;
+import de.cubbossa.tinytranslations.TinyTranslations;
+import de.cubbossa.tinytranslations.Translator;
+import de.cubbossa.tinytranslations.persistent.PropertiesMessageStorage;
+import de.cubbossa.tinytranslations.persistent.PropertiesStyleStorage;
 import net.kyori.adventure.platform.AudienceProvider;
 import net.kyori.adventure.platform.bukkit.BukkitAudiences;
 import net.kyori.adventure.text.ComponentLike;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
-import net.kyori.adventure.text.minimessage.tag.resolver.Formatter;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import org.bukkit.*;
 import org.bukkit.block.Block;
@@ -57,17 +56,17 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     public static final Message HIT_MAX_BLOCK_MESSAGE = new MessageBuilder("hitmaxblock")
             .withDefault("<negative>You have reached your daily block breaking limit.</negative>").build();
     public static final Message USAGE_MESSAGE = new MessageBuilder("usage")
-            .withDefault("<positive>You have used the AutoTreeChop <current_uses>/<max_uses> times today.</positive>").build();
+            .withDefault("<positive>You have used the AutoTreeChop {current_uses}/{max_uses} times today.</positive>").build();
     public static final Message BLOCKS_BROKEN_MESSAGE = new MessageBuilder("blocks-broken")
-            .withDefault("<positive>You have broken <current_blocks>/<max_blocks> blocks today.</positive>").build();
+            .withDefault("<positive>You have broken {current_blocks}/{max_blocks} blocks today.</positive>").build();
     public static final Message ENABLED_BY_OTHER_MESSAGE = new MessageBuilder("enabledByOther")
-            .withDefault("<positive>Auto tree chopping enabled by <player>.</positive>").build();
+            .withDefault("<positive>Auto tree chopping enabled by {player}.</positive>").build();
     public static final Message ENABLED_FOR_OTHER_MESSAGE = new MessageBuilder("enabledForOther")
-            .withDefault("<positive>Auto tree chopping enabled for <player></positive>").build();
+            .withDefault("<positive>Auto tree chopping enabled for {player}</positive>").build();
     public static final Message DISABLED_BY_OTHER_MESSAGE = new MessageBuilder("disabledByOther")
-            .withDefault("<negative>Auto tree chopping disabled by <player>.</negative>").build();
+            .withDefault("<negative>Auto tree chopping disabled by {player}.</negative>").build();
     public static final Message DISABLED_FOR_OTHER_MESSAGE = new MessageBuilder("disabledForOther")
-            .withDefault("<negative>Auto tree chopping disabled for <player></negative>").build();
+            .withDefault("<negative>Auto tree chopping disabled for {player}</negative>").build();
     public static final Message CONSOLE_NAME = new MessageBuilder("consoleName")
             .withDefault("console").build();
 
@@ -82,7 +81,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
     private Locale locale;
     private AudienceProvider audienceProvider;
-    private Translations translations;
+    private Translator translations;
 
     private static final String SPIGOT_RESOURCE_ID = "113071";
 
@@ -222,14 +221,12 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                 // If the user provided "usage" as an argument
                 if (args.length > 0 && args[0].equalsIgnoreCase("usage")) {
                     playerConfig = getPlayerConfig(player.getUniqueId()); // Get playerConfig for sender
-                    sendMessage(player, USAGE_MESSAGE.formatted(
-                            Formatter.number("current_uses", playerConfig.getDailyUses()),
-                            Formatter.number("max_uses", maxUsesPerDay)
-                    ));
-                    sendMessage(player, BLOCKS_BROKEN_MESSAGE.formatted(
-                            Formatter.number("current_blocks", playerConfig.getDailyBlocksBroken()),
-                            Formatter.number("max_blocks", maxBlocksPerDay)
-                    ));
+                    sendMessage(player, USAGE_MESSAGE
+                            .insertNumber("current_uses", playerConfig.getDailyUses())
+                            .insertNumber("max_uses", maxUsesPerDay));
+                    sendMessage(player, BLOCKS_BROKEN_MESSAGE
+                            .insertNumber("current_blocks", playerConfig.getDailyBlocksBroken())
+                            .insertNumber("max_blocks", maxBlocksPerDay));
                     return true;
                 }
 
@@ -249,19 +246,11 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                             playerConfig.setAutoTreeChopEnabled(autoTreeChopEnabled);
 
                             if (autoTreeChopEnabled) {
-                                sendMessage(player, ENABLED_FOR_OTHER_MESSAGE.formatted(
-                                        Placeholder.parsed("player", targetPlayer.getName())
-                                ));
-                                sendMessage(targetPlayer, ENABLED_BY_OTHER_MESSAGE.formatted(
-                                        Placeholder.parsed("player", player.getName())
-                                ));
+                                sendMessage(player, ENABLED_FOR_OTHER_MESSAGE.insertString("player", targetPlayer.getName()));
+                                sendMessage(targetPlayer, ENABLED_BY_OTHER_MESSAGE.insertString("player", player.getName()));
                             } else {
-                                sendMessage(player, DISABLED_FOR_OTHER_MESSAGE.formatted(
-                                        Placeholder.parsed("player", targetPlayer.getName())
-                                ));
-                                sendMessage(targetPlayer, DISABLED_BY_OTHER_MESSAGE.formatted(
-                                        Placeholder.parsed("player", player.getName())
-                                ));
+                                sendMessage(player, DISABLED_FOR_OTHER_MESSAGE.insertString("player", targetPlayer.getName()));
+                                sendMessage(targetPlayer, DISABLED_BY_OTHER_MESSAGE.insertString("player", player.getName()));
                             }
                         } else {
                             sendMessage(player, NO_PERMISSION_MESSAGE);
@@ -297,19 +286,11 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                         playerConfig.setAutoTreeChopEnabled(autoTreeChopEnabled);
 
                         if (autoTreeChopEnabled) {
-                            sendMessage(sender, ENABLED_FOR_OTHER_MESSAGE.formatted(
-                                    Placeholder.parsed("player", targetPlayer.getName())
-                            ));
-                            sendMessage(targetPlayer, ENABLED_BY_OTHER_MESSAGE.formatted(
-                                    Placeholder.component("player", CONSOLE_NAME)
-                            ));
+                            sendMessage(sender, ENABLED_FOR_OTHER_MESSAGE.insertString("player", targetPlayer.getName()));
+                            sendMessage(targetPlayer, ENABLED_BY_OTHER_MESSAGE.insertComponent("player", CONSOLE_NAME));
                         } else {
-                            sendMessage(sender, DISABLED_FOR_OTHER_MESSAGE.formatted(
-                                    Placeholder.parsed("player", targetPlayer.getName())
-                            ));
-                            sendMessage(targetPlayer, DISABLED_BY_OTHER_MESSAGE.formatted(
-                                    Placeholder.component("player", CONSOLE_NAME)
-                            ));
+                            sendMessage(sender, DISABLED_FOR_OTHER_MESSAGE.insertString("player", targetPlayer.getName()));
+                            sendMessage(targetPlayer, DISABLED_BY_OTHER_MESSAGE.insertComponent("player", CONSOLE_NAME));
                         }
                     } else {
                         getLogger().warning("Player not found: " + args[1]);
@@ -341,8 +322,8 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         loadConfig();
 
         audienceProvider = BukkitAudiences.create(this);
-        TranslationsFramework.enable(new File(getDataFolder(), "/.."));
-        translations = TranslationsFramework.application("AutoTreeChop");
+        TinyTranslations.enable(new File(getDataFolder(), "/.."));
+        translations = TinyTranslations.application("AutoTreeChop");
         // always use the configured locale, no matter what user.
         translations.setLocaleProvider(audience -> locale == null ? Locale.ENGLISH : locale);
 
@@ -351,7 +332,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
         // Register all messages from this class and save them into an en.properties and a de.properties.
         // If already exists, this will only write missing values into these files.
-        translations.addMessages(TranslationsFramework.messageFieldsFromClass(AutoTreeChop.class));
+        translations.addMessages(TinyTranslations.messageFieldsFromClass(AutoTreeChop.class));
         translations.saveLocale(Locale.ENGLISH);
         saveResource("lang/de.properties", false);
         saveResource("lang/zh.properties", false);
