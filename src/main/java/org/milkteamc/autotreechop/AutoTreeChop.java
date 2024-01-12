@@ -15,7 +15,6 @@ import net.kyori.adventure.platform.bukkit.BukkitAudiences;
 import net.kyori.adventure.text.ComponentLike;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
-import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.command.Command;
@@ -406,11 +405,9 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
             event.setCancelled(true);
             checkedLocations.clear();
-            if (stopChoppingIfNotConnected) {
-                chopTreeConnectedBlocks(block, player);
-            } else {
-                chopTree(block, player);
-            }
+
+            chopTree(block, player, stopChoppingIfNotConnected);
+
             checkedLocations.clear();
 
             playerConfig.incrementDailyUses();
@@ -493,24 +490,8 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
     private Set<Location> checkedLocations = new HashSet<>();
 
-    private void chopTree(Block block, Player player) {
-        UUID playerUUID = player.getUniqueId();
-        PlayerConfig playerConfig = getPlayerConfig(playerUUID);
-        if (checkedLocations.contains(block.getLocation())) {
-            return;
-        }
-        checkedLocations.add(block.getLocation());
-
-        if (isLog(block.getType())) {
-            block.breakNaturally();
-        } else {
-            return;
-        }
-
-        playerConfig.incrementDailyBlocksBroken();
-        if (toolDamage) {
-            damageTool(player, 1);
-        }
+    private void chopTree(Block block, Player player, boolean ConnectedBlocks) {
+        if (chopTreeInit(block, player)) return;
 
         // Async in Bukkit, but use sync method in Folia, because async system cause some issues for Folia.
         if (!isFolia()) {
@@ -525,7 +506,12 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                             if (stopChoppingIfDifferentTypes && !isSameType(block.getType(), relativeBlock.getType())) {
                                 continue;
                             }
-                            HandySchedulerUtil.runTask(() -> chopTree(relativeBlock, player));
+                            // Check if the relative block is connected to the original block.
+                            if (ConnectedBlocks && !isBlockConnected(block, relativeBlock)) {
+                                continue;
+                            }
+
+                            HandySchedulerUtil.runTask(() -> chopTree(relativeBlock, player, ConnectedBlocks));
                         }
                     }
                 }
@@ -541,65 +527,51 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                         if (stopChoppingIfDifferentTypes && !isSameType(block.getType(), relativeBlock.getType())) {
                             continue;
                         }
-                        chopTree(relativeBlock, player);
+                        // Check if the relative block is connected to the original block.
+                        if (ConnectedBlocks && !isBlockConnected(block, relativeBlock)) {
+                            continue;
+                        }
+
+                        chopTree(relativeBlock, player, ConnectedBlocks);
                     }
                 }
             }
         }
     }
 
-    private void chopTreeConnectedBlocks(Block block, Player player) {
+    // Check if the two blocks are adjacent to each other.
+    private boolean isBlockConnected(Block block1, Block block2) {
+        if (block1.getX() == block2.getX() && block1.getY() == block2.getY() && Math.abs(block1.getZ() - block2.getZ()) == 1) {
+            return true;
+        }
+        if (block1.getX() == block2.getX() && Math.abs(block1.getY() - block2.getY()) == 1 && block1.getZ() == block2.getZ()) {
+            return true;
+        }
+        if (Math.abs(block1.getX() - block2.getX()) == 1 && block1.getY() == block2.getY() && block1.getZ() == block2.getZ()) {
+            return true;
+        }
+        return false;
+    }
+
+    private boolean chopTreeInit(Block block, Player player) {
         UUID playerUUID = player.getUniqueId();
         PlayerConfig playerConfig = getPlayerConfig(playerUUID);
         if (checkedLocations.contains(block.getLocation())) {
-            return;
+            return true;
         }
         checkedLocations.add(block.getLocation());
 
         if (isLog(block.getType())) {
             block.breakNaturally();
         } else {
-            return;
+            return true;
         }
 
         playerConfig.incrementDailyBlocksBroken();
         if (toolDamage) {
             damageTool(player, 1);
         }
-
-        if (!isFolia()) {
-            HandySchedulerUtil.runTaskAsynchronously(() -> {
-                for (int yOffset = -1; yOffset <= 1; yOffset++) {
-                    for (int xOffset = -1; xOffset <= 1; xOffset++) {
-                        for (int zOffset = -1; zOffset <= 1; zOffset++) {
-                            if (xOffset == 0 && yOffset == 0 && zOffset == 0) {
-                                continue;
-                            }
-                            Block relativeBlock = block.getRelative(xOffset, yOffset, zOffset);
-                            if (stopChoppingIfDifferentTypes && !isSameType(block.getType(), relativeBlock.getType())) {
-                                continue;
-                            }
-                            HandySchedulerUtil.runTask(() -> chopTreeConnectedBlocks(relativeBlock, player));
-                        }
-                    }
-                }
-            });
-        } else {
-            for (int yOffset = -1; yOffset <= 1; yOffset++) {
-                for (int xOffset = -1; xOffset <= 1; xOffset++) {
-                    for (int zOffset = -1; zOffset <= 1; zOffset++) {
-                        if (xOffset == 0 && yOffset == 0 && zOffset == 0) {
-                            continue;
-                        }
-                        Block relativeBlock = block.getRelative(xOffset, yOffset, zOffset);
-                        if (stopChoppingIfDifferentTypes && !isSameType(block.getType(), relativeBlock.getType())) {
-                            continue;
-                        }
-                        chopTreeConnectedBlocks(relativeBlock, player);
-                    }
-                }
-            }
-        }
+        return false;
     }
 
     // Add a new method to check if two block types are the same
