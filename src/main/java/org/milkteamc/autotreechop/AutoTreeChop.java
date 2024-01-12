@@ -292,7 +292,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                             sendMessage(targetPlayer, DISABLED_BY_OTHER_MESSAGE.insertComponent("player", CONSOLE_NAME));
                         }
                     } else {
-                        getLogger().warning("Player not found: " + args[1]);
+                        getLogger().warning("Player not found: " + args[0]);
                     }
                     return true;
                 } else {
