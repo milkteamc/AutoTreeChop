@@ -19,6 +19,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import org.bukkit.*;
 import org.bukkit.block.Block;
+import org.bukkit.block.data.BlockData;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -390,7 +391,8 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
         Block block = event.getBlock();
         Material material = block.getType();
-        Location location = event.getBlock().getLocation();
+        Location location = block.getLocation();
+        BlockData blockData = block.getBlockData();
 
         if (playerConfig.isAutoTreeChopEnabled() && isLog(material)) {
 
@@ -412,7 +414,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             event.setCancelled(true);
             checkedLocations.clear();
 
-            chopTree(block, player, stopChoppingIfNotConnected, location, material);
+            chopTree(block, player, stopChoppingIfNotConnected, location, material, blockData);
 
             checkedLocations.clear();
 
@@ -496,7 +498,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
     private Set<Location> checkedLocations = new HashSet<>();
 
-    private void chopTree(Block block, Player player, boolean ConnectedBlocks,Location location, Material material) {
+    private void chopTree(Block block, Player player, boolean ConnectedBlocks, Location location, Material material, BlockData blockData) {
         if (chopTreeInit(block, player)) return;
 
         // Async in Bukkit, but use sync method in Folia, because async system cause some issues for Folia.
@@ -517,8 +519,8 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                                 continue;
                             }
 
-                            coiApi.logRemoval(String.valueOf(player), location, material, null);
-                            HandySchedulerUtil.runTask(() -> chopTree(relativeBlock, player, ConnectedBlocks, location, material));
+                            coiApi.logRemoval(String.valueOf(player), location, material, blockData);
+                            HandySchedulerUtil.runTask(() -> chopTree(relativeBlock, player, ConnectedBlocks, location, material, blockData));
                         }
                     }
                 }
@@ -539,7 +541,8 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                             continue;
                         }
 
-                        chopTree(relativeBlock, player, ConnectedBlocks, location, material);
+                        coiApi.logRemoval(String.valueOf(player), location, material, blockData);
+                        chopTree(relativeBlock, player, ConnectedBlocks, location, material, blockData);
                     }
                 }
             }
