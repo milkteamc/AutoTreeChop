@@ -501,6 +501,9 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     private void chopTree(Block block, Player player, boolean ConnectedBlocks, Location location, Material material, BlockData blockData) {
         if (chopTreeInit(block, player)) return;
 
+        // CoreProtect logging
+        coiApi.logRemoval(String.valueOf(player), location, material, blockData);
+
         // Async in Bukkit, but use sync method in Folia, because async system cause some issues for Folia.
         if (!isFolia()) {
             HandySchedulerUtil.runTaskAsynchronously(() -> {
@@ -519,7 +522,6 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                                 continue;
                             }
 
-                            coiApi.logRemoval(String.valueOf(player), location, material, blockData);
                             HandySchedulerUtil.runTask(() -> chopTree(relativeBlock, player, ConnectedBlocks, location, material, blockData));
                         }
                     }
@@ -541,7 +543,6 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                             continue;
                         }
 
-                        coiApi.logRemoval(String.valueOf(player), location, material, blockData);
                         chopTree(relativeBlock, player, ConnectedBlocks, location, material, blockData);
                     }
                 }
