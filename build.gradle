@@ -1,5 +1,6 @@
 plugins {
     id 'java'
+    id 'maven-publish'
     id 'com.github.johnrengelman.shadow' version '8.1.1'
     id 'xyz.jpenilla.run-paper' version "2.2.2"
 }
@@ -23,6 +24,9 @@ repositories {
     maven {
         url = "https://nexus.leonardbausenwein.de/repository/maven-public/"
     }
+    maven {
+        url = "https://maven.playpro.com/"
+    }
 }
 
 dependencies {
@@ -34,6 +38,7 @@ dependencies {
     compileOnly "net.kyori:adventure-api:4.14.0"
     compileOnly "net.kyori:adventure-platform-bukkit:4.3.1"
     compileOnly "net.kyori:adventure-text-minimessage:4.14.0"
+    compileOnly "net.coreprotect:coreprotect:22.2"
 }
 
 def targetJavaVersion = 17

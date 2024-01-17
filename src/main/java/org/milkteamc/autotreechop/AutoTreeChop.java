@@ -10,6 +10,8 @@ import de.cubbossa.tinytranslations.TinyTranslations;
 import de.cubbossa.tinytranslations.Translator;
 import de.cubbossa.tinytranslations.persistent.PropertiesMessageStorage;
 import de.cubbossa.tinytranslations.persistent.PropertiesStyleStorage;
+import net.coreprotect.CoreProtect;
+import net.coreprotect.CoreProtectAPI;
 import net.kyori.adventure.platform.AudienceProvider;
 import net.kyori.adventure.platform.bukkit.BukkitAudiences;
 import net.kyori.adventure.text.ComponentLike;
@@ -27,6 +29,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 
@@ -83,6 +86,8 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     private Translator translations;
 
     private static final String SPIGOT_RESOURCE_ID = "113071";
+
+    CoreProtectAPI coiApi = getCoreProtect();
 
     public void sendMessage(CommandSender sender, ComponentLike message) {
         if (sender instanceof Player player) {
@@ -385,6 +390,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
         Block block = event.getBlock();
         Material material = block.getType();
+        Location location = event.getBlock().getLocation();
 
         if (playerConfig.isAutoTreeChopEnabled() && isLog(material)) {
 
@@ -406,7 +412,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             event.setCancelled(true);
             checkedLocations.clear();
 
-            chopTree(block, player, stopChoppingIfNotConnected);
+            chopTree(block, player, stopChoppingIfNotConnected, location, material);
 
             checkedLocations.clear();
 
@@ -490,7 +496,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
     private Set<Location> checkedLocations = new HashSet<>();
 
-    private void chopTree(Block block, Player player, boolean ConnectedBlocks) {
+    private void chopTree(Block block, Player player, boolean ConnectedBlocks,Location location, Material material) {
         if (chopTreeInit(block, player)) return;
 
         // Async in Bukkit, but use sync method in Folia, because async system cause some issues for Folia.
@@ -511,7 +517,8 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                                 continue;
                             }
 
-                            HandySchedulerUtil.runTask(() -> chopTree(relativeBlock, player, ConnectedBlocks));
+                            coiApi.logRemoval(String.valueOf(player), location, material, null);
+                            HandySchedulerUtil.runTask(() -> chopTree(relativeBlock, player, ConnectedBlocks, location, material));
                         }
                     }
                 }
@@ -532,7 +539,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                             continue;
                         }
 
-                        chopTree(relativeBlock, player, ConnectedBlocks);
+                        chopTree(relativeBlock, player, ConnectedBlocks, location, material);
                     }
                 }
             }
@@ -606,6 +613,28 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
     public int getPlayerDailyBlocksBroken(UUID playerUUID) {
         return getPlayerConfig(playerUUID).getDailyBlocksBroken();
+    }
+
+    private CoreProtectAPI getCoreProtect() {
+        Plugin plugin = getServer().getPluginManager().getPlugin("CoreProtect");
+
+        // Check that CoreProtect is loaded
+        if (plugin == null || !(plugin instanceof CoreProtect)) {
+            return null;
+        }
+
+        // Check that the API is enabled
+        CoreProtectAPI CoreProtect = ((CoreProtect) plugin).getAPI();
+        if (CoreProtect.isEnabled() == false) {
+            return null;
+        }
+
+        // Check that a compatible version of the API is loaded
+        if (CoreProtect.APIVersion() < 9) {
+            return null;
+        }
+
+        return CoreProtect;
     }
 
     public AutoTreeChopAPI getAPI() {
