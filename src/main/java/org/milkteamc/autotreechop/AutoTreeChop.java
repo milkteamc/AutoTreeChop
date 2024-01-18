@@ -15,7 +15,6 @@ import de.cubbossa.tinytranslations.persistent.PropertiesMessageStorage;
 import de.cubbossa.tinytranslations.persistent.PropertiesStyleStorage;
 import me.angeschossen.lands.api.LandsIntegration;
 import me.angeschossen.lands.api.land.LandWorld;
-import net.coreprotect.CoreProtect;
 import net.coreprotect.CoreProtectAPI;
 import net.kyori.adventure.platform.AudienceProvider;
 import net.kyori.adventure.platform.bukkit.BukkitAudiences;
@@ -35,7 +34,6 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 
@@ -54,7 +52,6 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     private AutoTreeChopAPI api;
     public static final Message noResidencePermissions = new MessageBuilder("noResidencePermissions")
             .withDefault("<negative>You don't have permission to use AutoTreeChop at here.</negative>").build();
-
     public static final Message ENABLED_MESSAGE = new MessageBuilder("enabled")
             .withDefault("<positive>Auto tree chopping enabled.</positive>").build();
     public static final Message DISABLED_MESSAGE = new MessageBuilder("disabled")
@@ -79,7 +76,6 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             .withDefault("<negative>Auto tree chopping disabled for {player}</negative>").build();
     public static final Message CONSOLE_NAME = new MessageBuilder("consoleName")
             .withDefault("console").build();
-    LandsIntegration landsapi;
 
     private boolean VisualEffect;
     private boolean toolDamage;
@@ -96,8 +92,6 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     private Translator translations;
 
     private static final String SPIGOT_RESOURCE_ID = "113071";
-
-    CoreProtectAPI coiApi = getCoreProtect();
 
     public void sendMessage(CommandSender sender, ComponentLike message) {
         if (sender instanceof Player player) {
@@ -392,10 +386,6 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         }
         api = new AutoTreeChopAPI(this);
         playerConfigs = new HashMap<>();
-
-        if (this.getServer().getPluginManager().getPlugin("Lands") != null) {
-            landsapi = LandsIntegration.of(this);
-        }
     }
 
     @Override
@@ -520,15 +510,21 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     private Set<Location> checkedLocations = new HashSet<>();
 
     private void chopTree(Block block, Player player, boolean ConnectedBlocks, Location location, Material material, BlockData blockData) {
-        // Return if player don't have Residence permission in this area
-        if (!resCheck(player, location) || !landsCheck(player, location)) {
+        // Return if player don't have Residence/Lands permission in this area
+        if (!resCheck(player, location)) {
+            return;
+        }
+        if (!landsCheck(player, location)) {
             return;
         }
 
         if (chopTreeInit(block, player)) return;
 
         // CoreProtect logging
-        coiApi.logRemoval(String.valueOf(player), location, material, blockData);
+        if (getServer().getPluginManager().getPlugin("CoreProtect") != null) {
+            CoreProtectAPI coiApi = new CoreProtectAPI();
+            coiApi.logRemoval(String.valueOf(player), location, material, blockData);
+        }
 
         // Async in Bukkit, but use sync method in Folia, because async system cause some issues for Folia.
         if (!isFolia()) {
@@ -600,6 +596,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     // It will return true if player have permission, and vice versa.
     public boolean landsCheck(Player player, Location location) {
         if (this.getServer().getPluginManager().getPlugin("Lands") == null) { return true; }
+        LandsIntegration landsapi = LandsIntegration.of(this);
         LandWorld world = landsapi.getWorld(location.getWorld());
 
         if (world != null) { // Lands is enabled in this world
@@ -677,28 +674,6 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
     public int getPlayerDailyBlocksBroken(UUID playerUUID) {
         return getPlayerConfig(playerUUID).getDailyBlocksBroken();
-    }
-
-    private CoreProtectAPI getCoreProtect() {
-        Plugin plugin = getServer().getPluginManager().getPlugin("CoreProtect");
-
-        // Check that CoreProtect is loaded
-        if (!(plugin instanceof CoreProtect)) {
-            return null;
-        }
-
-        // Check that the API is enabled
-        CoreProtectAPI CoreProtect = ((CoreProtect) plugin).getAPI();
-        if (!CoreProtect.isEnabled()) {
-            return null;
-        }
-
-        // Check that a compatible version of the API is loaded
-        if (CoreProtect.APIVersion() < 9) {
-            return null;
-        }
-
-        return CoreProtect;
     }
 
     public AutoTreeChopAPI getAPI() {
