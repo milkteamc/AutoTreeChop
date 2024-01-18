@@ -1,6 +1,9 @@
 package org.milkteamc.autotreechop;
 
 import cn.handyplus.lib.adapter.HandySchedulerUtil;
+import com.bekvon.bukkit.residence.api.ResidenceApi;
+import com.bekvon.bukkit.residence.containers.Flags;
+import com.bekvon.bukkit.residence.protection.ClaimedResidence;
 import com.jeff_media.updatechecker.UpdateCheckSource;
 import com.jeff_media.updatechecker.UpdateChecker;
 import com.jeff_media.updatechecker.UserAgentBuilder;
@@ -10,6 +13,8 @@ import de.cubbossa.tinytranslations.TinyTranslations;
 import de.cubbossa.tinytranslations.Translator;
 import de.cubbossa.tinytranslations.persistent.PropertiesMessageStorage;
 import de.cubbossa.tinytranslations.persistent.PropertiesStyleStorage;
+import me.angeschossen.lands.api.LandsIntegration;
+import me.angeschossen.lands.api.land.LandWorld;
 import net.coreprotect.CoreProtect;
 import net.coreprotect.CoreProtectAPI;
 import net.kyori.adventure.platform.AudienceProvider;
@@ -47,6 +52,8 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
     private Map<UUID, PlayerConfig> playerConfigs;
     private AutoTreeChopAPI api;
+    public static final Message noResidencePermissions = new MessageBuilder("noResidencePermissions")
+            .withDefault("<negative>You don't have permission to use AutoTreeChop at here.</negative>").build();
 
     public static final Message ENABLED_MESSAGE = new MessageBuilder("enabled")
             .withDefault("<positive>Auto tree chopping enabled.</positive>").build();
@@ -72,6 +79,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             .withDefault("<negative>Auto tree chopping disabled for {player}</negative>").build();
     public static final Message CONSOLE_NAME = new MessageBuilder("consoleName")
             .withDefault("console").build();
+    LandsIntegration landsapi;
 
     private boolean VisualEffect;
     private boolean toolDamage;
@@ -81,6 +89,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
     private boolean stopChoppingIfNotConnected;
     private boolean stopChoppingIfDifferentTypes;
+    private String residenceFlag;
 
     private Locale locale;
     private AudienceProvider audienceProvider;
@@ -116,8 +125,8 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             "1.17-R0.1-SNAPSHOT"
     );
 
-    private FileConfiguration loadConfig() {
-        File configFile = new File(getDataFolder(), "config.yml");
+    @NotNull
+    private static FileConfiguration getDefaultConfig() {
         FileConfiguration defaultConfig;
 
         defaultConfig = new YamlConfiguration();
@@ -128,6 +137,13 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         defaultConfig.set("stopChoppingIfNotConnected", false);
         defaultConfig.set("stopChoppingIfDifferentTypes", false);
         defaultConfig.set("locale", Locale.ENGLISH);
+        defaultConfig.set("residenceFlag", "build");
+        return defaultConfig;
+    }
+
+    private FileConfiguration loadConfig() {
+        File configFile = new File(getDataFolder(), "config.yml");
+        FileConfiguration defaultConfig = getDefaultConfig();
 
         if (!configFile.exists()) {
             try {
@@ -161,13 +177,14 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         stopChoppingIfNotConnected = config.getBoolean("stopChoppingIfNotConnected");
         stopChoppingIfDifferentTypes = config.getBoolean("stopChoppingIfDifferentTypes");
         Object locale = config.get("locale");
+        residenceFlag = config.getString("residenceFlag");
         if (locale instanceof String s) {
             this.locale = Locale.forLanguageTag(s);
         }
         else if (locale instanceof Locale l) {
             this.locale = l;
         }
-      
+
         return config;
     }
 
@@ -375,6 +392,10 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         }
         api = new AutoTreeChopAPI(this);
         playerConfigs = new HashMap<>();
+
+        if (this.getServer().getPluginManager().getPlugin("Lands") != null) {
+            landsapi = LandsIntegration.of(this);
+        }
     }
 
     @Override
@@ -499,6 +520,11 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     private Set<Location> checkedLocations = new HashSet<>();
 
     private void chopTree(Block block, Player player, boolean ConnectedBlocks, Location location, Material material, BlockData blockData) {
+        // Return if player don't have Residence permission in this area
+        if (!resCheck(player, location) || !landsCheck(player, location)) {
+            return;
+        }
+
         if (chopTreeInit(block, player)) return;
 
         // CoreProtect logging
@@ -514,11 +540,11 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                                 continue;
                             }
                             Block relativeBlock = block.getRelative(xOffset, yOffset, zOffset);
-                            if (stopChoppingIfDifferentTypes && !isSameType(block.getType(), relativeBlock.getType())) {
+                            if (stopChoppingIfDifferentTypes && notSameType(block.getType(), relativeBlock.getType())) {
                                 continue;
                             }
                             // Check if the relative block is connected to the original block.
-                            if (ConnectedBlocks && !isBlockConnected(block, relativeBlock)) {
+                            if (ConnectedBlocks && blockNotConnected(block, relativeBlock)) {
                                 continue;
                             }
 
@@ -535,11 +561,11 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                             continue;
                         }
                         Block relativeBlock = block.getRelative(xOffset, yOffset, zOffset);
-                        if (stopChoppingIfDifferentTypes && !isSameType(block.getType(), relativeBlock.getType())) {
+                        if (stopChoppingIfDifferentTypes && notSameType(block.getType(), relativeBlock.getType())) {
                             continue;
                         }
                         // Check if the relative block is connected to the original block.
-                        if (ConnectedBlocks && !isBlockConnected(block, relativeBlock)) {
+                        if (ConnectedBlocks && blockNotConnected(block, relativeBlock)) {
                             continue;
                         }
 
@@ -550,18 +576,52 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         }
     }
 
-    // Check if the two blocks are adjacent to each other.
-    private boolean isBlockConnected(Block block1, Block block2) {
-        if (block1.getX() == block2.getX() && block1.getY() == block2.getY() && Math.abs(block1.getZ() - block2.getZ()) == 1) {
+    // Check if player have Residence permission in this area
+    // It will return true if player have permission, and vice versa.
+    private boolean resCheck(Player player, Location location) {
+        if (this.getServer().getPluginManager().getPlugin("Residence") == null) { return true; }
+
+        if (ResidenceApi.getResidenceManager().getByLoc(location) == null) { return true; }
+
+        ClaimedResidence residence = ResidenceApi.getResidenceManager().getByLoc(location);
+
+        if (residence.getOwnerUUID().equals(player.getUniqueId()) || player.isOp() || player.hasPermission("catchball.op")) { return true; }
+
+            if (!residence.getPermissions().playerHas(player, Flags.valueOf(residenceFlag.toLowerCase()) , true)) {
+
+                sendMessage(player, noResidencePermissions);
+
+                return false;
+            }
             return true;
+    }
+
+    // Check if player have Lands permission in this area
+    // It will return true if player have permission, and vice versa.
+    public boolean landsCheck(Player player, Location location) {
+        if (this.getServer().getPluginManager().getPlugin("Lands") == null) { return true; }
+        LandWorld world = landsapi.getWorld(location.getWorld());
+
+        if (world != null) { // Lands is enabled in this world
+            if (world.hasFlag(player, location, null, me.angeschossen.lands.api.flags.Flags.BLOCK_BREAK, false)) {
+                return true;
+            } else {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    // Check if the two blocks are adjacent to each other.
+    private boolean blockNotConnected(Block block1, Block block2) {
+        if (block1.getX() == block2.getX() && block1.getY() == block2.getY() && Math.abs(block1.getZ() - block2.getZ()) == 1) {
+            return false;
         }
         if (block1.getX() == block2.getX() && Math.abs(block1.getY() - block2.getY()) == 1 && block1.getZ() == block2.getZ()) {
-            return true;
+            return false;
         }
-        if (Math.abs(block1.getX() - block2.getX()) == 1 && block1.getY() == block2.getY() && block1.getZ() == block2.getZ()) {
-            return true;
-        }
-        return false;
+        return Math.abs(block1.getX() - block2.getX()) != 1 || block1.getY() != block2.getY() || block1.getZ() != block2.getZ();
     }
 
     private boolean chopTreeInit(Block block, Player player) {
@@ -586,8 +646,8 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     }
 
     // Add a new method to check if two block types are the same
-    private boolean isSameType(Material type1, Material type2) {
-        return type1 == type2;
+    private boolean notSameType(Material type1, Material type2) {
+        return type1 != type2;
     }
 
 
@@ -623,13 +683,13 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         Plugin plugin = getServer().getPluginManager().getPlugin("CoreProtect");
 
         // Check that CoreProtect is loaded
-        if (plugin == null || !(plugin instanceof CoreProtect)) {
+        if (!(plugin instanceof CoreProtect)) {
             return null;
         }
 
         // Check that the API is enabled
         CoreProtectAPI CoreProtect = ((CoreProtect) plugin).getAPI();
-        if (CoreProtect.isEnabled() == false) {
+        if (!CoreProtect.isEnabled()) {
             return null;
         }
 
