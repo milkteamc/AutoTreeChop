@@ -523,7 +523,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         // CoreProtect logging
         if (getServer().getPluginManager().getPlugin("CoreProtect") != null) {
             CoreProtectAPI coiApi = new CoreProtectAPI();
-            coiApi.logRemoval(String.valueOf(player), location, material, blockData);
+            coiApi.logRemoval(player.getName(), location, material, blockData);
         }
 
         // Async in Bukkit, but use sync method in Folia, because async system cause some issues for Folia.
