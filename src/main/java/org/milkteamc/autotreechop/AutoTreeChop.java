@@ -324,7 +324,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     @Override
     public void onEnable() {
         if (!SUPPORTED_VERSIONS.contains(this.getServer().getBukkitVersion())) {
-            getLogger().warning("Your Minecraft version is may have some issues, we only fully support "
+            getLogger().warning("Your Minecraft version may have some issues, we only fully support "
                     + String.join(", ", SUPPORTED_VERSIONS));
             getLogger().warning("Report any issue to our GitHub: https://github.com/milkteamc/AutoTreeChop/issues");
         }
@@ -520,12 +520,6 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
         if (chopTreeInit(block, player)) return;
 
-        // CoreProtect logging
-        if (getServer().getPluginManager().getPlugin("CoreProtect") != null) {
-            CoreProtectAPI coiApi = new CoreProtectAPI();
-            coiApi.logRemoval(player.getName(), location, material, blockData);
-        }
-
         // Async in Bukkit, but use sync method in Folia, because async system cause some issues for Folia.
         if (!isFolia()) {
             HandySchedulerUtil.runTaskAsynchronously(() -> {
@@ -542,6 +536,12 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                             // Check if the relative block is connected to the original block.
                             if (ConnectedBlocks && blockNotConnected(block, relativeBlock)) {
                                 continue;
+                            }
+                            // CoreProtect logging
+                            if (getServer().getPluginManager().getPlugin("CoreProtect") != null) {
+                                CoreProtectAPI coiApi = new CoreProtectAPI();
+                                Location relativeLocation = relativeBlock.getLocation();  // Use the relative block's location
+                                coiApi.logRemoval(player.getName(), relativeLocation, material, blockData);
                             }
 
                             HandySchedulerUtil.runTask(() -> chopTree(relativeBlock, player, ConnectedBlocks, location, material, blockData));
@@ -563,6 +563,12 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                         // Check if the relative block is connected to the original block.
                         if (ConnectedBlocks && blockNotConnected(block, relativeBlock)) {
                             continue;
+                        }
+                        // CoreProtect logging
+                        if (getServer().getPluginManager().getPlugin("CoreProtect") != null) {
+                            CoreProtectAPI coiApi = new CoreProtectAPI();
+                            Location relativeLocation = relativeBlock.getLocation();  // Use the relative block's location
+                            coiApi.logRemoval(player.getName(), relativeLocation, material, blockData);
                         }
 
                         chopTree(relativeBlock, player, ConnectedBlocks, location, material, blockData);
