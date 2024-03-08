@@ -48,8 +48,6 @@ import static cn.handyplus.lib.adapter.HandySchedulerUtil.isFolia;
 
 public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecutor {
 
-    private Map<UUID, PlayerConfig> playerConfigs;
-    private AutoTreeChopAPI api;
     public static final Message noResidencePermissions = new MessageBuilder("noResidencePermissions")
             .withDefault("<negative>You don't have permission to use AutoTreeChop at here.</negative>").build();
     public static final Message ENABLED_MESSAGE = new MessageBuilder("enabled")
@@ -76,31 +74,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             .withDefault("<negative>Auto tree chopping disabled for {player}</negative>").build();
     public static final Message CONSOLE_NAME = new MessageBuilder("consoleName")
             .withDefault("console").build();
-
-    private boolean VisualEffect;
-    private boolean toolDamage;
-
-    private int maxUsesPerDay;
-    private int maxBlocksPerDay;
-
-    private boolean stopChoppingIfNotConnected;
-    private boolean stopChoppingIfDifferentTypes;
-    private String residenceFlag;
-
-    private Locale locale;
-    private AudienceProvider audienceProvider;
-    private Translator translations;
-
     private static final String SPIGOT_RESOURCE_ID = "113071";
-
-    public void sendMessage(CommandSender sender, ComponentLike message) {
-        if (sender instanceof Player player) {
-            audienceProvider.player(player.getUniqueId()).sendMessage(message);
-            return;
-        }
-        audienceProvider.console().sendMessage(message);
-    }
-
     private static final List<String> SUPPORTED_VERSIONS = Arrays.asList(
             "1.20.4-R0.1-SNAPSHOT",
             "1.20.3-R0.1-SNAPSHOT",
@@ -118,6 +92,19 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             "1.17.1-R0.1-SNAPSHOT",
             "1.17-R0.1-SNAPSHOT"
     );
+    private Map<UUID, PlayerConfig> playerConfigs;
+    private AutoTreeChopAPI api;
+    private boolean VisualEffect;
+    private boolean toolDamage;
+    private int maxUsesPerDay;
+    private int maxBlocksPerDay;
+    private boolean stopChoppingIfNotConnected;
+    private boolean stopChoppingIfDifferentTypes;
+    private String residenceFlag;
+    private Locale locale;
+    private AudienceProvider audienceProvider;
+    private Translator translations;
+    private Set<Location> checkedLocations = new HashSet<>();
 
     @NotNull
     private static FileConfiguration getDefaultConfig() {
@@ -133,6 +120,14 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         defaultConfig.set("locale", Locale.ENGLISH);
         defaultConfig.set("residenceFlag", "build");
         return defaultConfig;
+    }
+
+    public void sendMessage(CommandSender sender, ComponentLike message) {
+        if (sender instanceof Player player) {
+            audienceProvider.player(player.getUniqueId()).sendMessage(message);
+            return;
+        }
+        audienceProvider.console().sendMessage(message);
     }
 
     private FileConfiguration loadConfig() {
@@ -174,8 +169,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         residenceFlag = config.getString("residenceFlag");
         if (locale instanceof String s) {
             this.locale = Locale.forLanguageTag(s);
-        }
-        else if (locale instanceof Locale l) {
+        } else if (locale instanceof Locale l) {
             this.locale = l;
         }
 
@@ -507,8 +501,6 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         }
     }
 
-    private Set<Location> checkedLocations = new HashSet<>();
-
     private void chopTree(Block block, Player player, boolean ConnectedBlocks, Location location, Material material, BlockData blockData) {
         // Return if player don't have Residence/Lands permission in this area
         if (!resCheck(player, location)) {
@@ -581,27 +573,35 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     // Check if player have Residence permission in this area
     // It will return true if player have permission, and vice versa.
     private boolean resCheck(Player player, Location location) {
-        if (this.getServer().getPluginManager().getPlugin("Residence") == null) { return true; }
+        if (this.getServer().getPluginManager().getPlugin("Residence") == null) {
+            return true;
+        }
 
-        if (ResidenceApi.getResidenceManager().getByLoc(location) == null) { return true; }
+        if (ResidenceApi.getResidenceManager().getByLoc(location) == null) {
+            return true;
+        }
 
         ClaimedResidence residence = ResidenceApi.getResidenceManager().getByLoc(location);
 
-        if (residence.getOwnerUUID().equals(player.getUniqueId()) || player.isOp() || player.hasPermission("catchball.op")) { return true; }
-
-            if (!residence.getPermissions().playerHas(player, Flags.valueOf(residenceFlag.toLowerCase()) , true)) {
-
-                sendMessage(player, noResidencePermissions);
-
-                return false;
-            }
+        if (residence.getOwnerUUID().equals(player.getUniqueId()) || player.isOp() || player.hasPermission("catchball.op")) {
             return true;
+        }
+
+        if (!residence.getPermissions().playerHas(player, Flags.valueOf(residenceFlag.toLowerCase()), true)) {
+
+            sendMessage(player, noResidencePermissions);
+
+            return false;
+        }
+        return true;
     }
 
     // Check if player have Lands permission in this area
     // It will return true if player have permission, and vice versa.
     public boolean landsCheck(Player player, Location location) {
-        if (this.getServer().getPluginManager().getPlugin("Lands") == null) { return true; }
+        if (this.getServer().getPluginManager().getPlugin("Lands") == null) {
+            return true;
+        }
         LandsIntegration landsapi = LandsIntegration.of(this);
         LandWorld world = landsapi.getWorld(location.getWorld());
 

@@ -30,6 +30,9 @@ repositories {
     maven {
         url = 'https://jitpack.io'
     }
+    maven {
+        url = 'https://repo.xenondevs.xyz/releases'
+    }
 }
 
 dependencies {
@@ -44,6 +47,7 @@ dependencies {
     compileOnly "net.coreprotect:coreprotect:22.2"
     compileOnly files("/libs/Residence5.1.4.3.jar")
     compileOnly "com.github.angeschossen:LandsAPI:6.44.0"
+    implementation "xyz.xenondevs.invui:invui:1.26"
 }
 
 def targetJavaVersion = 17

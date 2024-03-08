@@ -42,9 +42,9 @@ public class PlayerConfig {
                         "dailyBlocksBroken INT," +
                         "lastUseDate TEXT);")) {
             statement.executeUpdate();
-            } catch (SQLException e) {
-                getLogger().warning("Error creating SQLite table: " + e.getMessage());
-            }
+        } catch (SQLException e) {
+            getLogger().warning("Error creating SQLite table: " + e.getMessage());
+        }
     }
 
     private void loadConfig() {
@@ -144,8 +144,8 @@ public class PlayerConfig {
             statement.setString(4, lastUseDate.toString());
             statement.setString(5, playerUUID.toString());
             statement.executeUpdate();
-            } catch (SQLException e) {
-                getLogger().warning("Error updating player data in SQLite: " + e.getMessage());
-            }
+        } catch (SQLException e) {
+            getLogger().warning("Error updating player data in SQLite: " + e.getMessage());
+        }
     }
 }

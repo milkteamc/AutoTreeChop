@@ -14,6 +14,7 @@ public class AutoTreeChopAPI {
 
     /**
      * Get if AutoTreeChop is enabled
+     *
      * @param player
      * @return boolean
      */
@@ -24,6 +25,7 @@ public class AutoTreeChopAPI {
 
     /**
      * Set specific player AutoTreeChop as enabled
+     *
      * @param player
      */
     public void enableAutoTreeChop(Player player) {
@@ -33,6 +35,7 @@ public class AutoTreeChopAPI {
 
     /**
      * Set specific player AutoTreeChop as disable
+     *
      * @param player
      */
     public void disableAutoTreeChop(Player player) {
@@ -42,6 +45,7 @@ public class AutoTreeChopAPI {
 
     /**
      * Get how many times player use AutoTreeChop today
+     *
      * @param playerUUID
      * @return int
      */
@@ -51,6 +55,7 @@ public class AutoTreeChopAPI {
 
     /**
      * Get how many blocks player break via AutoTreeChop today
+     *
      * @param playerUUID
      * @return int
      */
