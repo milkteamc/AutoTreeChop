@@ -4,7 +4,9 @@
 # Source code: https://github.com/milkteamc/AutoTreeChop
 
 # The plugin locale (<language>-<country>-<variant>)
-# en, de, en-US, de-DE, de-AU, ...
+# en, de, zh, zh-TW, en-US, de-DE, de-AU, ...
+# See all available language in lang folder.
+# Open a PR at our GitHub to let plugin support more language!
 locale: en
 
 # The number of times non-VIP players can chop down trees per day,
