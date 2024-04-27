@@ -321,12 +321,6 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     }
 
     @Override
-    public void onDisable() {
-        translations.close();
-        audienceProvider.close();
-    }
-
-    @Override
     public void onEnable() {
         if (!SUPPORTED_VERSIONS.contains(this.getServer().getBukkitVersion())) {
             getLogger().warning("Your Minecraft version may have some issues, we only fully support "
@@ -387,6 +381,12 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         }
         api = new AutoTreeChopAPI(this);
         playerConfigs = new HashMap<>();
+    }
+
+    @Override
+    public void onDisable() {
+        translations.close();
+        audienceProvider.close();
     }
 
     private void spigotUpdateChecker() {
