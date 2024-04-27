@@ -12,8 +12,6 @@ import de.cubbossa.tinytranslations.storage.properties.PropertiesStyleStorage;
 import me.angeschossen.lands.api.LandsIntegration;
 import me.angeschossen.lands.api.land.LandWorld;
 import net.coreprotect.CoreProtectAPI;
-import net.kyori.adventure.platform.AudienceProvider;
-import net.kyori.adventure.text.ComponentLike;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.BlockData;
@@ -95,7 +93,6 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     private boolean chopTreeAsync;
     private String residenceFlag;
     private Locale locale;
-    private AudienceProvider audienceProvider;
     private MessageTranslator translations;
     private Set<Location> checkedLocations = new HashSet<>();
 
@@ -114,14 +111,6 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         defaultConfig.set("locale", Locale.ENGLISH);
         defaultConfig.set("residenceFlag", "build");
         return defaultConfig;
-    }
-
-    public void sendMessage(CommandSender sender, ComponentLike message) {
-        if (sender instanceof Player player) {
-            audienceProvider.player(player.getUniqueId()).sendMessage(message);
-            return;
-        }
-        audienceProvider.console().sendMessage(message);
     }
 
     private static boolean isFolia() {
@@ -350,6 +339,9 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         // Now load all written and also all pre-existing translations (in case the user added some)
         translations.loadLocales();
 
+        // always use the configured locale, no matter what user.
+        translations.defaultLocale(locale == null ? Locale.ENGLISH : locale);
+
         translations.loadStyles();
         // Let's make <negative> a resolver for red color and <positive> for green.
         // We can simply modify the styles.properties file to change the whole look and feel of the plugin.
@@ -362,7 +354,6 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         // Save potential changes
         translations.saveStyles();
         // Now ready to use sendMessage method
-
 
         if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
             new AutoTreeChopExpansion(this).register();
