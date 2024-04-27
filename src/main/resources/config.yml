@@ -21,6 +21,9 @@ visual-effect: true
 # damage tool when chopping tree
 toolDamage: true
 
+# Enable this for better performance, but this may cause issue sometime.
+chopTreeAsync: true
+
 # Stop chopping if the blocks are not connected (not part of the same tree)
 stopChoppingIfNotConnected: false
 

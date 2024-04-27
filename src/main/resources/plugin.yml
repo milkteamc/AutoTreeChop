@@ -21,6 +21,11 @@ commands:
     usage: /autotreechop
     permission: autotreechop.use
 
+  atc:
+    description: Toggle auto tree chop.
+    usage: /atc
+    permission: autotreechop.use
+
 permissions:
   autotreechop.use:
     description: Allows players to use the auto tree chop command.

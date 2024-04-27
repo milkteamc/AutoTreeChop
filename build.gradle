@@ -39,15 +39,13 @@ dependencies {
     compileOnly "org.spigotmc:spigot-api:1.20-R0.1-SNAPSHOT"
     implementation files("libs/SpigotUpdateChecker.jar")
     compileOnly 'me.clip:placeholderapi:2.11.5'
-    implementation "de.cubbossa:TinyTranslations:4.1.2"
-    implementation "cn.handyplus.lib.adapter:FoliaLib:1.0.3"
-    compileOnly "net.kyori:adventure-api:4.14.0"
-    compileOnly "net.kyori:adventure-platform-bukkit:4.3.1"
-    compileOnly "net.kyori:adventure-text-minimessage:4.14.0"
+    implementation "de.cubbossa:TinyTranslations-bukkit:4.5.0"
+    compileOnly "net.kyori:adventure-api:4.16.0"
+    compileOnly "net.kyori:adventure-platform-bukkit:4.3.2"
+    compileOnly "net.kyori:adventure-text-minimessage:4.16.0"
     compileOnly "net.coreprotect:coreprotect:22.2"
     compileOnly files("/libs/Residence5.1.4.3.jar")
     compileOnly "com.github.angeschossen:LandsAPI:6.44.0"
-    implementation "xyz.xenondevs.invui:invui:1.26"
 }
 
 def targetJavaVersion = 17
@@ -87,7 +85,6 @@ tasks.shadowJar {
 
     relocate 'com.jeff_media.updatechecker', 'org.milkteamc.autotreechop.libs.updatechecker'
     relocate 'de.cubbossa.tinytranslations', 'org.milkteamc.autotreechop.libs.tinytranslations'
-    relocate 'cn.handyplus.lib.adapter', 'org.milkteamc.autotreechop.libs.folialib'
 }
 
 tasks.jar {
