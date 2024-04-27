@@ -13,7 +13,6 @@ import me.angeschossen.lands.api.LandsIntegration;
 import me.angeschossen.lands.api.land.LandWorld;
 import net.coreprotect.CoreProtectAPI;
 import net.kyori.adventure.platform.AudienceProvider;
-import net.kyori.adventure.platform.bukkit.BukkitAudiences;
 import net.kyori.adventure.text.ComponentLike;
 import org.bukkit.*;
 import org.bukkit.block.Block;
@@ -337,8 +336,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         saveDefaultConfig();
         loadConfig();
 
-        audienceProvider = BukkitAudiences.create(this);
-        translations = BukkitTinyTranslations.application("AutoTreeChop");
+        translations = BukkitTinyTranslations.application(this);
 
         translations.setMessageStorage(new PropertiesMessageStorage(new File(getDataFolder(), "/lang/")));
         translations.setStyleStorage(new PropertiesStyleStorage(new File(getDataFolder(), "/lang/styles.properties")));
@@ -386,7 +384,6 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     @Override
     public void onDisable() {
         translations.close();
-        audienceProvider.close();
     }
 
     private void spigotUpdateChecker() {
@@ -538,10 +535,6 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                             }
 
                             // Stop if no enough credits
-                            if (getPlayerConfig(player.getUniqueId()).getDailyUses() >= maxUsesPerDay) {
-                                BukkitTinyTranslations.sendMessage(player, HIT_MAX_USAGE_MESSAGE);
-                                return;
-                            }
                             if (getPlayerConfig(player.getUniqueId()).getDailyBlocksBroken() >= maxBlocksPerDay) {
                                 BukkitTinyTranslations.sendMessage(player, HIT_MAX_BLOCK_MESSAGE);
                                 return;
