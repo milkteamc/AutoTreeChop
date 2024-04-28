@@ -7,9 +7,9 @@ import com.jeff_media.updatechecker.UpdateCheckSource;
 import com.jeff_media.updatechecker.UpdateChecker;
 import com.jeff_media.updatechecker.UserAgentBuilder;
 import de.cubbossa.tinytranslations.*;
+import de.cubbossa.tinytranslations.libs.kyori.adventure.text.ComponentLike;
 import de.cubbossa.tinytranslations.storage.properties.PropertiesMessageStorage;
 import de.cubbossa.tinytranslations.storage.properties.PropertiesStyleStorage;
-import de.cubbossa.tinytranslations.libs.kyori.adventure.text.ComponentLike;
 import me.angeschossen.lands.api.LandsIntegration;
 import me.angeschossen.lands.api.land.LandWorld;
 import net.coreprotect.CoreProtectAPI;
@@ -94,6 +94,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             "1.17.1-R0.1-SNAPSHOT",
             "1.17-R0.1-SNAPSHOT"
     );
+    private Metrics metrics;
     private Map<UUID, PlayerConfig> playerConfigs;
     private AutoTreeChopAPI api;
     private boolean VisualEffect;
@@ -107,7 +108,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     private Locale locale;
     private MessageTranslator translations;
     private boolean useClientLocale;
-    private Set<Location> checkedLocations = new HashSet<>();
+    private final Set<Location> checkedLocations = new HashSet<>();
 
     @NotNull
     private static FileConfiguration getDefaultConfig() {
@@ -208,7 +209,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
+    public boolean onCommand(@NotNull CommandSender sender, Command cmd, @NotNull String label, String[] args) {
         if (cmd.getName().equalsIgnoreCase("autotreechop") || cmd.getName().equalsIgnoreCase("atc")) {
             PlayerConfig playerConfig;
 
@@ -223,7 +224,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                 if (args.length == 1 && args[0].equalsIgnoreCase("reload")) {
                     if (sender.hasPermission("autotreechop.reload")) {
                         loadConfig();
-						loadLocale();
+                        loadLocale();
 
                         sender.sendMessage("Config reloaded successfully.");
                     } else {
@@ -328,7 +329,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             getLogger().warning("Report any issue to our GitHub: https://github.com/milkteamc/AutoTreeChop/issues");
         }
 
-        org.milkteamc.autotreechop.Metrics metrics = new Metrics(this, 20053); //bstats
+        metrics = new Metrics(this, 20053); //bstats
 
         getServer().getPluginManager().registerEvents(this, this);
         getCommand("autotreechop").setExecutor(this);
@@ -389,10 +390,11 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     @Override
     public void onDisable() {
         translations.close();
+        metrics.shutdown();
     }
 
     private void spigotUpdateChecker() {
-        new UpdateChecker(this, UpdateCheckSource.SPIGOT, SPIGOT_RESOURCE_ID) // You can also use Spiget instead of Spigot - Spiget's API is usually much faster up to date.
+        new UpdateChecker(this, UpdateCheckSource.SPIGOT, SPIGOT_RESOURCE_ID) // You can also use Spigot instead of Spigot - Spigot's API is usually much faster up to date.
                 .checkEveryXHours(24) // Check every 24 hours
                 .setDonationLink("https://ko-fi.com/maoyue")
                 .setChangelogLink("https://modrinth.com/plugin/autotreechop/version/latest") // Same as for the Download link: URL or Spigot Resource ID
@@ -443,44 +445,44 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
     @EventHandler
     public void onBlockBreak(BlockBreakEvent event) {
-      Player player = event.getPlayer();
-      UUID playerUUID = player.getUniqueId();
-      PlayerConfig playerConfig = getPlayerConfig(playerUUID);
+        Player player = event.getPlayer();
+        UUID playerUUID = player.getUniqueId();
+        PlayerConfig playerConfig = getPlayerConfig(playerUUID);
 
-      Block block = event.getBlock();
-      Material material = block.getType();
-      Location location = block.getLocation();
-      BlockData blockData = block.getBlockData();
+        Block block = event.getBlock();
+        Material material = block.getType();
+        Location location = block.getLocation();
+        BlockData blockData = block.getBlockData();
 
-      if (playerConfig.isAutoTreeChopEnabled() && isLog(material)) {
+        if (playerConfig.isAutoTreeChopEnabled() && isLog(material)) {
 
-        if (!player.hasPermission("autotreechop.vip") && playerConfig.getDailyBlocksBroken() >= maxBlocksPerDay) {
-          sendMaxBlockLimitReachedMessage(player, block);
-          event.setCancelled(true);
-          return;
+            if (!player.hasPermission("autotreechop.vip") && playerConfig.getDailyBlocksBroken() >= maxBlocksPerDay) {
+                sendMaxBlockLimitReachedMessage(player, block);
+                event.setCancelled(true);
+                return;
+            }
+
+            if (!player.hasPermission("autotreechop.vip") && playerConfig.getDailyUses() >= maxUsesPerDay) {
+                BukkitTinyTranslations.sendMessage(player, HIT_MAX_USAGE_MESSAGE);
+                return;
+            }
+
+            if (VisualEffect) {
+                showChopEffect(player, block);
+            }
+
+            event.setCancelled(true);
+            checkedLocations.clear();
+
+            chopTree(block, player, stopChoppingIfNotConnected, location, material, blockData);
+
+            checkedLocations.clear();
+
+            playerConfig.incrementDailyUses();
         }
-
-        if (!player.hasPermission("autotreechop.vip") && playerConfig.getDailyUses() >= maxUsesPerDay) {
-          BukkitTinyTranslations.sendMessage(player, HIT_MAX_USAGE_MESSAGE);
-          return;
-        }
-
-        if (VisualEffect) {
-          showChopEffect(player, block);
-        }
-
-        event.setCancelled(true);
-        checkedLocations.clear();
-
-        chopTree(block, player, stopChoppingIfNotConnected, location, material, blockData);
-
-        checkedLocations.clear();
-
-        playerConfig.incrementDailyUses();
-      }
     }
 
-  // Sends a message to the player and shows a red particle effect indicating the block limit has been reached
+    // Sends a message to the player and shows a red particle effect indicating the block limit has been reached
     private static void sendMaxBlockLimitReachedMessage(Player player, Block block) {
         sendMessage(player, HIT_MAX_BLOCK_MESSAGE);
         player.getWorld().spawnParticle(org.bukkit.Particle.REDSTONE, block.getLocation().add(0.5, 0.5, 0.5), 50, 0.5, 0.5, 0.5, 0, new Particle.DustOptions(Color.RED, 1));
@@ -494,7 +496,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     // Method to reduce the durability value of tools
     private void damageTool(Player player, int amount) {
         ItemStack tool = player.getInventory().getItemInMainHand();
-        if (tool != null && tool.getType().getMaxDurability() > 0) {
+        if (tool.getType().getMaxDurability() > 0) {
             int newDurability = tool.getDurability() + amount;
             if (newDurability > tool.getType().getMaxDurability()) {
                 player.getInventory().setItemInMainHand(null);
@@ -592,19 +594,18 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
     // Check if player have Lands permission in this area
     // It will return true if player have permission, and vice versa.
-    public boolean landsCheck(Player player, Location location) {
+    public boolean landsCheck(Player player, @NotNull Location location) {
         if (this.getServer().getPluginManager().getPlugin("Lands") == null) {
             return true;
+        }
+        if (location.getWorld() == null) {
+            return false;
         }
         LandsIntegration landsapi = LandsIntegration.of(this);
         LandWorld world = landsapi.getWorld(location.getWorld());
 
         if (world != null) { // Lands is enabled in this world
-            if (world.hasFlag(player, location, null, me.angeschossen.lands.api.flags.Flags.BLOCK_BREAK, false)) {
-                return true;
-            } else {
-                return false;
-            }
+          return world.hasFlag(player, location, null, me.angeschossen.lands.api.flags.Flags.BLOCK_BREAK, false);
         }
 
         return true;
