@@ -71,11 +71,6 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             .withDefault("console").build();
 
     private static final String SPIGOT_RESOURCE_ID = "113071";
-
-    public static void sendMessage(CommandSender sender, ComponentLike message) {
-        BukkitTinyTranslations.sendMessageIfNotEmpty(sender, message);
-    }
-
     private static final List<String> SUPPORTED_VERSIONS = Arrays.asList(
             "1.20.5-R0.1-SNAPSHOT",
             "1.20.4-R0.1-SNAPSHOT",
@@ -94,6 +89,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             "1.17.1-R0.1-SNAPSHOT",
             "1.17-R0.1-SNAPSHOT"
     );
+    private final Set<Location> checkedLocations = new HashSet<>();
     private Metrics metrics;
     private Map<UUID, PlayerConfig> playerConfigs;
     private AutoTreeChopAPI api;
@@ -108,7 +104,10 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     private Locale locale;
     private MessageTranslator translations;
     private boolean useClientLocale;
-    private final Set<Location> checkedLocations = new HashSet<>();
+
+    public static void sendMessage(CommandSender sender, ComponentLike message) {
+        BukkitTinyTranslations.sendMessageIfNotEmpty(sender, message);
+    }
 
     @NotNull
     private static FileConfiguration getDefaultConfig() {
@@ -135,6 +134,12 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         } catch (ClassNotFoundException e) {
             return false;
         }
+    }
+
+    // Sends a message to the player and shows a red particle effect indicating the block limit has been reached
+    private static void sendMaxBlockLimitReachedMessage(Player player, Block block) {
+        sendMessage(player, HIT_MAX_BLOCK_MESSAGE);
+        player.getWorld().spawnParticle(org.bukkit.Particle.REDSTONE, block.getLocation().add(0.5, 0.5, 0.5), 50, 0.5, 0.5, 0.5, 0, new Particle.DustOptions(Color.RED, 1));
     }
 
     private FileConfiguration loadConfig() {
@@ -483,12 +488,6 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         }
     }
 
-    // Sends a message to the player and shows a red particle effect indicating the block limit has been reached
-    private static void sendMaxBlockLimitReachedMessage(Player player, Block block) {
-        sendMessage(player, HIT_MAX_BLOCK_MESSAGE);
-        player.getWorld().spawnParticle(org.bukkit.Particle.REDSTONE, block.getLocation().add(0.5, 0.5, 0.5), 50, 0.5, 0.5, 0.5, 0, new Particle.DustOptions(Color.RED, 1));
-    }
-
     // Shows a green particle effect indicating the block has been chopped
     private void showChopEffect(Player player, Block block) {
         player.getWorld().spawnParticle(org.bukkit.Particle.VILLAGER_HAPPY, block.getLocation().add(0.5, 0.5, 0.5), 50, 0.5, 0.5, 0.5, 0);
@@ -606,7 +605,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         LandWorld world = landsapi.getWorld(location.getWorld());
 
         if (world != null) { // Lands is enabled in this world
-          return world.hasFlag(player, location, null, me.angeschossen.lands.api.flags.Flags.BLOCK_BREAK, false);
+            return world.hasFlag(player, location, null, me.angeschossen.lands.api.flags.Flags.BLOCK_BREAK, false);
         }
 
         return true;
