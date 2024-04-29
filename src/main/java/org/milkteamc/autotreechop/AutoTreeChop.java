@@ -375,7 +375,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         saveResourceIfNotExists("lang/zh.properties");
 
         translations.setUseClientLocale(useClientLocale);
-        translations.setDefaultLocale(locale == null ? Locale.getDefault() : locale);
+        translations.defaultLocale(locale == null ? Locale.getDefault() : locale);
 
         translations.loadStyles();
         translations.loadLocales();
