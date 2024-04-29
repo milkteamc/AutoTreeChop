@@ -7,6 +7,7 @@ import com.jeff_media.updatechecker.UpdateCheckSource;
 import com.jeff_media.updatechecker.UpdateChecker;
 import com.jeff_media.updatechecker.UserAgentBuilder;
 import de.cubbossa.tinytranslations.*;
+import de.cubbossa.tinytranslations.libs.kyori.adventure.text.ComponentLike;
 import de.cubbossa.tinytranslations.storage.properties.PropertiesMessageStorage;
 import de.cubbossa.tinytranslations.storage.properties.PropertiesStyleStorage;
 import me.angeschossen.lands.api.LandsIntegration;
@@ -37,33 +38,44 @@ import java.util.logging.Level;
 
 public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecutor {
 
+    // We make a prefix just to be safe if sm removes our style overrides. Then each plugin message begins with prefix
+    // and if none set it will look ugly. We don't need to add decoration (like "[AutoTreeChop] >"), it's done via styling
+    public static final Message PREFIX = Message.message("prefix", "AutoTreeChop");
     public static final Message noResidencePermissions = new MessageBuilder("noResidencePermissions")
-            .withDefault("<negative>You don't have permission to use AutoTreeChop at here.</negative>").build();
+            .withDefault("<negative>You don't have permission to use AutoTreeChop here.</negative>").build();
     public static final Message ENABLED_MESSAGE = new MessageBuilder("enabled")
-            .withDefault("<positive>Auto tree chopping enabled.</positive>").build();
+            .withDefault("<prefix>Auto tree chopping enabled.</prefix>").build();
     public static final Message DISABLED_MESSAGE = new MessageBuilder("disabled")
-            .withDefault("<negative>Auto tree chopping disabled.</negative>").build();
+            .withDefault("<prefix_negative>Auto tree chopping disabled.</prefix_negative>").build();
     public static final Message NO_PERMISSION_MESSAGE = new MessageBuilder("no-permission")
-            .withDefault("<negative>You don't have permission to use this command.</negative>").build();
+            .withDefault(GlobalMessages.NO_PERM_CMD).build();
+    public static final Message ONLY_PLAYERS_MESSAGE = new MessageBuilder("only-players")
+            .withDefault(GlobalMessages.CMD_PLAYER_ONLY).build();
     public static final Message HIT_MAX_USAGE_MESSAGE = new MessageBuilder("hitmaxusage")
-            .withDefault("<negative>You've reached the daily usage limit.</negative>").build();
+            .withDefault("<prefix_negative>You've reached the daily usage limit.</prefix_negative>").build();
     public static final Message HIT_MAX_BLOCK_MESSAGE = new MessageBuilder("hitmaxblock")
-            .withDefault("<negative>You have reached your daily block breaking limit.</negative>").build();
+            .withDefault("<prefix_negative>You have reached your daily block breaking limit.</prefix_negative>").build();
     public static final Message USAGE_MESSAGE = new MessageBuilder("usage")
-            .withDefault("<positive>You have used the AutoTreeChop {current_uses}/{max_uses} times today.</positive>").build();
+            .withDefault("<prefix>You have used the AutoTreeChop {current_uses}/{max_uses} times today.</prefix>").build();
     public static final Message BLOCKS_BROKEN_MESSAGE = new MessageBuilder("blocks-broken")
-            .withDefault("<positive>You have broken {current_blocks}/{max_blocks} blocks today.</positive>").build();
+            .withDefault("<prefix>You have broken {current_blocks}/{max_blocks} blocks today.</prefix>").build();
     public static final Message ENABLED_BY_OTHER_MESSAGE = new MessageBuilder("enabledByOther")
-            .withDefault("<positive>Auto tree chopping enabled by {player}.</positive>").build();
+            .withDefault("<prefix>Auto tree chopping enabled by {player}.</prefix>").build();
     public static final Message ENABLED_FOR_OTHER_MESSAGE = new MessageBuilder("enabledForOther")
-            .withDefault("<positive>Auto tree chopping enabled for {player}</positive>").build();
+            .withDefault("<prefix>Auto tree chopping enabled for {player}</prefix>").build();
     public static final Message DISABLED_BY_OTHER_MESSAGE = new MessageBuilder("disabledByOther")
-            .withDefault("<negative>Auto tree chopping disabled by {player}.</negative>").build();
+            .withDefault("<prefix_negative>Auto tree chopping disabled by {player}.</prefix_negative>").build();
     public static final Message DISABLED_FOR_OTHER_MESSAGE = new MessageBuilder("disabledForOther")
-            .withDefault("<negative>Auto tree chopping disabled for {player}</negative>").build();
+            .withDefault("<prefix_negative>Auto tree chopping disabled for {player}</prefix_negative>").build();
     public static final Message CONSOLE_NAME = new MessageBuilder("consoleName")
             .withDefault("console").build();
+
     private static final String SPIGOT_RESOURCE_ID = "113071";
+
+    public static void sendMessage(CommandSender sender, ComponentLike message) {
+        BukkitTinyTranslations.sendMessageIfNotEmpty(sender, message);
+    }
+
     private static final List<String> SUPPORTED_VERSIONS = Arrays.asList(
             "1.20.5-R0.1-SNAPSHOT",
             "1.20.4-R0.1-SNAPSHOT",
@@ -82,6 +94,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             "1.17.1-R0.1-SNAPSHOT",
             "1.17-R0.1-SNAPSHOT"
     );
+    private Metrics metrics;
     private Map<UUID, PlayerConfig> playerConfigs;
     private AutoTreeChopAPI api;
     private boolean VisualEffect;
@@ -94,7 +107,8 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     private String residenceFlag;
     private Locale locale;
     private MessageTranslator translations;
-    private Set<Location> checkedLocations = new HashSet<>();
+    private boolean useClientLocale;
+    private final Set<Location> checkedLocations = new HashSet<>();
 
     @NotNull
     private static FileConfiguration getDefaultConfig() {
@@ -165,6 +179,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         } else if (locale instanceof Locale l) {
             this.locale = l;
         }
+        useClientLocale = config.getBoolean("use-player-locale");
 
         return config;
     }
@@ -194,7 +209,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
+    public boolean onCommand(@NotNull CommandSender sender, Command cmd, @NotNull String label, String[] args) {
         if (cmd.getName().equalsIgnoreCase("autotreechop") || cmd.getName().equalsIgnoreCase("atc")) {
             PlayerConfig playerConfig;
 
@@ -209,9 +224,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                 if (args.length == 1 && args[0].equalsIgnoreCase("reload")) {
                     if (sender.hasPermission("autotreechop.reload")) {
                         loadConfig();
-
-                        translations.loadStyles();
-                        translations.loadLocales();
+                        loadLocale();
 
                         sender.sendMessage("Config reloaded successfully.");
                     } else {
@@ -300,7 +313,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                     }
                     return true;
                 } else {
-                    sender.sendMessage("Only players can use this command.");
+                    sendMessage(sender, ONLY_PLAYERS_MESSAGE);
                 }
             }
             return true;
@@ -316,7 +329,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             getLogger().warning("Report any issue to our GitHub: https://github.com/milkteamc/AutoTreeChop/issues");
         }
 
-        org.milkteamc.autotreechop.Metrics metrics = new Metrics(this, 20053); //bstats
+        metrics = new Metrics(this, 20053); //bstats
 
         getServer().getPluginManager().registerEvents(this, this);
         getCommand("autotreechop").setExecutor(this);
@@ -330,29 +343,11 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         translations.setMessageStorage(new PropertiesMessageStorage(new File(getDataFolder(), "/lang/")));
         translations.setStyleStorage(new PropertiesStyleStorage(new File(getDataFolder(), "/lang/styles.properties")));
 
-        // Register all messages from this class and save them into an en.properties and a de.properties.
-        // If already exists, this will only write missing values into these files.
+        // Register all messages from this class and save them into an en.properties.
+        // If already exists, this will only write missing values into the file.
         translations.addMessages(TinyTranslations.messageFieldsFromClass(AutoTreeChop.class));
-        translations.saveLocale(Locale.ENGLISH);
-        saveResource("lang/de.properties", false);
-        saveResource("lang/zh.properties", false);
-        // Now load all written and also all pre-existing translations (in case the user added some)
-        translations.loadLocales();
 
-        // always use the configured locale, no matter what user.
-        translations.defaultLocale(locale == null ? Locale.ENGLISH : locale);
-
-        translations.loadStyles();
-        // Let's make <negative> a resolver for red color and <positive> for green.
-        // We can simply modify the styles.properties file to change the whole look and feel of the plugin.
-        if (!translations.getStyleSet().containsKey("negative")) {
-            translations.getStyleSet().put("negative", "red");
-        }
-        if (!translations.getStyleSet().containsKey("positive")) {
-            translations.getStyleSet().put("positive", "green");
-        }
-        // Save potential changes
-        translations.saveStyles();
+        loadLocale();
         // Now ready to use sendMessage method
 
         if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
@@ -372,13 +367,34 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         playerConfigs = new HashMap<>();
     }
 
+    private void loadLocale() {
+
+        translations.saveLocale(Locale.ENGLISH);
+        saveResourceIfNotExists("lang/styles.properties");
+        saveResourceIfNotExists("lang/de.properties");
+        saveResourceIfNotExists("lang/zh.properties");
+
+        translations.setUseClientLocale(useClientLocale);
+        translations.defaultLocale(locale == null ? Locale.getDefault() : locale);
+
+        translations.loadStyles();
+        translations.loadLocales();
+    }
+
+    private void saveResourceIfNotExists(String resourcePath) {
+        if (!new File(getDataFolder(), resourcePath).exists()) {
+            saveResource(resourcePath, false);
+        }
+    }
+
     @Override
     public void onDisable() {
         translations.close();
+        metrics.shutdown();
     }
 
     private void spigotUpdateChecker() {
-        new UpdateChecker(this, UpdateCheckSource.SPIGOT, SPIGOT_RESOURCE_ID) // You can also use Spiget instead of Spigot - Spiget's API is usually much faster up to date.
+        new UpdateChecker(this, UpdateCheckSource.SPIGOT, SPIGOT_RESOURCE_ID) // You can also use Spigot instead of Spigot - Spigot's API is usually much faster up to date.
                 .checkEveryXHours(24) // Check every 24 hours
                 .setDonationLink("https://ko-fi.com/maoyue")
                 .setChangelogLink("https://modrinth.com/plugin/autotreechop/version/latest") // Same as for the Download link: URL or Spigot Resource ID
@@ -466,6 +482,12 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         }
     }
 
+    // Sends a message to the player and shows a red particle effect indicating the block limit has been reached
+    private static void sendMaxBlockLimitReachedMessage(Player player, Block block) {
+        sendMessage(player, HIT_MAX_BLOCK_MESSAGE);
+        player.getWorld().spawnParticle(org.bukkit.Particle.REDSTONE, block.getLocation().add(0.5, 0.5, 0.5), 50, 0.5, 0.5, 0.5, 0, new Particle.DustOptions(Color.RED, 1));
+    }
+
     // Shows a green particle effect indicating the block has been chopped
     private void showChopEffect(Player player, Block block) {
         player.getWorld().spawnParticle(org.bukkit.Particle.VILLAGER_HAPPY, block.getLocation().add(0.5, 0.5, 0.5), 50, 0.5, 0.5, 0.5, 0);
@@ -474,7 +496,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     // Method to reduce the durability value of tools
     private void damageTool(Player player, int amount) {
         ItemStack tool = player.getInventory().getItemInMainHand();
-        if (tool != null && tool.getType().getMaxDurability() > 0) {
+        if (tool.getType().getMaxDurability() > 0) {
             int newDurability = tool.getDurability() + amount;
             if (newDurability > tool.getType().getMaxDurability()) {
                 player.getInventory().setItemInMainHand(null);
@@ -482,12 +504,6 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                 tool.setDurability((short) newDurability);
             }
         }
-    }
-
-    // Sends a message to the player and shows a red particle effect indicating the block limit has been reached
-    private void sendMaxBlockLimitReachedMessage(Player player, Block block) {
-        BukkitTinyTranslations.sendMessage(player, HIT_MAX_BLOCK_MESSAGE);
-        player.getWorld().spawnParticle(org.bukkit.Particle.REDSTONE, block.getLocation().add(0.5, 0.5, 0.5), 50, 0.5, 0.5, 0.5, 0, new Particle.DustOptions(Color.RED, 1));
     }
 
     private void chopTree(Block block, Player player, boolean ConnectedBlocks, Location location, Material material, BlockData blockData) {
@@ -578,19 +594,18 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
     // Check if player have Lands permission in this area
     // It will return true if player have permission, and vice versa.
-    public boolean landsCheck(Player player, Location location) {
+    public boolean landsCheck(Player player, @NotNull Location location) {
         if (this.getServer().getPluginManager().getPlugin("Lands") == null) {
             return true;
+        }
+        if (location.getWorld() == null) {
+            return false;
         }
         LandsIntegration landsapi = LandsIntegration.of(this);
         LandWorld world = landsapi.getWorld(location.getWorld());
 
         if (world != null) { // Lands is enabled in this world
-            if (world.hasFlag(player, location, null, me.angeschossen.lands.api.flags.Flags.BLOCK_BREAK, false)) {
-                return true;
-            } else {
-                return false;
-            }
+          return world.hasFlag(player, location, null, me.angeschossen.lands.api.flags.Flags.BLOCK_BREAK, false);
         }
 
         return true;

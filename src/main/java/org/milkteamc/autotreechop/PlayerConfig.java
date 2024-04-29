@@ -9,7 +9,7 @@ import static org.bukkit.Bukkit.getLogger;
 public class PlayerConfig {
 
     private final UUID playerUUID;
-    private Connection connection;
+    private final Connection connection;
     private boolean autoTreeChopEnabled;
     private int dailyUses;
     private int dailyBlocksBroken;
