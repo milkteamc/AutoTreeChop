@@ -42,7 +42,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     // and if none set it will look ugly. We don't need to add decoration (like "[AutoTreeChop] >"), it's done via styling
     public static final Message PREFIX = Message.message("prefix", "AutoTreeChop");
     public static final Message noResidencePermissions = new MessageBuilder("noResidencePermissions")
-            .withDefault("<negative>You don't have permission to use AutoTreeChop here.</negative>").build();
+            .withDefault("<prefix_negative>You don't have permission to use AutoTreeChop here.</prefix_negative>").build();
     public static final Message ENABLED_MESSAGE = new MessageBuilder("enabled")
             .withDefault("<prefix>Auto tree chopping enabled.</prefix>").build();
     public static final Message DISABLED_MESSAGE = new MessageBuilder("disabled")
@@ -122,6 +122,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         defaultConfig.set("stopChoppingIfNotConnected", false);
         defaultConfig.set("stopChoppingIfDifferentTypes", false);
         defaultConfig.set("chopTreeAsync", true);
+        defaultConfig.set("use-player-locale", false);
         defaultConfig.set("locale", Locale.ENGLISH);
         defaultConfig.set("residenceFlag", "build");
         return defaultConfig;
