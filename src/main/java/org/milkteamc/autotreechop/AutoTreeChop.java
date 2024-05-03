@@ -72,6 +72,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
     private static final String SPIGOT_RESOURCE_ID = "113071";
     private static final List<String> SUPPORTED_VERSIONS = Arrays.asList(
+            "1.20.6-R0.1-SNAPSHOT",
             "1.20.5-R0.1-SNAPSHOT",
             "1.20.4-R0.1-SNAPSHOT",
             "1.20.3-R0.1-SNAPSHOT",
