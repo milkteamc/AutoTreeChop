@@ -34,3 +34,16 @@ stopChoppingIfNotConnected: false
 
 # Stop chopping if the blocks are of different types
 stopChoppingIfDifferentTypes: false
+
+# Define which materials are log
+# Fun fact: If you add "DIAMOND_ORE", this plugin can become an auto mining plugin, lol
+log-types:
+  - OAK_LOG
+  - BIRCH_LOG
+  - SPRUCE_LOG
+  - JUNGLE_LOG
+  - ACACIA_LOG
+  - DARK_OAK_LOG
+  - MANGROVE_LOG
+  - CHERRY_LOG
+

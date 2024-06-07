@@ -24,7 +24,6 @@ public class AutoTreeChopAPI {
 
     /**
      * Set specific player AutoTreeChop as enabled
-     *
      */
     public void enableAutoTreeChop(Player player) {
         PlayerConfig playerConfig = plugin.getPlayerConfig(player.getUniqueId());
@@ -33,7 +32,6 @@ public class AutoTreeChopAPI {
 
     /**
      * Set specific player AutoTreeChop as disable
-     *
      */
     public void disableAutoTreeChop(Player player) {
         PlayerConfig playerConfig = plugin.getPlayerConfig(player.getUniqueId());

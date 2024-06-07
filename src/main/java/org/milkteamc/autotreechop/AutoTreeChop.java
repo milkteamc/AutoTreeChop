@@ -35,6 +35,7 @@ import java.io.InputStream;
 import java.net.URL;
 import java.util.*;
 import java.util.logging.Level;
+import java.util.stream.Collectors;
 
 public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecutor {
 
@@ -105,6 +106,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     private Locale locale;
     private MessageTranslator translations;
     private boolean useClientLocale;
+    private Set<Material> logTypes;
 
     public static void sendMessage(CommandSender sender, ComponentLike message) {
         BukkitTinyTranslations.sendMessageIfNotEmpty(sender, message);
@@ -125,6 +127,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         defaultConfig.set("use-player-locale", false);
         defaultConfig.set("locale", Locale.ENGLISH);
         defaultConfig.set("residenceFlag", "build");
+        defaultConfig.set("log-types", Arrays.asList("OAK_LOG", "SPRUCE_LOG", "BIRCH_LOG", "JUNGLE_LOG", "ACACIA_LOG", "DARK_OAK_LOG", "MANGROVE_LOG", "CHERRY_LOG"));
         return defaultConfig;
     }
 
@@ -187,6 +190,10 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             this.locale = l;
         }
         useClientLocale = config.getBoolean("use-player-locale");
+
+        // Load log types
+        List<String> logTypeStrings = config.getStringList("log-types");
+        logTypes = logTypeStrings.stream().map(Material::getMaterial).collect(Collectors.toSet());
 
         return config;
     }
@@ -677,14 +684,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
 
     private boolean isLog(Material material) {
-        return material == Material.OAK_LOG ||
-                material == Material.SPRUCE_LOG ||
-                material == Material.BIRCH_LOG ||
-                material == Material.JUNGLE_LOG ||
-                material == Material.ACACIA_LOG ||
-                material == Material.DARK_OAK_LOG ||
-                material == Material.MANGROVE_LOG ||
-                material == Material.CHERRY_LOG;
+        return logTypes.contains(material);
     }
 
     PlayerConfig getPlayerConfig(UUID playerUUID) {
