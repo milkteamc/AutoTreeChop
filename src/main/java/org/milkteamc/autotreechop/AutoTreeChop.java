@@ -112,6 +112,9 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     private String database;
     private String username;
     private String password;
+    private boolean limitVipUsage;
+    private int vipUsesPerDay;
+    private int vipBlocksPerDay;
     private Set<Material> logTypes;
 
     public static void sendMessage(CommandSender sender, ComponentLike message) {
@@ -140,6 +143,9 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         defaultConfig.set("password", "abc1234");
         defaultConfig.set("locale", Locale.ENGLISH);
         defaultConfig.set("residenceFlag", "build");
+        defaultConfig.set("limitVipUsage", true);
+        defaultConfig.set("vip-uses-per-day", 50);
+        defaultConfig.set("vip-blocks-per-day", 500);
         defaultConfig.set("log-types", Arrays.asList("OAK_LOG", "SPRUCE_LOG", "BIRCH_LOG", "JUNGLE_LOG", "ACACIA_LOG", "DARK_OAK_LOG", "MANGROVE_LOG", "CHERRY_LOG"));
         return defaultConfig;
     }
@@ -212,6 +218,9 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         username = config.getString("username");
         password = config.getString("password");
 
+        limitVipUsage = config.getBoolean("limitVipUsage");
+        vipUsesPerDay = config.getInt("vip-uses-per-day");
+        vipBlocksPerDay = config.getInt("vip-blocks-per-day");
         // Load log types
         List<String> logTypeStrings = config.getStringList("log-types");
         logTypes = logTypeStrings.stream().map(Material::getMaterial).collect(Collectors.toSet());
@@ -478,6 +487,17 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         }
     }
 
+    // VIP limit checker
+    private boolean vipUses(Player player, PlayerConfig playerConfig) {
+        if (!limitVipUsage) return player.hasPermission("autotreechop.vip");
+        return playerConfig.getDailyUses() >= vipBlocksPerDay;
+    }
+
+    private boolean vipBlock(Player player, PlayerConfig playerConfig) {
+        if (!limitVipUsage) return player.hasPermission("autotreechop.vip");
+        return playerConfig.getDailyUses() >= vipUsesPerDay;
+    }
+
     @EventHandler
     public void onBlockBreak(BlockBreakEvent event) {
         Player player = event.getPlayer();
@@ -491,13 +511,13 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
         if (playerConfig.isAutoTreeChopEnabled() && isLog(material)) {
 
-            if (!player.hasPermission("autotreechop.vip") && playerConfig.getDailyBlocksBroken() >= maxBlocksPerDay) {
+            if (vipBlock(player, playerConfig) && playerConfig.getDailyBlocksBroken() >= maxBlocksPerDay) {
                 sendMaxBlockLimitReachedMessage(player, block);
                 event.setCancelled(true);
                 return;
             }
 
-            if (!player.hasPermission("autotreechop.vip") && playerConfig.getDailyUses() >= maxUsesPerDay) {
+            if (!vipUses(player, playerConfig) && playerConfig.getDailyUses() >= maxUsesPerDay) {
                 BukkitTinyTranslations.sendMessage(player, HIT_MAX_USAGE_MESSAGE);
                 return;
             }

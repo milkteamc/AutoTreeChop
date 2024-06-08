@@ -25,6 +25,12 @@ database: example
 username: root
 password: abc1234
 
+# If disable, VIP have unlimited usage
+limitVipUsage: true
+# Will only work when you enable limitVipUsage
+vip-uses-per-day: 100
+vip-blocks-per-day: 1000
+
 # Tree blocks that non-VIP players can chop down every day,
 # you can give everyone "autotreechop.vip" permission to disable it.
 max-blocks-per-day: 500
