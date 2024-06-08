@@ -1,6 +1,6 @@
 # AutoTreeChop
 
-## All introduction are in Spigot page
+## All introduction are in Modrinth page
 
 A auto tree chopping plugin for milkteamc.  
 Discord: https://discord.gg/uQ4UXANnP2  
