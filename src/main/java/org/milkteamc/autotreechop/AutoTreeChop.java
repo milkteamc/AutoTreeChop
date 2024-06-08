@@ -334,6 +334,19 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
             } else {
                 if (args.length > 0) {
+                    // Reload command
+                    if (args[0].equalsIgnoreCase("reload")) {
+                        if (sender.hasPermission("autotreechop.reload")) {
+                            loadConfig();
+                            loadLocale();
+
+                            sender.sendMessage("Config reloaded successfully.");
+                        } else {
+                            BukkitTinyTranslations.sendMessage(sender, NO_PERMISSION_MESSAGE);
+                        }
+                        return true;
+                    }
+
                     // Get the target player
                     Player targetPlayer = Bukkit.getPlayer(args[0]);
 
