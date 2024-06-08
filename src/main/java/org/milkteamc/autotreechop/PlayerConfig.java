@@ -44,6 +44,7 @@ public class PlayerConfig {
             try {
                 HikariConfig config = new HikariConfig();
                 config.setJdbcUrl("jdbc:sqlite:plugins/AutoTreeChop/player_data.db");
+                config.setMaximumPoolSize(10);
 
                 HikariDataSource dataSource = new HikariDataSource(config);
                 return dataSource.getConnection();
