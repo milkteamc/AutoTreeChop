@@ -15,21 +15,31 @@ public class PlayerConfig {
     private int dailyBlocksBroken;
     private LocalDate lastUseDate;
 
-    public PlayerConfig(UUID playerUUID) {
+    public PlayerConfig(UUID playerUUID, boolean useMysql, String hostname, String database, int port, String username, String password) {
         this.playerUUID = playerUUID;
-        this.connection = establishConnection();
+        this.connection = establishConnection(useMysql, hostname, port, database, username, password);
         createTable();
         loadConfig();
     }
 
-    private Connection establishConnection() {
-        try {
-            Class.forName("org.sqlite.JDBC");
-            String dbUrl = "jdbc:sqlite:plugins/AutoTreeChop/player_data.db"; // Adjust the path as needed
-            return DriverManager.getConnection(dbUrl);
-        } catch (ClassNotFoundException | SQLException e) {
-            getLogger().warning("Error establishing SQLite connection: " + e.getMessage());
-            return null;
+    private Connection establishConnection(boolean useMysql, String hostname, int port, String database, String username, String password) {
+        if (useMysql) {
+            try {
+                Class.forName("org.sqlite.JDBC");
+                return DriverManager.getConnection("jdbc:mysql://" + hostname + ":" + port + "/" + database, username, password);
+            } catch (ClassNotFoundException | SQLException e) {
+                getLogger().warning("Error establishing MySQL connection: " + e.getMessage());
+                return null;
+            }
+        } else {
+            try {
+                Class.forName("org.sqlite.JDBC");
+                String dbUrl = "jdbc:sqlite:plugins/AutoTreeChop/player_data.db"; // Adjust the path as needed
+                return DriverManager.getConnection(dbUrl);
+            } catch (ClassNotFoundException | SQLException e) {
+                getLogger().warning("Error establishing SQLite connection: " + e.getMessage());
+                return null;
+            }
         }
     }
 
@@ -43,7 +53,7 @@ public class PlayerConfig {
                         "lastUseDate TEXT);")) {
             statement.executeUpdate();
         } catch (SQLException e) {
-            getLogger().warning("Error creating SQLite table: " + e.getMessage());
+            getLogger().warning("Error creating database table: " + e.getMessage());
         }
     }
 
@@ -72,11 +82,11 @@ public class PlayerConfig {
                     insertStatement.setString(5, lastUseDate.toString());
                     insertStatement.executeUpdate();
                 } catch (SQLException e) {
-                    getLogger().warning("Error inserting player data into SQLite: " + e.getMessage());
+                    getLogger().warning("Error inserting player data into database: " + e.getMessage());
                 }
             }
         } catch (SQLException e) {
-            getLogger().warning("Error loading player data from SQLite: " + e.getMessage());
+            getLogger().warning("Error loading player data from database: " + e.getMessage());
         }
     }
 
@@ -116,7 +126,7 @@ public class PlayerConfig {
                     ")";
             statement.executeUpdate(createTableQuery);
         } catch (SQLException e) {
-            getLogger().warning("Error initializing SQLite tables: " + e.getMessage());
+            getLogger().warning("Error initializing database tables: " + e.getMessage());
         }
     }
 
@@ -145,7 +155,7 @@ public class PlayerConfig {
             statement.setString(5, playerUUID.toString());
             statement.executeUpdate();
         } catch (SQLException e) {
-            getLogger().warning("Error updating player data in SQLite: " + e.getMessage());
+            getLogger().warning("Error updating player data in database: " + e.getMessage());
         }
     }
 }

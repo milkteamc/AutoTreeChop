@@ -106,12 +106,19 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     private Locale locale;
     private MessageTranslator translations;
     private boolean useClientLocale;
+    private boolean useMysql;
+    private String hostname;
+    private int port;
+    private String database;
+    private String username;
+    private String password;
     private Set<Material> logTypes;
 
     public static void sendMessage(CommandSender sender, ComponentLike message) {
         BukkitTinyTranslations.sendMessageIfNotEmpty(sender, message);
     }
 
+    // Auto edit add missing key
     @NotNull
     private static FileConfiguration getDefaultConfig() {
         FileConfiguration defaultConfig;
@@ -125,6 +132,12 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         defaultConfig.set("stopChoppingIfDifferentTypes", false);
         defaultConfig.set("chopTreeAsync", true);
         defaultConfig.set("use-player-locale", false);
+        defaultConfig.set("useMysql", false);
+        defaultConfig.set("hostname", "example.com");
+        defaultConfig.set("port", 3306);
+        defaultConfig.set("database", "example");
+        defaultConfig.set("username", "root");
+        defaultConfig.set("password", "abc1234");
         defaultConfig.set("locale", Locale.ENGLISH);
         defaultConfig.set("residenceFlag", "build");
         defaultConfig.set("log-types", Arrays.asList("OAK_LOG", "SPRUCE_LOG", "BIRCH_LOG", "JUNGLE_LOG", "ACACIA_LOG", "DARK_OAK_LOG", "MANGROVE_LOG", "CHERRY_LOG"));
@@ -190,6 +203,14 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             this.locale = l;
         }
         useClientLocale = config.getBoolean("use-player-locale");
+
+        // MySQL
+        useMysql = config.getBoolean("useMysql");
+        hostname = config.getString("hostname");
+        port = config.getInt("port");
+        database = config.getString("database");
+        username = config.getString("username");
+        password = config.getString("password");
 
         // Load log types
         List<String> logTypeStrings = config.getStringList("log-types");
@@ -690,7 +711,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     PlayerConfig getPlayerConfig(UUID playerUUID) {
         PlayerConfig playerConfig = playerConfigs.get(playerUUID);
         if (playerConfig == null) {
-            playerConfig = new PlayerConfig(playerUUID);
+            playerConfig = new PlayerConfig(playerUUID, useMysql, hostname, database, port, username, password);
             playerConfigs.put(playerUUID, playerConfig);
         }
         return playerConfig;

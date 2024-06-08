@@ -16,6 +16,15 @@ use-player-locale: false
 # you can give everyone "autotreechop.vip" permission to disable it.
 max-uses-per-day: 50
 
+# MySQL setting
+# If "useMysql: false", plugin will use SQLite
+useMysql: false
+hostname: example.com
+port: 3306
+database: example
+username: root
+password: abc1234
+
 # Tree blocks that non-VIP players can chop down every day,
 # you can give everyone "autotreechop.vip" permission to disable it.
 max-blocks-per-day: 500
