@@ -1,5 +1,8 @@
 package org.milkteamc.autotreechop;
 
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
+
 import java.sql.*;
 import java.time.LocalDate;
 import java.util.UUID;
@@ -25,9 +28,15 @@ public class PlayerConfig {
     private Connection establishConnection(boolean useMysql, String hostname, int port, String database, String username, String password) {
         if (useMysql) {
             try {
-                Class.forName("org.sqlite.JDBC");
-                return DriverManager.getConnection("jdbc:mysql://" + hostname + ":" + port + "/" + database, username, password);
-            } catch (ClassNotFoundException | SQLException e) {
+                HikariConfig config = new HikariConfig();
+                config.setJdbcUrl("jdbc:mysql://" + hostname + ":" + port + "/" + database);
+                config.setUsername(username);
+                config.setPassword(password);
+                config.setMaximumPoolSize(10);
+
+                HikariDataSource dataSource = new HikariDataSource(config);
+                return dataSource.getConnection();
+            } catch (Exception e) {
                 getLogger().warning("Error establishing MySQL connection: " + e.getMessage());
                 return null;
             }
