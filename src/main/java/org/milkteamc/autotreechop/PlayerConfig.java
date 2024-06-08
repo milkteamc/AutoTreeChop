@@ -42,10 +42,12 @@ public class PlayerConfig {
             }
         } else {
             try {
-                Class.forName("org.sqlite.JDBC");
-                String dbUrl = "jdbc:sqlite:plugins/AutoTreeChop/player_data.db"; // Adjust the path as needed
-                return DriverManager.getConnection(dbUrl);
-            } catch (ClassNotFoundException | SQLException e) {
+                HikariConfig config = new HikariConfig();
+                config.setJdbcUrl("jdbc:sqlite:plugins/AutoTreeChop/player_data.db");
+
+                HikariDataSource dataSource = new HikariDataSource(config);
+                return dataSource.getConnection();
+            } catch (Exception e) {
                 getLogger().warning("Error establishing SQLite connection: " + e.getMessage());
                 return null;
             }
