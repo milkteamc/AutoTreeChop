@@ -265,7 +265,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                 }
 
                 // Inside the onCommand method
-                if (args.length == 1 && args[0].equalsIgnoreCase("reload")) {
+                if (args.length > 0 && args[0].equalsIgnoreCase("reload")) {
                     if (sender.hasPermission("autotreechop.reload")) {
                         loadConfig();
                         loadLocale();
