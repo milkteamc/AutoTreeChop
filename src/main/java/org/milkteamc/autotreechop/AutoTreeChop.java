@@ -117,6 +117,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     private int vipUsesPerDay;
     private int vipBlocksPerDay;
     private Set<Material> logTypes;
+    private int toolDamageDecrease;
 
     public static void sendMessage(CommandSender sender, ComponentLike message) {
         BukkitTinyTranslations.sendMessageIfNotEmpty(sender, message);
@@ -147,6 +148,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         defaultConfig.set("limitVipUsage", true);
         defaultConfig.set("vip-uses-per-day", 50);
         defaultConfig.set("vip-blocks-per-day", 500);
+        defaultConfig.set("toolDamageDecrease", 1);
         defaultConfig.set("log-types", Arrays.asList("OAK_LOG", "SPRUCE_LOG", "BIRCH_LOG", "JUNGLE_LOG", "ACACIA_LOG", "DARK_OAK_LOG", "MANGROVE_LOG", "CHERRY_LOG"));
         return defaultConfig;
     }
@@ -163,7 +165,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     // Sends a message to the player and shows a red particle effect indicating the block limit has been reached
     private static void sendMaxBlockLimitReachedMessage(Player player, Block block) {
         sendMessage(player, HIT_MAX_BLOCK_MESSAGE);
-        player.getWorld().spawnParticle(org.bukkit.Particle.REDSTONE, block.getLocation().add(0.5, 0.5, 0.5), 50, 0.5, 0.5, 0.5, 0, new Particle.DustOptions(Color.RED, 1));
+        player.getWorld().spawnParticle(Particle.REDSTONE, block.getLocation().add(0.5, 0.5, 0.5), 50, 0.5, 0.5, 0.5, 0, new Particle.DustOptions(Color.RED, 1));
     }
 
     private FileConfiguration loadConfig() {
@@ -222,6 +224,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         limitVipUsage = config.getBoolean("limitVipUsage");
         vipUsesPerDay = config.getInt("vip-uses-per-day");
         vipBlocksPerDay = config.getInt("vip-blocks-per-day");
+        toolDamageDecrease = config.getInt("toolDamageDecrease");
         // Load log types
         List<String> logTypeStrings = config.getStringList("log-types");
         logTypes = logTypeStrings.stream().map(Material::getMaterial).collect(Collectors.toSet());
@@ -553,7 +556,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
     // Shows a green particle effect indicating the block has been chopped
     private void showChopEffect(Player player, Block block) {
-        player.getWorld().spawnParticle(org.bukkit.Particle.VILLAGER_HAPPY, block.getLocation().add(0.5, 0.5, 0.5), 50, 0.5, 0.5, 0.5, 0);
+        player.getWorld().spawnParticle(Particle.VILLAGER_HAPPY, block.getLocation().add(0.5, 0.5, 0.5), 50, 0.5, 0.5, 0.5, 0);
     }
 
     // Method to reduce the durability value of tools
@@ -578,7 +581,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             return;
         }
 
-        if (chopTreeInit(block, player)) return;
+        if (chopTreeInit(block, player, toolDamageDecrease)) return;
 
         // Async in Bukkit, but use sync method in Folia, because async system cause some issues for Folia.
         if (!isFolia() && chopTreeAsync) {
@@ -685,7 +688,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         return Math.abs(block1.getX() - block2.getX()) != 1 || block1.getY() != block2.getY() || block1.getZ() != block2.getZ();
     }
 
-    private boolean chopTreeInit(Block block, Player player) {
+    private boolean chopTreeInit(Block block, Player player, int damageToolInt) {
         UUID playerUUID = player.getUniqueId();
         PlayerConfig playerConfig = getPlayerConfig(playerUUID);
         if (checkedLocations.contains(block.getLocation())) {
@@ -701,7 +704,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
         playerConfig.incrementDailyBlocksBroken();
         if (toolDamage) {
-            damageTool(player, 1);
+            damageTool(player, damageToolInt);
         }
         return false;
     }

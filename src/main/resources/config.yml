@@ -50,6 +50,9 @@ stopChoppingIfNotConnected: false
 # Stop chopping if the blocks are of different types
 stopChoppingIfDifferentTypes: false
 
+# How much durability should be decrease when player brock one block.
+toolDamageDecrease: 1
+
 # Define which materials are log
 # Fun fact: If you add "DIAMOND_ORE", this plugin can become an auto mining plugin, lol
 log-types:
