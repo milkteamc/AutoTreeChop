@@ -234,153 +234,119 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
     @Override
     public List<String> onTabComplete(@NotNull CommandSender sender, Command cmd, @NotNull String alias, String[] args) {
-        List<String> completions = new ArrayList<>();
-
-        if (cmd.getName().equalsIgnoreCase("autotreechop") || cmd.getName().equalsIgnoreCase("atc")) {
-            if (args.length == 1) {
-
-                completions.add("usage");
-                if (sender.hasPermission("autotreechop.other") || sender.hasPermission("autotreechop.op")) {
-                    for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
-                        completions.add(onlinePlayer.getName());
-                    }
-                }
-                if (sender.hasPermission("autotreechop.op")) {
-                    completions.add("reload");
-                }
-
-                return completions;
-            }
+        if (!cmd.getName().equalsIgnoreCase("autotreechop") && !cmd.getName().equalsIgnoreCase("atc")) {
+            return null;
         }
 
-        return null;
+        if (args.length != 1) {
+            return null;
+        }
+
+        List<String> completions = new ArrayList<>();
+        completions.add("usage");
+
+        boolean hasOtherPermission = sender.hasPermission("autotreechop.other") || sender.hasPermission("autotreechop.op");
+        boolean hasOpPermission = sender.hasPermission("autotreechop.op");
+
+        if (hasOtherPermission) {
+            Bukkit.getOnlinePlayers().forEach(player -> completions.add(player.getName()));
+        }
+
+        if (hasOpPermission) {
+            completions.add("reload");
+        }
+
+        return completions;
     }
 
     @Override
     public boolean onCommand(@NotNull CommandSender sender, Command cmd, @NotNull String label, String[] args) {
-        if (cmd.getName().equalsIgnoreCase("autotreechop") || cmd.getName().equalsIgnoreCase("atc")) {
-            PlayerConfig playerConfig;
+        if (!cmd.getName().equalsIgnoreCase("autotreechop") && !cmd.getName().equalsIgnoreCase("atc")) {
+            return false;
+        }
 
-            if (sender instanceof Player player) {
-                // Check if the player has the required permission
-                if (!player.hasPermission("autotreechop.use")) {
-                    BukkitTinyTranslations.sendMessage(player, NO_PERMISSION_MESSAGE);
-                    return true;
-                }
-
-                // Inside the onCommand method
-                if (args.length > 0 && args[0].equalsIgnoreCase("reload")) {
-                    if (sender.hasPermission("autotreechop.reload")) {
-                        loadConfig();
-                        loadLocale();
-
-                        sender.sendMessage("Config reloaded successfully.");
-                    } else {
-                        BukkitTinyTranslations.sendMessage(sender, NO_PERMISSION_MESSAGE);
-                    }
-                    return true;
-                }
-
-
-                // If the user provided "usage" as an argument
-                if (args.length > 0 && args[0].equalsIgnoreCase("usage")) {
-                    playerConfig = getPlayerConfig(player.getUniqueId()); // Get playerConfig for sender
-                    BukkitTinyTranslations.sendMessage(player, USAGE_MESSAGE
-                            .insertNumber("current_uses", playerConfig.getDailyUses())
-                            .insertNumber("max_uses", maxUsesPerDay));
-                    BukkitTinyTranslations.sendMessage(player, BLOCKS_BROKEN_MESSAGE
-                            .insertNumber("current_blocks", playerConfig.getDailyBlocksBroken())
-                            .insertNumber("max_blocks", maxBlocksPerDay));
-                    return true;
-                }
-
-                // Check if the user provided a player name
-                if (args.length > 0) {
-                    // Get the target player
-                    Player targetPlayer = Bukkit.getPlayer(args[0]);
-
-                    // Check if the target player is online
-                    if (targetPlayer != null) {
-                        // Check if the sender has the required permission to toggle other players' state
-                        if (player.hasPermission("autotreechop.other") || player.hasPermission("autotreechop.op")) {
-                            UUID targetUUID = targetPlayer.getUniqueId();
-                            playerConfig = getPlayerConfig(targetUUID);
-
-                            boolean autoTreeChopEnabled = !playerConfig.isAutoTreeChopEnabled();
-                            playerConfig.setAutoTreeChopEnabled(autoTreeChopEnabled);
-
-                            if (autoTreeChopEnabled) {
-                                BukkitTinyTranslations.sendMessage(player, ENABLED_FOR_OTHER_MESSAGE.insertString("player", targetPlayer.getName()));
-                                BukkitTinyTranslations.sendMessage(targetPlayer, ENABLED_BY_OTHER_MESSAGE.insertString("player", player.getName()));
-                            } else {
-                                BukkitTinyTranslations.sendMessage(player, DISABLED_FOR_OTHER_MESSAGE.insertString("player", targetPlayer.getName()));
-                                BukkitTinyTranslations.sendMessage(targetPlayer, DISABLED_BY_OTHER_MESSAGE.insertString("player", player.getName()));
-                            }
-                        } else {
-                            BukkitTinyTranslations.sendMessage(player, NO_PERMISSION_MESSAGE);
-                        }
-                    } else {
-                        player.sendMessage("Player not found: " + args[0]);
-                    }
-                    return true;
-                } else {
-                    // Toggle the state for the sender
-                    playerConfig = getPlayerConfig(player.getUniqueId()); // Get playerConfig for sender
-                    boolean autoTreeChopEnabled = !playerConfig.isAutoTreeChopEnabled();
-                    playerConfig.setAutoTreeChopEnabled(autoTreeChopEnabled);
-
-                    if (autoTreeChopEnabled) {
-                        BukkitTinyTranslations.sendMessage(player, ENABLED_MESSAGE);
-                    } else {
-                        BukkitTinyTranslations.sendMessage(player, DISABLED_MESSAGE);
-                    }
-                }
-
+        if (args.length > 0 && args[0].equalsIgnoreCase("reload")) {
+            if (sender.hasPermission("autotreechop.reload")) {
+                loadConfig();
+                loadLocale();
+                sender.sendMessage("Config reloaded successfully.");
             } else {
-                if (args.length > 0) {
-                    // Reload command
-                    if (args[0].equalsIgnoreCase("reload")) {
-                        if (sender.hasPermission("autotreechop.reload")) {
-                            loadConfig();
-                            loadLocale();
-
-                            sender.sendMessage("Config reloaded successfully.");
-                        } else {
-                            BukkitTinyTranslations.sendMessage(sender, NO_PERMISSION_MESSAGE);
-                        }
-                        return true;
-                    }
-
-                    // Get the target player
-                    Player targetPlayer = Bukkit.getPlayer(args[0]);
-
-                    // Check if the target player is online
-                    if (targetPlayer != null) {
-                        UUID targetUUID = targetPlayer.getUniqueId();
-                        playerConfig = getPlayerConfig(targetUUID);
-
-                        boolean autoTreeChopEnabled = !playerConfig.isAutoTreeChopEnabled();
-                        playerConfig.setAutoTreeChopEnabled(autoTreeChopEnabled);
-
-                        if (autoTreeChopEnabled) {
-                            BukkitTinyTranslations.sendMessage(sender, ENABLED_FOR_OTHER_MESSAGE.insertString("player", targetPlayer.getName()));
-                            BukkitTinyTranslations.sendMessage(targetPlayer, ENABLED_BY_OTHER_MESSAGE.insertComponent("player", CONSOLE_NAME));
-                        } else {
-                            BukkitTinyTranslations.sendMessage(sender, DISABLED_FOR_OTHER_MESSAGE.insertString("player", targetPlayer.getName()));
-                            BukkitTinyTranslations.sendMessage(targetPlayer, DISABLED_BY_OTHER_MESSAGE.insertComponent("player", CONSOLE_NAME));
-                        }
-                    } else {
-                        getLogger().warning("Player not found: " + args[0]);
-                    }
-                    return true;
-                } else {
-                    sendMessage(sender, ONLY_PLAYERS_MESSAGE);
-                }
+                sendMessage(sender, NO_PERMISSION_MESSAGE);
             }
             return true;
         }
-        return false;
+
+        if (!(sender instanceof Player player)) {
+            if (args.length > 0) {
+                handleTargetPlayerToggle(sender, args[0]);
+            } else {
+                sendMessage(sender, ONLY_PLAYERS_MESSAGE);
+            }
+            return true;
+        }
+
+        if (!player.hasPermission("autotreechop.use")) {
+            sendMessage(player, NO_PERMISSION_MESSAGE);
+            return true;
+        }
+
+        if (args.length > 0 && args[0].equalsIgnoreCase("usage")) {
+            handleUsageCommand(player);
+            return true;
+        }
+
+        if (args.length > 0) {
+            handleTargetPlayerToggle(player, args[0]);
+            return true;
+        }
+
+        toggleAutoTreeChop(player, player.getUniqueId());
+        return true;
     }
+
+    private void handleUsageCommand(Player player) {
+        PlayerConfig playerConfig = getPlayerConfig(player.getUniqueId());
+        BukkitTinyTranslations.sendMessage(player, USAGE_MESSAGE
+                .insertNumber("current_uses", playerConfig.getDailyUses())
+                .insertNumber("max_uses", maxUsesPerDay));
+        BukkitTinyTranslations.sendMessage(player, BLOCKS_BROKEN_MESSAGE
+                .insertNumber("current_blocks", playerConfig.getDailyBlocksBroken())
+                .insertNumber("max_blocks", maxBlocksPerDay));
+    }
+
+    private void handleTargetPlayerToggle(CommandSender sender, String targetPlayerName) {
+        Player targetPlayer = Bukkit.getPlayer(targetPlayerName);
+        if (targetPlayer == null) {
+            sender.sendMessage("Player not found: " + targetPlayerName);
+            return;
+        }
+
+        UUID targetUUID = targetPlayer.getUniqueId();
+        PlayerConfig playerConfig = getPlayerConfig(targetUUID);
+        boolean autoTreeChopEnabled = !playerConfig.isAutoTreeChopEnabled();
+        playerConfig.setAutoTreeChopEnabled(autoTreeChopEnabled);
+
+        if (autoTreeChopEnabled) {
+            sendMessage(sender, ENABLED_FOR_OTHER_MESSAGE.insertString("player", targetPlayer.getName()));
+            sendMessage(targetPlayer, ENABLED_BY_OTHER_MESSAGE.insertString("player", sender.getName()));
+        } else {
+            sendMessage(sender, DISABLED_FOR_OTHER_MESSAGE.insertString("player", targetPlayer.getName()));
+            sendMessage(targetPlayer, DISABLED_BY_OTHER_MESSAGE.insertString("player", sender.getName()));
+        }
+    }
+
+    private void toggleAutoTreeChop(Player player, UUID playerUUID) {
+        PlayerConfig playerConfig = getPlayerConfig(playerUUID);
+        boolean autoTreeChopEnabled = !playerConfig.isAutoTreeChopEnabled();
+        playerConfig.setAutoTreeChopEnabled(autoTreeChopEnabled);
+
+        if (autoTreeChopEnabled) {
+            BukkitTinyTranslations.sendMessage(player, ENABLED_MESSAGE);
+        } else {
+            BukkitTinyTranslations.sendMessage(player, DISABLED_MESSAGE);
+        }
+    }
+
 
     @Override
     public void onEnable() {
