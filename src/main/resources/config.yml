@@ -44,6 +44,9 @@ toolDamage: true
 # Enable this for better performance, but this may cause issue sometime.
 chopTreeAsync: true
 
+# If you are using Residence, you can set which Flag players have access to AutoTreeChop in residence.
+residenceFlag: build
+
 # Stop chopping if the blocks are not connected (not part of the same tree)
 stopChoppingIfNotConnected: false
 
