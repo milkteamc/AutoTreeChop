@@ -73,25 +73,26 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
     private static final String SPIGOT_RESOURCE_ID = "113071";
     private static final List<String> SUPPORTED_VERSIONS = Arrays.asList(
-            "1.21-R0.1-SNAPSHOT",
-            "1.20.6-R0.1-SNAPSHOT",
-            "1.20.5-R0.1-SNAPSHOT",
-            "1.20.4-R0.1-SNAPSHOT",
-            "1.20.3-R0.1-SNAPSHOT",
-            "1.20.2-R0.1-SNAPSHOT",
-            "1.20.1-R0.1-SNAPSHOT",
-            "1.20-R0.1-SNAPSHOT",
-            "1.19.4-R0.1-SNAPSHOT",
-            "1.19.3-R0.1-SNAPSHOT",
-            "1.19.2-R0.1-SNAPSHOT",
-            "1.19.1-R0.1-SNAPSHOT",
-            "1.19-R0.1-SNAPSHOT",
-            "1.18.2-R0.1-SNAPSHOT",
-            "1.18.1-R0.1-SNAPSHOT",
-            "1.18-R0.1-SNAPSHOT",
-            "1.17.1-R0.1-SNAPSHOT",
-            "1.17-R0.1-SNAPSHOT"
+            "1.21",
+            "1.20.6",
+            "1.20.5",
+            "1.20.4",
+            "1.20.3",
+            "1.20.2",
+            "1.20.1",
+            "1.20",
+            "1.19.4",
+            "1.19.3",
+            "1.19.2",
+            "1.19.1",
+            "1.19",
+            "1.18.2",
+            "1.18.1",
+            "1.18",
+            "1.17.1",
+            "1.17"
     );
+    private String bukkitVersion = this.getServer().getBukkitVersion();
     private final Set<Location> checkedLocations = new HashSet<>();
     private Metrics metrics;
     private Map<UUID, PlayerConfig> playerConfigs;
@@ -347,13 +348,17 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         }
     }
 
-
     @Override
     public void onEnable() {
-        if (!SUPPORTED_VERSIONS.contains(this.getServer().getBukkitVersion())) {
-            getLogger().warning("Your Minecraft version may have some issues, we only fully support "
-                    + String.join(", ", SUPPORTED_VERSIONS));
-            getLogger().warning("Report any issue to our GitHub: https://github.com/milkteamc/AutoTreeChop/issues");
+        // Bukkit version checker
+        if (bukkitVersion.length() > 14) {
+            bukkitVersion = bukkitVersion.substring(0, bukkitVersion.length() - 14);
+
+            if (!SUPPORTED_VERSIONS.contains(bukkitVersion)) {
+                getLogger().warning("Your Minecraft version may have some issues, we only fully support "
+                        + String.join(", ", SUPPORTED_VERSIONS));
+                getLogger().warning("Report any issue to our GitHub: https://github.com/milkteamc/AutoTreeChop/issues");
+            }
         }
 
         metrics = new Metrics(this, 20053); //bstats
