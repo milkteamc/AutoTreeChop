@@ -281,6 +281,26 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             return true;
         }
 
+        if (args.length > 0 && args[0].equalsIgnoreCase("enable-all")) {
+            if (sender.hasPermission("autotreechop.other") || sender.hasPermission("autotreechop.op")) {
+                toggleAutoTreeChopForAll(sender, true);
+                sendMessage(sender, ENABLED_FOR_OTHER_MESSAGE.insertString("player", "everyone"));
+            } else {
+                sendMessage(sender, NO_PERMISSION_MESSAGE);
+            }
+            return true;
+        }
+
+        if (args.length > 0 && args[0].equalsIgnoreCase("disable-all")) {
+            if (sender.hasPermission("autotreechop.other") || sender.hasPermission("autotreechop.op")) {
+                toggleAutoTreeChopForAll(sender, false);
+                sendMessage(sender, DISABLED_FOR_OTHER_MESSAGE.insertString("player", "everyone"));
+            } else {
+                sendMessage(sender, NO_PERMISSION_MESSAGE);
+            }
+            return true;
+        }
+
         if (!(sender instanceof Player player)) {
             if (args.length > 0) {
                 handleTargetPlayerToggle(sender, args[0]);
@@ -297,26 +317,6 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
         if (args.length > 0 && args[0].equalsIgnoreCase("usage")) {
             handleUsageCommand(player);
-            return true;
-        }
-
-        if (args.length > 0 && args[0].equalsIgnoreCase("enable-all")) {
-            if (sender.hasPermission("autotreechop.other") || sender.hasPermission("autotreechop.op")) {
-                toggleAutoTreeChopForAll(player, true);
-                sendMessage(sender, ENABLED_FOR_OTHER_MESSAGE.insertString("player", "everyone"));
-            } else {
-                sendMessage(sender, NO_PERMISSION_MESSAGE);
-            }
-            return true;
-        }
-
-        if (args.length > 0 && args[0].equalsIgnoreCase("disable-all")) {
-            if (sender.hasPermission("autotreechop.other") || sender.hasPermission("autotreechop.op")) {
-                toggleAutoTreeChopForAll(player, false);
-                sendMessage(sender, DISABLED_FOR_OTHER_MESSAGE.insertString("player", "everyone"));
-            } else {
-                sendMessage(sender, NO_PERMISSION_MESSAGE);
-            }
             return true;
         }
 
