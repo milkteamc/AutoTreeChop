@@ -378,13 +378,13 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                 ? ENABLED_BY_OTHER_MESSAGE.insertString("player", sender.getName())
                 : DISABLED_BY_OTHER_MESSAGE.insertString("player", sender.getName());
 
-        for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
+        // Use parallelStream for better performance
+        Bukkit.getOnlinePlayers().parallelStream().forEach(onlinePlayer -> {
             UUID playerUUID = onlinePlayer.getUniqueId();
             PlayerConfig playerConfig = getPlayerConfig(playerUUID);
             playerConfig.setAutoTreeChopEnabled(autoTreeChopEnabled);
-
             sendMessage(onlinePlayer, message);
-        }
+        });
     }
 
     @Override
