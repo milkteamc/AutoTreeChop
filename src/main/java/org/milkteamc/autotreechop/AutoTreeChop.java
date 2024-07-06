@@ -250,6 +250,8 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         boolean hasOpPermission = sender.hasPermission("autotreechop.op");
 
         if (hasOtherPermission) {
+            completions.add("enable-all");
+            completions.add("disable-all");
             Bukkit.getOnlinePlayers().forEach(player -> completions.add(player.getName()));
         }
 
@@ -296,8 +298,23 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             return true;
         }
 
-        if (args.length > 0 && args[0].equalsIgnoreCase("@a")) {
-            toggleAutoTreeChopForAll(player);
+        if (args.length > 0 && args[0].equalsIgnoreCase("enable-all")) {
+            if (sender.hasPermission("autotreechop.other") || sender.hasPermission("autotreechop.op")) {
+                toggleAutoTreeChopForAll(player, true);
+                sendMessage(sender, ENABLED_FOR_OTHER_MESSAGE.insertString("player", "everyone"));
+            } else {
+                sendMessage(sender, NO_PERMISSION_MESSAGE);
+            }
+            return true;
+        }
+
+        if (args.length > 0 && args[0].equalsIgnoreCase("disable-all")) {
+            if (sender.hasPermission("autotreechop.other") || sender.hasPermission("autotreechop.op")) {
+                toggleAutoTreeChopForAll(player, false);
+                sendMessage(sender, DISABLED_FOR_OTHER_MESSAGE.insertString("player", "everyone"));
+            } else {
+                sendMessage(sender, NO_PERMISSION_MESSAGE);
+            }
             return true;
         }
 
@@ -354,18 +371,15 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     }
 
     // /atc @a
-    private void toggleAutoTreeChopForAll(CommandSender sender) {
+    private void toggleAutoTreeChopForAll(CommandSender sender, boolean autoTreeChopEnabled) {
         for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
             UUID playerUUID = onlinePlayer.getUniqueId();
             PlayerConfig playerConfig = getPlayerConfig(playerUUID);
-            boolean autoTreeChopEnabled = !playerConfig.isAutoTreeChopEnabled();
             playerConfig.setAutoTreeChopEnabled(autoTreeChopEnabled);
 
             if (autoTreeChopEnabled) {
-                sendMessage(sender, ENABLED_FOR_OTHER_MESSAGE.insertString("player", onlinePlayer.getName()));
                 sendMessage(onlinePlayer, ENABLED_BY_OTHER_MESSAGE.insertString("player", sender.getName()));
             } else {
-                sendMessage(sender, DISABLED_FOR_OTHER_MESSAGE.insertString("player", onlinePlayer.getName()));
                 sendMessage(onlinePlayer, DISABLED_BY_OTHER_MESSAGE.insertString("player", sender.getName()));
             }
         }
