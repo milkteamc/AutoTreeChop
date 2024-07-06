@@ -252,7 +252,9 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         if (hasOtherPermission) {
             completions.add("enable-all");
             completions.add("disable-all");
-            Bukkit.getOnlinePlayers().forEach(player -> completions.add(player.getName()));
+            Bukkit.getOnlinePlayers().stream()
+                    .limit(10) // Limit to 10 players
+                    .forEach(player -> completions.add(player.getName()));
         }
 
         if (hasOpPermission) {
