@@ -296,6 +296,11 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             return true;
         }
 
+        if (args.length > 0 && args[0].equalsIgnoreCase("@a")) {
+            toggleAutoTreeChopForAll(player);
+            return true;
+        }
+
         if (args.length > 0) {
             handleTargetPlayerToggle(player, args[0]);
             return true;
@@ -345,6 +350,24 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             BukkitTinyTranslations.sendMessage(player, ENABLED_MESSAGE);
         } else {
             BukkitTinyTranslations.sendMessage(player, DISABLED_MESSAGE);
+        }
+    }
+
+    // /atc @a
+    private void toggleAutoTreeChopForAll(CommandSender sender) {
+        for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
+            UUID playerUUID = onlinePlayer.getUniqueId();
+            PlayerConfig playerConfig = getPlayerConfig(playerUUID);
+            boolean autoTreeChopEnabled = !playerConfig.isAutoTreeChopEnabled();
+            playerConfig.setAutoTreeChopEnabled(autoTreeChopEnabled);
+
+            if (autoTreeChopEnabled) {
+                sendMessage(sender, ENABLED_FOR_OTHER_MESSAGE.insertString("player", onlinePlayer.getName()));
+                sendMessage(onlinePlayer, ENABLED_BY_OTHER_MESSAGE.insertString("player", sender.getName()));
+            } else {
+                sendMessage(sender, DISABLED_FOR_OTHER_MESSAGE.insertString("player", onlinePlayer.getName()));
+                sendMessage(onlinePlayer, DISABLED_BY_OTHER_MESSAGE.insertString("player", sender.getName()));
+            }
         }
     }
 
