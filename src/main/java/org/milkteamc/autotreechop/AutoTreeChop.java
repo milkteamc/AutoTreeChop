@@ -372,18 +372,18 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         }
     }
 
-    // /atc @a
+    // Logic when using /atc @a
     private void toggleAutoTreeChopForAll(CommandSender sender, boolean autoTreeChopEnabled) {
+        ComponentLike message = autoTreeChopEnabled
+                ? ENABLED_BY_OTHER_MESSAGE.insertString("player", sender.getName())
+                : DISABLED_BY_OTHER_MESSAGE.insertString("player", sender.getName());
+
         for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
             UUID playerUUID = onlinePlayer.getUniqueId();
             PlayerConfig playerConfig = getPlayerConfig(playerUUID);
             playerConfig.setAutoTreeChopEnabled(autoTreeChopEnabled);
 
-            if (autoTreeChopEnabled) {
-                sendMessage(onlinePlayer, ENABLED_BY_OTHER_MESSAGE.insertString("player", sender.getName()));
-            } else {
-                sendMessage(onlinePlayer, DISABLED_BY_OTHER_MESSAGE.insertString("player", sender.getName()));
-            }
+            sendMessage(onlinePlayer, message);
         }
     }
 
