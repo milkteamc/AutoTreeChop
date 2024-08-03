@@ -44,7 +44,7 @@ dependencies {
     compileOnly 'me.clip:placeholderapi:2.11.5'
     implementation "de.cubbossa:TinyTranslations-bukkit:4.5.0"
     compileOnly "net.coreprotect:coreprotect:22.2"
-    compileOnly files("/libs/Residence5.1.4.3.jar")
+    compileOnly files("./libs/Residence5.1.4.3.jar")
     compileOnly "com.github.angeschossen:LandsAPI:6.44.0"
     implementation "com.zaxxer:HikariCP:4.0.3"
 }
