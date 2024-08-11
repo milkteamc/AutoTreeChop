@@ -12,7 +12,6 @@ commands:
     description: Toggle auto tree chop.
     usage: /autotreechop
     permission: autotreechop.use
-
   atc:
     description: Toggle auto tree chop.
     usage: /atc

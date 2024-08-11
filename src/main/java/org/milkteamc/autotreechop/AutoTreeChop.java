@@ -73,24 +73,11 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
     private static final String SPIGOT_RESOURCE_ID = "113071";
     private static final List<String> SUPPORTED_VERSIONS = Arrays.asList(
-            "1.21",
-            "1.20.6",
-            "1.20.5",
-            "1.20.4",
-            "1.20.3",
-            "1.20.2",
-            "1.20.1",
-            "1.20",
-            "1.19.4",
-            "1.19.3",
-            "1.19.2",
-            "1.19.1",
-            "1.19",
-            "1.18.2",
-            "1.18.1",
-            "1.18",
-            "1.17.1",
-            "1.17"
+            "1.21.1", "1.21",
+            "1.20.6", "1.20.5", "1.20.4", "1.20.3", "1.20.2", "1.20.1", "1.20",
+            "1.19.4", "1.19.3", "1.19.2", "1.19.1", "1.19",
+            "1.18.2", "1.18.1", "1.18",
+            "1.17.1", "1.17"
     );
     private String bukkitVersion = this.getServer().getBukkitVersion();
     private final Set<Location> checkedLocations = new HashSet<>();
@@ -556,13 +543,13 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
         if (playerConfig.isAutoTreeChopEnabled() && isLog(material)) {
 
-            if (vipBlock(player, playerConfig) && playerConfig.getDailyBlocksBroken() >= maxBlocksPerDay) {
+            if (vipBlock(player, playerConfig) || playerConfig.getDailyBlocksBroken() >= maxBlocksPerDay) {
                 sendMaxBlockLimitReachedMessage(player, block);
                 event.setCancelled(true);
                 return;
             }
 
-            if (!vipUses(player, playerConfig) && playerConfig.getDailyUses() >= maxUsesPerDay) {
+            if (!vipUses(player, playerConfig) || playerConfig.getDailyUses() >= maxUsesPerDay) {
                 BukkitTinyTranslations.sendMessage(player, HIT_MAX_USAGE_MESSAGE);
                 return;
             }
