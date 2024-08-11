@@ -330,13 +330,31 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     }
 
     private void handleUsageCommand(Player player) {
-        PlayerConfig playerConfig = getPlayerConfig(player.getUniqueId());
-        BukkitTinyTranslations.sendMessage(player, USAGE_MESSAGE
-                .insertNumber("current_uses", playerConfig.getDailyUses())
-                .insertNumber("max_uses", maxUsesPerDay));
-        BukkitTinyTranslations.sendMessage(player, BLOCKS_BROKEN_MESSAGE
-                .insertNumber("current_blocks", playerConfig.getDailyBlocksBroken())
-                .insertNumber("max_blocks", maxBlocksPerDay));
+        if (!player.hasPermission("autotreechop.vip")) {
+            PlayerConfig playerConfig = getPlayerConfig(player.getUniqueId());
+            BukkitTinyTranslations.sendMessage(player, USAGE_MESSAGE
+                    .insertNumber("current_uses", playerConfig.getDailyUses())
+                    .insertNumber("max_uses", maxUsesPerDay));
+            BukkitTinyTranslations.sendMessage(player, BLOCKS_BROKEN_MESSAGE
+                    .insertNumber("current_blocks", playerConfig.getDailyBlocksBroken())
+                    .insertNumber("max_blocks", maxBlocksPerDay));
+        } else if (player.hasPermission("autotreechop.vip") && limitVipUsage) {
+            PlayerConfig playerConfig = getPlayerConfig(player.getUniqueId());
+            BukkitTinyTranslations.sendMessage(player, USAGE_MESSAGE
+                    .insertNumber("current_uses", playerConfig.getDailyUses())
+                    .insertNumber("max_uses", vipUsesPerDay));
+            BukkitTinyTranslations.sendMessage(player, BLOCKS_BROKEN_MESSAGE
+                    .insertNumber("current_blocks", playerConfig.getDailyBlocksBroken())
+                    .insertNumber("max_blocks", vipBlocksPerDay));
+        } else if(!player.hasPermission("autotreechop.vip") && !limitVipUsage) {
+            PlayerConfig playerConfig = getPlayerConfig(player.getUniqueId());
+            BukkitTinyTranslations.sendMessage(player, USAGE_MESSAGE
+                    .insertNumber("current_uses", playerConfig.getDailyUses())
+                    .insertString("max_uses", "?"));
+            BukkitTinyTranslations.sendMessage(player, BLOCKS_BROKEN_MESSAGE
+                    .insertNumber("current_blocks", playerConfig.getDailyBlocksBroken())
+                    .insertString("max_blocks", "?"));
+        }
     }
 
     private void handleTargetPlayerToggle(CommandSender sender, String targetPlayerName) {
@@ -372,7 +390,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         }
     }
 
-    // Logic when using /atc @a
+    // Logic when using /atc enable-all disable-all
     private void toggleAutoTreeChopForAll(CommandSender sender, boolean autoTreeChopEnabled) {
         ComponentLike message = autoTreeChopEnabled
                 ? ENABLED_BY_OTHER_MESSAGE.insertString("player", sender.getName())
