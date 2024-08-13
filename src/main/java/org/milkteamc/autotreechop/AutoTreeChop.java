@@ -333,7 +333,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             BukkitTinyTranslations.sendMessage(player, BLOCKS_BROKEN_MESSAGE
                     .insertNumber("current_blocks", playerConfig.getDailyBlocksBroken())
                     .insertNumber("max_blocks", vipBlocksPerDay));
-        } else if (!player.hasPermission("autotreechop.vip") && !limitVipUsage) {
+        } else if (player.hasPermission("autotreechop.vip") && !limitVipUsage) {
             PlayerConfig playerConfig = getPlayerConfig(player.getUniqueId());
             BukkitTinyTranslations.sendMessage(player, USAGE_MESSAGE
                     .insertNumber("current_uses", playerConfig.getDailyUses())
@@ -520,14 +520,16 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     }
 
     // VIP limit checker
-    private boolean vipUses(Player player, PlayerConfig playerConfig) {
+    private boolean hasvipUses(Player player, PlayerConfig playerConfig) {
         if (!limitVipUsage) return player.hasPermission("autotreechop.vip");
-        return playerConfig.getDailyUses() <= vipUsesPerDay;
+        if (player.hasPermission("autotreechop.vip")) return playerConfig.getDailyUses() <= vipUsesPerDay;
+        return false;
     }
 
-    private boolean vipBlock(Player player, PlayerConfig playerConfig) {
+    private boolean hasvipBlock(Player player, PlayerConfig playerConfig) {
         if (!limitVipUsage) return player.hasPermission("autotreechop.vip");
-        return playerConfig.getDailyBlocksBroken() <= vipBlocksPerDay;
+        if (player.hasPermission("autotreechop.vip")) return playerConfig.getDailyBlocksBroken() <= vipBlocksPerDay;
+        return false;
     }
 
     @EventHandler
@@ -543,13 +545,13 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
         if (playerConfig.isAutoTreeChopEnabled() && isLog(material)) {
 
-            if (vipBlock(player, playerConfig) || playerConfig.getDailyBlocksBroken() <= maxBlocksPerDay) {
+            if (!hasvipBlock(player, playerConfig) && playerConfig.getDailyBlocksBroken() >= maxBlocksPerDay) {
                 sendMaxBlockLimitReachedMessage(player, block);
                 event.setCancelled(true);
                 return;
             }
 
-            if (vipUses(player, playerConfig) || playerConfig.getDailyUses() <= maxUsesPerDay) {
+            if (!hasvipUses(player, playerConfig) && playerConfig.getDailyUses() >= maxUsesPerDay) {
                 BukkitTinyTranslations.sendMessage(player, HIT_MAX_USAGE_MESSAGE);
                 return;
             }
@@ -623,7 +625,11 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                             }
 
                             // Stop if no enough credits
-                            if (getPlayerConfig(player.getUniqueId()).getDailyBlocksBroken() >= maxBlocksPerDay) {
+                            if (getPlayerConfig(player.getUniqueId()).getDailyUses() >= maxUsesPerDay && !hasvipBlock(player, getPlayerConfig(player.getUniqueId()))) {
+                                BukkitTinyTranslations.sendMessage(player, HIT_MAX_USAGE_MESSAGE);
+                                return;
+                            }
+                            if (getPlayerConfig(player.getUniqueId()).getDailyBlocksBroken() >= maxBlocksPerDay && !hasvipBlock(player, getPlayerConfig(player.getUniqueId()))) {
                                 BukkitTinyTranslations.sendMessage(player, HIT_MAX_BLOCK_MESSAGE);
                                 return;
                             }
@@ -657,11 +663,11 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                         }
 
                         // Stop if no enough credits
-                        if (getPlayerConfig(player.getUniqueId()).getDailyUses() >= maxUsesPerDay) {
+                        if (getPlayerConfig(player.getUniqueId()).getDailyUses() >= maxUsesPerDay && !hasvipBlock(player, getPlayerConfig(player.getUniqueId()))) {
                             BukkitTinyTranslations.sendMessage(player, HIT_MAX_USAGE_MESSAGE);
                             return;
                         }
-                        if (getPlayerConfig(player.getUniqueId()).getDailyBlocksBroken() >= maxBlocksPerDay) {
+                        if (getPlayerConfig(player.getUniqueId()).getDailyBlocksBroken() >= maxBlocksPerDay && !hasvipBlock(player, getPlayerConfig(player.getUniqueId()))) {
                             BukkitTinyTranslations.sendMessage(player, HIT_MAX_BLOCK_MESSAGE);
                             return;
                         }
