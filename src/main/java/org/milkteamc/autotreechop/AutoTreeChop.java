@@ -543,13 +543,13 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
         if (playerConfig.isAutoTreeChopEnabled() && isLog(material)) {
 
-            if (vipBlock(player, playerConfig) || playerConfig.getDailyBlocksBroken() >= maxBlocksPerDay) {
+            if (vipBlock(player, playerConfig) || playerConfig.getDailyBlocksBroken() <= maxBlocksPerDay) {
                 sendMaxBlockLimitReachedMessage(player, block);
                 event.setCancelled(true);
                 return;
             }
 
-            if (!vipUses(player, playerConfig) || playerConfig.getDailyUses() >= maxUsesPerDay) {
+            if (vipUses(player, playerConfig) || playerConfig.getDailyUses() <= maxUsesPerDay) {
                 BukkitTinyTranslations.sendMessage(player, HIT_MAX_USAGE_MESSAGE);
                 return;
             }
