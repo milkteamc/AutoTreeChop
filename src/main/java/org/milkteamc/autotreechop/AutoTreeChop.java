@@ -333,14 +333,14 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             BukkitTinyTranslations.sendMessage(player, BLOCKS_BROKEN_MESSAGE
                     .insertNumber("current_blocks", playerConfig.getDailyBlocksBroken())
                     .insertNumber("max_blocks", vipBlocksPerDay));
-        } else if(!player.hasPermission("autotreechop.vip") && !limitVipUsage) {
+        } else if (!player.hasPermission("autotreechop.vip") && !limitVipUsage) {
             PlayerConfig playerConfig = getPlayerConfig(player.getUniqueId());
             BukkitTinyTranslations.sendMessage(player, USAGE_MESSAGE
                     .insertNumber("current_uses", playerConfig.getDailyUses())
-                    .insertString("max_uses", "?"));
+                    .insertString("max_uses", "\u221e"));
             BukkitTinyTranslations.sendMessage(player, BLOCKS_BROKEN_MESSAGE
                     .insertNumber("current_blocks", playerConfig.getDailyBlocksBroken())
-                    .insertString("max_blocks", "?"));
+                    .insertString("max_blocks", "\u221e"));
         }
     }
 
@@ -522,12 +522,12 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     // VIP limit checker
     private boolean vipUses(Player player, PlayerConfig playerConfig) {
         if (!limitVipUsage) return player.hasPermission("autotreechop.vip");
-        return playerConfig.getDailyUses() >= vipBlocksPerDay;
+        return playerConfig.getDailyUses() <= vipUsesPerDay;
     }
 
     private boolean vipBlock(Player player, PlayerConfig playerConfig) {
         if (!limitVipUsage) return player.hasPermission("autotreechop.vip");
-        return playerConfig.getDailyUses() >= vipUsesPerDay;
+        return playerConfig.getDailyBlocksBroken() <= vipBlocksPerDay;
     }
 
     @EventHandler
