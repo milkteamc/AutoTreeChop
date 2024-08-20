@@ -58,11 +58,11 @@ public class PlayerConfig {
     private void createTable() {
         try (PreparedStatement statement = connection.prepareStatement(
                 "CREATE TABLE IF NOT EXISTS player_data (" +
-                        "uuid TEXT PRIMARY KEY," +
+                        "uuid VARCHAR(36) PRIMARY KEY," +
                         "autoTreeChopEnabled BOOLEAN," +
                         "dailyUses INT," +
                         "dailyBlocksBroken INT," +
-                        "lastUseDate TEXT);")) {
+                        "lastUseDate VARCHAR(10));")) {
             statement.executeUpdate();
         } catch (SQLException e) {
             getLogger().warning("Error creating database table: " + e.getMessage());
