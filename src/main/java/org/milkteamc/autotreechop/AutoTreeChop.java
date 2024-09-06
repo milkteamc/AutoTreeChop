@@ -485,7 +485,8 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         try {
 
             if (this.getDescription().getVersion().contains("SNAPSHOT")) {
-                this.getLogger().warning("You are using a beta version!");
+                this.getLogger().warning("You are using a SNAPSHOT version, this should NEVER use in production environment.");
+                this.getLogger().warning("Download latest version at: https://modrinth.com/plugin/autotreechop");
                 return;
             }
 
