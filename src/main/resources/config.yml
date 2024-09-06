@@ -17,6 +17,9 @@ use-player-locale: false
 # you can give everyone "autotreechop.vip" permission to disable it.
 max-uses-per-day: 50
 
+# Cooldown time (second), use 0 to disable
+cooldownTime: 5
+
 # MySQL setting
 # If "useMysql: false", plugin will use SQLite
 useMysql: false
@@ -31,6 +34,8 @@ limitVipUsage: true
 # Will only work when you enable limitVipUsage
 vip-uses-per-day: 100
 vip-blocks-per-day: 1000
+# Cooldown time for VIP users (second), use 0 to disable
+vipCooldownTime: 2
 
 # Tree blocks that non-VIP players can chop down every day,
 # you can give everyone "autotreechop.vip" permission to disable it.

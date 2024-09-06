@@ -68,6 +68,8 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             .withDefault("<prefix_negative>Auto tree chopping disabled by {player}.</prefix_negative>").build();
     public static final Message DISABLED_FOR_OTHER_MESSAGE = new MessageBuilder("disabledForOther")
             .withDefault("<prefix_negative>Auto tree chopping disabled for {player}</prefix_negative>").build();
+    public static final Message STILL_IN_COOLDOWN_MESSAGE = new MessageBuilder("stillInCooldown")
+            .withDefault("<prefix_negative>You are still in cooldown! Try again after {cooldown_time} seconds.</prefix_negative>").build();
     public static final Message CONSOLE_NAME = new MessageBuilder("consoleName")
             .withDefault("console").build();
 
@@ -81,6 +83,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     );
     private String bukkitVersion = this.getServer().getBukkitVersion();
     private final Set<Location> checkedLocations = new HashSet<>();
+    private final HashMap<UUID, Long> cooldowns = new HashMap<>();
     private Metrics metrics;
     private Map<UUID, PlayerConfig> playerConfigs;
     private AutoTreeChopAPI api;
@@ -88,6 +91,8 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     private boolean toolDamage;
     private int maxUsesPerDay;
     private int maxBlocksPerDay;
+    private int cooldownTime;
+    private int vipCooldownTime;
     private boolean stopChoppingIfNotConnected;
     private boolean stopChoppingIfDifferentTypes;
     private boolean chopTreeAsync;
@@ -121,6 +126,8 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         defaultConfig.set("toolDamage", true);
         defaultConfig.set("max-uses-per-day", 50);
         defaultConfig.set("max-blocks-per-day", 500);
+        defaultConfig.set("cooldownTime", 5);
+        defaultConfig.set("vipCooldownTime", 2);
         defaultConfig.set("stopChoppingIfNotConnected", false);
         defaultConfig.set("stopChoppingIfDifferentTypes", false);
         defaultConfig.set("chopTreeAsync", true);
@@ -194,6 +201,8 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         chopTreeAsync = config.getBoolean("chopTreeAsync");
         Object locale = config.get("locale");
         residenceFlag = config.getString("residenceFlag");
+        cooldownTime = config.getInt("cooldownTime");
+        vipCooldownTime = config.getInt("vipCooldownTime");
         if (locale instanceof String s) {
             this.locale = Locale.forLanguageTag(s);
         } else if (locale instanceof Locale l) {
@@ -539,6 +548,14 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         UUID playerUUID = player.getUniqueId();
         PlayerConfig playerConfig = getPlayerConfig(playerUUID);
 
+        if (isInCooldown(playerUUID)) {
+            sendMessage(player, STILL_IN_COOLDOWN_MESSAGE
+                    .insertNumber("cooldown_time", getRemainingCooldown(playerUUID))
+            );
+            event.setCancelled(true);
+            return;
+        }
+
         Block block = event.getBlock();
         Material material = block.getType();
         Location location = block.getLocation();
@@ -569,6 +586,9 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             checkedLocations.clear();
 
             playerConfig.incrementDailyUses();
+
+            // set cooldown time
+            setCooldown(player, playerUUID);
         }
     }
 
@@ -678,6 +698,31 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                 }
             }
         }
+    }
+
+    private void setCooldown(Player player, UUID playerUUID) {
+        if (player.hasPermission("autotreechop.vip")) {
+            cooldowns.put(playerUUID, System.currentTimeMillis() + (vipCooldownTime * 1000L));
+        } else  {
+            cooldowns.put(playerUUID, System.currentTimeMillis() + (cooldownTime * 1000L));
+        }
+    }
+
+    private boolean isInCooldown(UUID playerUUID) {
+        Long cooldownEnd = cooldowns.get(playerUUID);
+        if (cooldownEnd == null) {
+            return false;
+        }
+        return System.currentTimeMillis() < cooldownEnd;
+    }
+
+    private long getRemainingCooldown(UUID playerUUID) {
+        Long cooldownEnd = cooldowns.get(playerUUID);
+        if (cooldownEnd == null) {
+            return 0;
+        }
+        long remainingTime = cooldownEnd - System.currentTimeMillis();
+        return Math.max(0, remainingTime / 1000);
     }
 
     // Check if player have Lands permission in this area
