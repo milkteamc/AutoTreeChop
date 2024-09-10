@@ -53,6 +53,9 @@ chopTreeAsync: true
 # If you are using Residence, you can set which Flag players have access to AutoTreeChop in residence.
 residenceFlag: build
 
+# If you are using GriefPrevention, you can set which Flag players have access to AutoTreeChop in GriefPrevention.
+griefPreventionFlag: Build
+
 # Stop chopping if the blocks are not connected (not part of the same tree)
 stopChoppingIfNotConnected: false
 

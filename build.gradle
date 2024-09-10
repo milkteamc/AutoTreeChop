@@ -46,6 +46,7 @@ dependencies {
     compileOnly "net.coreprotect:coreprotect:22.2"
     compileOnly files("./libs/Residence5.1.4.3.jar")
     compileOnly "com.github.angeschossen:LandsAPI:6.44.0"
+    compileOnly "com.github.GriefPrevention:GriefPrevention:16.18.4"
     implementation "com.zaxxer:HikariCP:4.0.3"
 }
 

@@ -12,6 +12,9 @@ import de.cubbossa.tinytranslations.storage.properties.PropertiesMessageStorage;
 import de.cubbossa.tinytranslations.storage.properties.PropertiesStyleStorage;
 import me.angeschossen.lands.api.LandsIntegration;
 import me.angeschossen.lands.api.land.LandWorld;
+import me.ryanhamshire.GriefPrevention.Claim;
+import me.ryanhamshire.GriefPrevention.ClaimPermission;
+import me.ryanhamshire.GriefPrevention.GriefPrevention;
 import net.coreprotect.CoreProtectAPI;
 import org.bukkit.*;
 import org.bukkit.block.Block;
@@ -97,6 +100,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     private boolean stopChoppingIfDifferentTypes;
     private boolean chopTreeAsync;
     private String residenceFlag;
+    private String griefPreventionFlag;
     private Locale locale;
     private MessageTranslator translations;
     private boolean useClientLocale;
@@ -140,6 +144,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         defaultConfig.set("password", "abc1234");
         defaultConfig.set("locale", Locale.ENGLISH);
         defaultConfig.set("residenceFlag", "build");
+        defaultConfig.set("griefPreventionFlag", "Build");
         defaultConfig.set("limitVipUsage", true);
         defaultConfig.set("vip-uses-per-day", 50);
         defaultConfig.set("vip-blocks-per-day", 500);
@@ -201,6 +206,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         chopTreeAsync = config.getBoolean("chopTreeAsync");
         Object locale = config.get("locale");
         residenceFlag = config.getString("residenceFlag");
+        griefPreventionFlag = config.getString("griefPreventionFlag");
         cooldownTime = config.getInt("cooldownTime");
         vipCooldownTime = config.getInt("vipCooldownTime");
         if (locale instanceof String s) {
@@ -611,11 +617,14 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     }
 
     private void chopTree(Block block, Player player, boolean ConnectedBlocks, Location location, Material material, BlockData blockData) {
-        // Return if player don't have Residence/Lands permission in this area
+        // Return if player don't have Residence, Lands or GriefPrevention permission in this area
         if (!resCheck(player, location)) {
             return;
         }
         if (!landsCheck(player, location)) {
+            return;
+        }
+        if (!gfCheck(player, location)) {
             return;
         }
 
@@ -739,6 +748,23 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
         if (world != null) { // Lands is enabled in this world
             return world.hasFlag(player, location, null, me.angeschossen.lands.api.flags.Flags.BLOCK_BREAK, false);
+        }
+
+        return true;
+    }
+
+    public boolean gfCheck(Player player, Location location) {
+        if (this.getServer().getPluginManager().getPlugin("GriefPrevention") == null) { return true; }
+
+        if (GriefPrevention.instance.dataStore.getClaimAt(location, false, null) == null) { return true; }
+
+        Claim claim = GriefPrevention.instance.dataStore.getClaimAt(location, false, null);
+
+        if (claim.getOwnerID().equals(player.getUniqueId()) || player.hasPermission("catchball.op") || player.isOp()) { return true; }
+
+        if (!claim.hasExplicitPermission(player, ClaimPermission.valueOf(griefPreventionFlag))) {
+            BukkitTinyTranslations.sendMessage(player, noResidencePermissions);
+            return false;
         }
 
         return true;
