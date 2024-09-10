@@ -89,7 +89,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     private final HashMap<UUID, Long> cooldowns = new HashMap<>();
     private Metrics metrics;
     private Map<UUID, PlayerConfig> playerConfigs;
-    private AutoTreeChopAPI api;
+    private AutoTreeChopAPI autoTreeChopAPI;
     private boolean VisualEffect;
     private boolean toolDamage;
     private int maxUsesPerDay;
@@ -454,7 +454,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         } else {
             spigotUpdateChecker();
         }
-        api = new AutoTreeChopAPI(this);
+        autoTreeChopAPI = new AutoTreeChopAPI(this);
         playerConfigs = new HashMap<>();
     }
 
@@ -630,47 +630,9 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
         if (chopTreeInit(block, player, toolDamageDecrease)) return;
 
-        // Async in Bukkit, but use sync method in Folia, because async system cause some issues for Folia.
-        if (!isFolia() && chopTreeAsync) {
-            Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
-                for (int yOffset = -1; yOffset <= 1; yOffset++) {
-                    for (int xOffset = -1; xOffset <= 1; xOffset++) {
-                        for (int zOffset = -1; zOffset <= 1; zOffset++) {
-                            if (xOffset == 0 && yOffset == 0 && zOffset == 0) {
-                                continue;
-                            }
-                            Block relativeBlock = block.getRelative(xOffset, yOffset, zOffset);
-                            if (stopChoppingIfDifferentTypes && notSameType(block.getType(), relativeBlock.getType())) {
-                                continue;
-                            }
-                            // Check if the relative block is connected to the original block.
-                            if (ConnectedBlocks && blockNotConnected(block, relativeBlock)) {
-                                continue;
-                            }
-                            // CoreProtect logging
-                            if (getServer().getPluginManager().getPlugin("CoreProtect") != null) {
-                                CoreProtectAPI coiApi = new CoreProtectAPI();
-                                Location relativeLocation = relativeBlock.getLocation();  // Use the relative block's location
-                                coiApi.logRemoval(player.getName(), relativeLocation, material, blockData);
-                            }
+        Set<Location> loggedLocations = new HashSet<>();
 
-                            // Stop if no enough credits
-                            if (getPlayerConfig(player.getUniqueId()).getDailyUses() >= maxUsesPerDay && !hasvipBlock(player, getPlayerConfig(player.getUniqueId()))) {
-                                BukkitTinyTranslations.sendMessage(player, HIT_MAX_USAGE_MESSAGE);
-                                return;
-                            }
-                            if (getPlayerConfig(player.getUniqueId()).getDailyBlocksBroken() >= maxBlocksPerDay && !hasvipBlock(player, getPlayerConfig(player.getUniqueId()))) {
-                                BukkitTinyTranslations.sendMessage(player, HIT_MAX_BLOCK_MESSAGE);
-                                return;
-                            }
-
-                            Bukkit.getScheduler().runTask(this,
-                                    () -> chopTree(relativeBlock, player, ConnectedBlocks, location, material, blockData));
-                        }
-                    }
-                }
-            });
-        } else {
+        Runnable task = () -> {
             for (int yOffset = -1; yOffset <= 1; yOffset++) {
                 for (int xOffset = -1; xOffset <= 1; xOffset++) {
                     for (int zOffset = -1; zOffset <= 1; zOffset++) {
@@ -681,15 +643,18 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                         if (stopChoppingIfDifferentTypes && notSameType(block.getType(), relativeBlock.getType())) {
                             continue;
                         }
-                        // Check if the relative block is connected to the original block.
                         if (ConnectedBlocks && blockNotConnected(block, relativeBlock)) {
                             continue;
                         }
-                        // CoreProtect logging
+
                         if (getServer().getPluginManager().getPlugin("CoreProtect") != null) {
-                            CoreProtectAPI coiApi = new CoreProtectAPI();
-                            Location relativeLocation = relativeBlock.getLocation();  // Use the relative block's location
-                            coiApi.logRemoval(player.getName(), relativeLocation, material, blockData);
+                            Bukkit.getScheduler().runTask(this, () -> {
+                                if (!loggedLocations.contains(relativeBlock.getLocation())) {
+                                    loggedLocations.add(relativeBlock.getLocation());
+                                    CoreProtectAPI coiApi = new CoreProtectAPI();
+                                    coiApi.logRemoval(player.getName(), relativeBlock.getLocation(), material, blockData);
+                                }
+                            });
                         }
 
                         // Stop if no enough credits
@@ -702,10 +667,17 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                             return;
                         }
 
-                        chopTree(relativeBlock, player, ConnectedBlocks, location, material, blockData);
+                        Bukkit.getScheduler().runTask(this,
+                                () -> chopTree(relativeBlock, player, ConnectedBlocks, location, material, blockData));
                     }
                 }
             }
+        };
+
+        if (!isFolia() && chopTreeAsync) {
+            Bukkit.getScheduler().runTaskAsynchronously(this, task);
+        } else {
+            task.run();
         }
     }
 
@@ -841,7 +813,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     PlayerConfig getPlayerConfig(UUID playerUUID) {
         PlayerConfig playerConfig = playerConfigs.get(playerUUID);
         if (playerConfig == null) {
-            playerConfig = new PlayerConfig(playerUUID, useMysql, hostname, database, port, username, password);
+            playerConfig = new PlayerConfig(playerUUID, useMysql, hostname, database, port, username, password, maxUsesPerDay, maxBlocksPerDay);
             playerConfigs.put(playerUUID, playerConfig);
         }
         return playerConfig;
@@ -855,7 +827,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         return getPlayerConfig(playerUUID).getDailyBlocksBroken();
     }
 
-    public AutoTreeChopAPI getAPI() {
-        return api;
+    public AutoTreeChopAPI getAutoTreeChopAPI() {
+        return autoTreeChopAPI;
     }
 }

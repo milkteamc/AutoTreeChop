@@ -9,20 +9,24 @@ import java.util.UUID;
 
 import static org.bukkit.Bukkit.getLogger;
 
-public class PlayerConfig {
+class PlayerConfig {
 
     private final UUID playerUUID;
     private final Connection connection;
     private boolean autoTreeChopEnabled;
     private int dailyUses;
+    private int dailyUsesLimit;
     private int dailyBlocksBroken;
+    private int dailyBlocksBrokenLimit;
     private LocalDate lastUseDate;
 
-    public PlayerConfig(UUID playerUUID, boolean useMysql, String hostname, String database, int port, String username, String password) {
+    PlayerConfig(UUID playerUUID,
+                        boolean useMysql, String hostname, String database, int port, String username, String password,
+                        int defaultDailyUsesLimit, int defaultDailyBlocksBrokenLimit) {
         this.playerUUID = playerUUID;
         this.connection = establishConnection(useMysql, hostname, port, database, username, password);
-        createTable();
-        loadConfig();
+        alterTable(defaultDailyUsesLimit, defaultDailyBlocksBrokenLimit);
+        loadConfig(defaultDailyUsesLimit, defaultDailyBlocksBrokenLimit);
     }
 
     private Connection establishConnection(boolean useMysql, String hostname, int port, String database, String username, String password) {
@@ -55,21 +59,25 @@ public class PlayerConfig {
         }
     }
 
-    private void createTable() {
+    private void alterTable(int defaultDailyUsesLimit, int defaultDailyBlocksBrokenLimit) {
         try (PreparedStatement statement = connection.prepareStatement(
-                "CREATE TABLE IF NOT EXISTS player_data (" +
-                        "uuid VARCHAR(36) PRIMARY KEY," +
-                        "autoTreeChopEnabled BOOLEAN," +
-                        "dailyUses INT," +
-                        "dailyBlocksBroken INT," +
-                        "lastUseDate VARCHAR(10));")) {
+                "ALTER TABLE player_data ADD COLUMN IF NOT EXISTS dailyUsesLimit INT DEFAULT " + defaultDailyUsesLimit + ";"
+        )) {
             statement.executeUpdate();
         } catch (SQLException e) {
-            getLogger().warning("Error creating database table: " + e.getMessage());
+            getLogger().warning("Error altering database table: " + e.getMessage());
+        }
+
+        try (PreparedStatement statement = connection.prepareStatement(
+                "ALTER TABLE player_data ADD COLUMN IF NOT EXISTS dailyBlocksBrokenLimit INT DEFAULT" + defaultDailyBlocksBrokenLimit + ";"
+        )) {
+            statement.executeUpdate();
+        } catch (SQLException e) {
+            getLogger().warning("Error altering database table: " + e.getMessage());
         }
     }
 
-    private void loadConfig() {
+    private void loadConfig(int defaultDailyUsesLimit, int defaultDailyBlocksBrokenLimit) {
         try (PreparedStatement statement = connection.prepareStatement("SELECT * FROM player_data WHERE uuid = ?")) {
             statement.setString(1, playerUUID.toString());
             ResultSet resultSet = statement.executeQuery();
@@ -79,19 +87,26 @@ public class PlayerConfig {
                 dailyUses = resultSet.getInt("dailyUses");
                 dailyBlocksBroken = resultSet.getInt("dailyBlocksBroken");
                 lastUseDate = LocalDate.parse(resultSet.getString("lastUseDate"));
+                dailyUsesLimit = resultSet.getInt("dailyUsesLimit");
+                dailyBlocksBrokenLimit = resultSet.getInt("dailyBlocksBrokenLimit");
             } else {
                 autoTreeChopEnabled = false;
                 dailyUses = 0;
                 dailyBlocksBroken = 0;
                 lastUseDate = LocalDate.now();
 
+                dailyUsesLimit = defaultDailyUsesLimit;
+                dailyBlocksBrokenLimit = defaultDailyBlocksBrokenLimit;
+
                 try (PreparedStatement insertStatement = connection.prepareStatement(
-                        "INSERT INTO player_data (uuid, autoTreeChopEnabled, dailyUses, dailyBlocksBroken, lastUseDate) VALUES (?, ?, ?, ?, ?)")) {
+                        "INSERT INTO player_data (uuid, autoTreeChopEnabled, dailyUses, dailyBlocksBroken, lastUseDate, dailyUsesLimit, dailyBlocksBrokenLimit) VALUES (?, ?, ?, ?, ?, ?, ?)")) {
                     insertStatement.setString(1, playerUUID.toString());
                     insertStatement.setBoolean(2, autoTreeChopEnabled);
                     insertStatement.setInt(3, dailyUses);
                     insertStatement.setInt(4, dailyBlocksBroken);
                     insertStatement.setString(5, lastUseDate.toString());
+                    insertStatement.setInt(6, dailyUsesLimit);
+                    insertStatement.setInt(7, dailyBlocksBrokenLimit);
                     insertStatement.executeUpdate();
                 } catch (SQLException e) {
                     getLogger().warning("Error inserting player data into database: " + e.getMessage());
@@ -102,49 +117,52 @@ public class PlayerConfig {
         }
     }
 
-    public boolean isAutoTreeChopEnabled() {
+    boolean isAutoTreeChopEnabled() {
         return autoTreeChopEnabled;
     }
 
-    public void setAutoTreeChopEnabled(boolean enabled) {
+    void setAutoTreeChopEnabled(boolean enabled) {
         this.autoTreeChopEnabled = enabled;
         updateConfig();
     }
 
-    public int getDailyUses() {
+    int getDailyUses() {
         checkAndUpdateDate();
         return dailyUses;
     }
 
-    public void incrementDailyUses() {
+    void incrementDailyUses() {
         checkAndUpdateDate();
         dailyUses++;
         updateConfig();
     }
 
-    public int getDailyBlocksBroken() {
+    int getDailyUsesLimit() {
+        return dailyUsesLimit;
+    }
+
+    void setDailyUsesLimit(int dailyUsesLimit) {
+        this.dailyUsesLimit = dailyUsesLimit;
+        updateConfig();
+    }
+
+    int getDailyBlocksBroken() {
         checkAndUpdateDate();
         return dailyBlocksBroken;
     }
 
-    private void initializeSQLiteTables(Connection connection) {
-        try (Statement statement = connection.createStatement()) {
-            String createTableQuery = "CREATE TABLE IF NOT EXISTS player_data (" +
-                    "uuid VARCHAR(36) PRIMARY KEY," +
-                    "autoTreeChopEnabled BOOLEAN," +
-                    "dailyUses INT," +
-                    "dailyBlocksBroken INT," +
-                    "lastUseDate VARCHAR(10)" +
-                    ")";
-            statement.executeUpdate(createTableQuery);
-        } catch (SQLException e) {
-            getLogger().warning("Error initializing database tables: " + e.getMessage());
-        }
-    }
-
-    public void incrementDailyBlocksBroken() {
+    void incrementDailyBlocksBroken() {
         checkAndUpdateDate();
         dailyBlocksBroken++;
+        updateConfig();
+    }
+
+    int getDailyBlocksBrokenLimit() {
+        return dailyBlocksBrokenLimit;
+    }
+
+    void setDailyBlocksBrokenLimit(int dailyBlocksBrokenLimit) {
+        this.dailyBlocksBrokenLimit = dailyBlocksBrokenLimit;
         updateConfig();
     }
 
@@ -159,12 +177,14 @@ public class PlayerConfig {
 
     private void updateConfig() {
         try (PreparedStatement statement = connection.prepareStatement(
-                "UPDATE player_data SET autoTreeChopEnabled = ?, dailyUses = ?, dailyBlocksBroken = ?, lastUseDate = ? WHERE uuid = ?")) {
+                "UPDATE player_data SET autoTreeChopEnabled = ?, dailyUses = ?, dailyBlocksBroken = ?, lastUseDate = ?, dailyUsesLimit = ?, dailyBlocksBrokenLimit = ? WHERE uuid = ?")) {
             statement.setBoolean(1, autoTreeChopEnabled);
             statement.setInt(2, dailyUses);
             statement.setInt(3, dailyBlocksBroken);
             statement.setString(4, lastUseDate.toString());
-            statement.setString(5, playerUUID.toString());
+            statement.setInt(5, dailyUsesLimit);
+            statement.setInt(6, dailyBlocksBrokenLimit);
+            statement.setString(7, playerUUID.toString());
             statement.executeUpdate();
         } catch (SQLException e) {
             getLogger().warning("Error updating player data in database: " + e.getMessage());
