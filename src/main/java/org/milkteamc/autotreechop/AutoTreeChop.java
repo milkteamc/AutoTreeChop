@@ -78,7 +78,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
     private static final String SPIGOT_RESOURCE_ID = "113071";
     private static final List<String> SUPPORTED_VERSIONS = Arrays.asList(
-            "1.21.1", "1.21",
+            "1.21.3", "1.21.2", "1.21.1", "1.21",
             "1.20.6", "1.20.5", "1.20.4", "1.20.3", "1.20.2", "1.20.1", "1.20",
             "1.19.4", "1.19.3", "1.19.2", "1.19.1", "1.19",
             "1.18.2", "1.18.1", "1.18",
@@ -414,7 +414,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             bukkitVersion = bukkitVersion.substring(0, bukkitVersion.length() - 14);
 
             if (!SUPPORTED_VERSIONS.contains(bukkitVersion)) {
-                getLogger().warning("Your Minecraft version may have some issues, we only fully support "
+                getLogger().warning("Your Minecraft version may causes some issues, we only fully support "
                         + String.join(", ", SUPPORTED_VERSIONS));
                 getLogger().warning("Report any issue to our GitHub: https://github.com/milkteamc/AutoTreeChop/issues");
             }
