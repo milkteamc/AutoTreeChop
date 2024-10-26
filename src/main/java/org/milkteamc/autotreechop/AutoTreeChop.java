@@ -448,12 +448,16 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             getLogger().warning("PlaceholderAPI not found. Placeholder expansion for AutoTreeChop will not work.");
         }
 
-        if (isFolia()) {
-            getLogger().warning("It seen you are using Folia, some function may not work.");
-            foliaUpdateChecker();
-        } else {
-            spigotUpdateChecker();
-        }
+        new UpdateChecker(this, UpdateCheckSource.SPIGOT, SPIGOT_RESOURCE_ID) // You can also use Spigot instead of Spigot - Spigot's API is usually much faster up to date.
+                .checkEveryXHours(24) // Check every 24 hours
+                .setDonationLink("https://ko-fi.com/maoyue")
+                .setChangelogLink("https://modrinth.com/plugin/autotreechop/version/latest") // Same as for the Download link: URL or Spigot Resource ID
+                .setDownloadLink("https://modrinth.com/plugin/autotreechop/version/latest")
+                .setNotifyOpsOnJoin(true) // Notify OPs on Join when a new version is found (default)
+                .setNotifyByPermissionOnJoin("autotreechop.updatechecker") // Also notify people on join with this permission
+                .setUserAgent(new UserAgentBuilder().addPluginNameAndVersion())
+                .checkNow(); // And check right now
+
         autoTreeChopAPI = new AutoTreeChopAPI(this);
         playerConfigs = new HashMap<>();
     }
@@ -482,57 +486,6 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     public void onDisable() {
         translations.close();
         metrics.shutdown();
-    }
-
-    private void spigotUpdateChecker() {
-        new UpdateChecker(this, UpdateCheckSource.SPIGOT, SPIGOT_RESOURCE_ID) // You can also use Spigot instead of Spigot - Spigot's API is usually much faster up to date.
-                .checkEveryXHours(24) // Check every 24 hours
-                .setDonationLink("https://ko-fi.com/maoyue")
-                .setChangelogLink("https://modrinth.com/plugin/autotreechop/version/latest") // Same as for the Download link: URL or Spigot Resource ID
-                .setDownloadLink("https://modrinth.com/plugin/autotreechop/version/latest")
-                .setNotifyOpsOnJoin(true) // Notify OPs on Join when a new version is found (default)
-                .setNotifyByPermissionOnJoin("autotreechop.updatechecker") // Also notify people on join with this permission
-                .setUserAgent(new UserAgentBuilder().addPluginNameAndVersion())
-                .checkNow(); // And check right now
-    }
-
-    private void foliaUpdateChecker() {
-        try {
-
-            if (this.getDescription().getVersion().contains("SNAPSHOT")) {
-                this.getLogger().warning("You are using a SNAPSHOT version, this should NEVER use in production environment.");
-                this.getLogger().warning("Download latest version at: https://modrinth.com/plugin/autotreechop");
-                return;
-            }
-
-            InputStream inputStream = new URL(("https://api.spigotmc.org/legacy/update.php?resource=113071"))
-                    .openStream();
-            Scanner scanner = new Scanner(inputStream);
-            String version = scanner.next();
-
-            scanner.close();
-
-            String[] currentParts = this.getDescription().getVersion().split("\\.");
-
-            String[] latestParts = version.split("\\.");
-
-            int minLength = Math.min(currentParts.length, latestParts.length);
-
-            for (int i = 0; i < minLength; i++) {
-
-                int currentPart = Integer.parseInt(currentParts[i]);
-
-                int latestPart = Integer.parseInt(latestParts[i]);
-
-                if (currentPart < latestPart) {
-                    this.getLogger().warning("A new update available: " + version);
-                    this.getLogger().warning("Download now: https://modrinth.com/plugin/autotreechop/version/latest/");
-                }
-            }
-        } catch (Exception e) {
-            this.getLogger().log(Level.WARNING,
-                    ChatColor.RED + "Cannot check for plugin version: " + e.getMessage());
-        }
     }
 
     // VIP limit checker
