@@ -766,7 +766,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     PlayerConfig getPlayerConfig(UUID playerUUID) {
         PlayerConfig playerConfig = playerConfigs.get(playerUUID);
         if (playerConfig == null) {
-            playerConfig = new PlayerConfig(playerUUID, useMysql, hostname, database, port, username, password, maxUsesPerDay, maxBlocksPerDay);
+            playerConfig = new PlayerConfig(playerUUID, useMysql, hostname, database, port, username, password);
             playerConfigs.put(playerUUID, playerConfig);
         }
         return playerConfig;
