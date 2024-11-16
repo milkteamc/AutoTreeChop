@@ -728,6 +728,10 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             BukkitTinyTranslations.sendMessage(player, noResidencePermissions);
             return false;
         }
+        if (set.queryState(localPlayer, com.sk89q.worldguard.protection.flags.Flags.BLOCK_BREAK) == StateFlag.State.DENY) {
+            BukkitTinyTranslations.sendMessage(player, noResidencePermissions);
+            return false;
+        }
 
         return true;
     }
