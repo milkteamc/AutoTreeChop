@@ -1,11 +1,20 @@
 package org.milkteamc.autotreechop;
 
+import io.papermc.paper.threadedregions.scheduler.ScheduledTask;
 import com.bekvon.bukkit.residence.api.ResidenceApi;
 import com.bekvon.bukkit.residence.containers.Flags;
 import com.bekvon.bukkit.residence.protection.ClaimedResidence;
 import com.jeff_media.updatechecker.UpdateCheckSource;
 import com.jeff_media.updatechecker.UpdateChecker;
 import com.jeff_media.updatechecker.UserAgentBuilder;
+import com.sk89q.worldedit.bukkit.BukkitAdapter;
+import com.sk89q.worldguard.LocalPlayer;
+import com.sk89q.worldguard.WorldGuard;
+import com.sk89q.worldguard.bukkit.WorldGuardPlugin;
+import com.sk89q.worldguard.protection.ApplicableRegionSet;
+import com.sk89q.worldguard.protection.flags.StateFlag;
+import com.sk89q.worldguard.protection.regions.RegionContainer;
+import com.sk89q.worldguard.protection.regions.RegionQuery;
 import de.cubbossa.tinytranslations.*;
 import de.cubbossa.tinytranslations.libs.kyori.adventure.text.ComponentLike;
 import de.cubbossa.tinytranslations.storage.properties.PropertiesMessageStorage;
@@ -581,6 +590,10 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             return;
         }
 
+        if (!wgCheck(player, location)) {
+            return;
+        }
+
         if (chopTreeInit(block, player, toolDamageDecrease)) return;
 
         Set<Location> loggedLocations = new HashSet<>();
@@ -601,13 +614,27 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                         }
 
                         if (getServer().getPluginManager().getPlugin("CoreProtect") != null) {
+                            // Use region-based scheduler for CoreProtect logging
+                            if (isFolia()) {
+                                io.papermc.paper.threadedregions.scheduler.ScheduledTask scheduledTask =
+                                        this.getServer().getRegionScheduler().run(this, relativeBlock.getLocation(), (task1) -> {
+                                            if (!loggedLocations.contains(relativeBlock.getLocation())) {
+                                                loggedLocations.add(relativeBlock.getLocation());
+                                                CoreProtectAPI coiApi = new CoreProtectAPI();
+                                                coiApi.logRemoval(player.getName(), relativeBlock.getLocation(), material, blockData);
+                                            }
+                                        });
+                            } else {
+
                             Bukkit.getScheduler().runTask(this, () -> {
-                                if (!loggedLocations.contains(relativeBlock.getLocation())) {
-                                    loggedLocations.add(relativeBlock.getLocation());
-                                    CoreProtectAPI coiApi = new CoreProtectAPI();
-                                    coiApi.logRemoval(player.getName(), relativeBlock.getLocation(), material, blockData);
-                                }
-                            });
+                                        if (!loggedLocations.contains(relativeBlock.getLocation())) {
+                                            loggedLocations.add(relativeBlock.getLocation());
+                                            CoreProtectAPI coiApi = new CoreProtectAPI();
+                                            coiApi.logRemoval(player.getName(), relativeBlock.getLocation(), material, blockData);
+                                        }
+                                    });
+                            }
+
                         }
 
                         // Stop if no enough credits
@@ -620,19 +647,29 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                             return;
                         }
 
-                        Bukkit.getScheduler().runTask(this,
-                                () -> chopTree(relativeBlock, player, ConnectedBlocks, location, material, blockData));
+                        // Use region-based scheduler for recursive chopTree calls
+                        if (isFolia()) {
+                            this.getServer().getRegionScheduler().run(this, relativeBlock.getLocation(), (task2) ->
+                                    chopTree(relativeBlock, player, ConnectedBlocks, location, material, blockData));
+                        } else {
+                            Bukkit.getScheduler().runTask(this, () ->
+                                    chopTree(relativeBlock, player, ConnectedBlocks, location, material, blockData));
+                        }
                     }
                 }
             }
         };
 
+        // Execute the task based on configuration and environment
         if (!isFolia() && chopTreeAsync) {
+            // Fallback for non-Folia servers
             Bukkit.getScheduler().runTaskAsynchronously(this, task);
         } else {
+            // Synchronous execution
             task.run();
         }
     }
+
 
     private void setCooldown(Player player, UUID playerUUID) {
         if (player.hasPermission("autotreechop.vip")) {
@@ -673,6 +710,27 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
         if (world != null) { // Lands is enabled in this world
             return world.hasFlag(player, location, null, me.angeschossen.lands.api.flags.Flags.BLOCK_BREAK, false);
+        }
+
+        return true;
+    }
+
+    public boolean wgCheck(Player player, @NotNull Location location) {
+        if (this.getServer().getPluginManager().getPlugin("WorldGuard") == null) {
+            return true;
+        }
+        com.sk89q.worldedit.util.Location loc = BukkitAdapter.adapt(location);
+        RegionContainer container = WorldGuard.getInstance().getPlatform().getRegionContainer();
+        RegionQuery query = container.createQuery();
+        ApplicableRegionSet set = query.getApplicableRegions(loc);
+        LocalPlayer localPlayer = WorldGuardPlugin.inst().wrapPlayer(player);
+        if (set.queryState(localPlayer, com.sk89q.worldguard.protection.flags.Flags.BUILD) == StateFlag.State.DENY) {
+            BukkitTinyTranslations.sendMessage(player, noResidencePermissions);
+            return false;
+        }
+        if (set.queryState(localPlayer, com.sk89q.worldguard.protection.flags.Flags.BLOCK_BREAK) == StateFlag.State.DENY) {
+            BukkitTinyTranslations.sendMessage(player, noResidencePermissions);
+            return false;
         }
 
         return true;
