@@ -95,7 +95,7 @@ tasks.jar {
 }
 
 tasks.runServer {
-    minecraftVersion("1.21")
+    minecraftVersion("1.21.4")
 }
 
 runPaper.folia.registerTask()
