@@ -491,11 +491,11 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                 residenceEnabled = true;
                 getLogger().info("Residence support enabled");
             } catch (Exception e) {
-                getLogger().warning("Residence is not installed");
+                getLogger().info("Residence is not installed");
                 residenceEnabled = false;
             }
         } else {
-            getLogger().warning("Residence is not installed");
+            getLogger().info("Residence is not installed");
             residenceEnabled = false;
         }
 
@@ -506,11 +506,11 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                 griefPreventionEnabled = true;
                 getLogger().info("GriefPrevention support enabled");
             } catch (Exception e) {
-                getLogger().warning("GriefPrevention is not installed");
+                getLogger().info("GriefPrevention is not installed");
                 griefPreventionEnabled = false;
             }
         } else {
-            getLogger().warning("GriefPrevention is not installed");
+            getLogger().info("GriefPrevention is not installed");
             griefPreventionEnabled = false;
         }
 
@@ -521,11 +521,11 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                 landsEnabled = true;
                 getLogger().info("Lands support enabled");
             } catch (Exception e) {
-                getLogger().warning("Lands is not installed");
+                getLogger().info("Lands is not installed");
                 landsEnabled = false;
             }
         } else {
-            getLogger().warning("Lands is not installed");
+            getLogger().info("Lands is not installed");
             landsEnabled = false;
         }
         // Initialize WorldGuard support
@@ -534,11 +534,11 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                 worldGuardHook = new WorldGuardHook();
                 getLogger().info("WorldGuard support enabled");
             } catch (NoClassDefFoundError  e) {
-                getLogger().warning("WorldGuard is not installed");
+                getLogger().info("WorldGuard is not installed");
                 worldGuardEnabled = false;
             }
         } else {
-            getLogger().warning("WorldGuard is not installed");
+            getLogger().info("WorldGuard is not installed");
             worldGuardEnabled = false;
         }
     }
