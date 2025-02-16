@@ -494,6 +494,9 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                 getLogger().warning("Residence is not installed");
                 residenceEnabled = false;
             }
+        } else {
+            getLogger().warning("Residence is not installed");
+            residenceEnabled = false;
         }
 
         // GriefPrevention hook initialization
@@ -506,6 +509,9 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                 getLogger().warning("GriefPrevention is not installed");
                 griefPreventionEnabled = false;
             }
+        } else {
+            getLogger().warning("GriefPrevention is not installed");
+            griefPreventionEnabled = false;
         }
 
         // Lands hook initialization
@@ -518,6 +524,9 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                 getLogger().warning("Lands is not installed");
                 landsEnabled = false;
             }
+        } else {
+            getLogger().warning("Lands is not installed");
+            landsEnabled = false;
         }
         // Initialize WorldGuard support
         if (Bukkit.getPluginManager().getPlugin("WorldGuard") != null) {
@@ -528,7 +537,10 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                 getLogger().warning("WorldGuard is not installed");
                 worldGuardEnabled = false;
             }
-                }
+        } else {
+            getLogger().warning("WorldGuard is not installed");
+            worldGuardEnabled = false;
+        }
     }
 
     private void loadLocale() {
