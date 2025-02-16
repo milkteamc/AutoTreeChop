@@ -39,6 +39,10 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
+import org.milkteamc.autotreechop.hooks.GriefPreventionHook;
+import org.milkteamc.autotreechop.hooks.LandsHook;
+import org.milkteamc.autotreechop.hooks.ResidenceHook;
+import org.milkteamc.autotreechop.hooks.WorldGuardHook;
 
 import java.io.File;
 import java.io.IOException;
@@ -121,6 +125,14 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     private Set<Material> logTypes;
     private int toolDamageDecrease;
     private final Set<Location> processingLocations = new HashSet<>();
+    private boolean worldGuardEnabled = false;
+    private boolean residenceEnabled = false;
+    private boolean griefPreventionEnabled = false;
+    private boolean landsEnabled = false;
+    private WorldGuardHook worldGuardHook = null;
+    private ResidenceHook residenceHook = null;
+    private GriefPreventionHook griefPreventionHook = null;
+    private LandsHook landsHook = null;
 
     public static void sendMessage(CommandSender sender, ComponentLike message) {
         BukkitTinyTranslations.sendMessageIfNotEmpty(sender, message);
@@ -466,6 +478,57 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
         autoTreeChopAPI = new AutoTreeChopAPI(this);
         playerConfigs = new HashMap<>();
+
+        // Initialize protection plugin hooks
+        initializeHooks();
+    }
+
+    private void initializeHooks() {
+        // Residence hook initialization
+        if (Bukkit.getPluginManager().getPlugin("Residence") != null) {
+            try {
+                residenceHook = new ResidenceHook(residenceFlag);
+                residenceEnabled = true;
+                getLogger().info("Residence support enabled");
+            } catch (Exception e) {
+                getLogger().warning("Residence is not installed");
+                residenceEnabled = false;
+            }
+        }
+
+        // GriefPrevention hook initialization
+        if (Bukkit.getPluginManager().getPlugin("GriefPrevention") != null) {
+            try {
+                griefPreventionHook = new GriefPreventionHook(griefPreventionFlag);
+                griefPreventionEnabled = true;
+                getLogger().info("GriefPrevention support enabled");
+            } catch (Exception e) {
+                getLogger().warning("GriefPrevention is not installed");
+                griefPreventionEnabled = false;
+            }
+        }
+
+        // Lands hook initialization
+        if (Bukkit.getPluginManager().getPlugin("Lands") != null) {
+            try {
+                landsHook = new LandsHook(this);
+                landsEnabled = true;
+                getLogger().info("Lands support enabled");
+            } catch (Exception e) {
+                getLogger().warning("Lands is not installed");
+                landsEnabled = false;
+            }
+        }
+        // Initialize WorldGuard support
+        if (Bukkit.getPluginManager().getPlugin("WorldGuard") != null) {
+            try {
+                worldGuardHook = new WorldGuardHook();
+                getLogger().info("WorldGuard support enabled");
+            } catch (NoClassDefFoundError  e) {
+                getLogger().warning("WorldGuard is not installed");
+                worldGuardEnabled = false;
+            }
+                }
     }
 
     private void loadLocale() {
@@ -697,58 +760,18 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     // Check if player have Lands permission in this area
     // It will return true if player have permission, and vice versa.
     public boolean landsCheck(Player player, @NotNull Location location) {
-        if (this.getServer().getPluginManager().getPlugin("Lands") == null) {
-            return true;
-        }
-        if (location.getWorld() == null) {
-            return false;
-        }
-        LandsIntegration landsapi = LandsIntegration.of(this);
-        LandWorld world = landsapi.getWorld(location.getWorld());
-
-        if (world != null) { // Lands is enabled in this world
-            return world.hasFlag(player, location, null, me.angeschossen.lands.api.flags.Flags.BLOCK_BREAK, false);
-        }
-
-        return true;
+        return !landsEnabled || landsHook.checkBuild(player, location);
     }
 
-    public boolean wgCheck(Player player, @NotNull Location location) {
-        if (this.getServer().getPluginManager().getPlugin("WorldGuard") == null) {
+    public boolean wgCheck(Player player, Location location) {
+        if (!worldGuardEnabled) {
             return true;
         }
-        com.sk89q.worldedit.util.Location loc = BukkitAdapter.adapt(location);
-        RegionContainer container = WorldGuard.getInstance().getPlatform().getRegionContainer();
-        RegionQuery query = container.createQuery();
-        ApplicableRegionSet set = query.getApplicableRegions(loc);
-        LocalPlayer localPlayer = WorldGuardPlugin.inst().wrapPlayer(player);
-        if (set.queryState(localPlayer, com.sk89q.worldguard.protection.flags.Flags.BUILD) == StateFlag.State.DENY) {
-            BukkitTinyTranslations.sendMessage(player, noResidencePermissions);
-            return false;
-        }
-        if (set.queryState(localPlayer, com.sk89q.worldguard.protection.flags.Flags.BLOCK_BREAK) == StateFlag.State.DENY) {
-            BukkitTinyTranslations.sendMessage(player, noResidencePermissions);
-            return false;
-        }
-
-        return true;
+        return worldGuardHook.checkBuild(player, location);
     }
 
     public boolean gfCheck(Player player, Location location) {
-        if (this.getServer().getPluginManager().getPlugin("GriefPrevention") == null) { return true; }
-
-        if (GriefPrevention.instance.dataStore.getClaimAt(location, false, null) == null) { return true; }
-
-        Claim claim = GriefPrevention.instance.dataStore.getClaimAt(location, false, null);
-
-        if (claim.getOwnerID().equals(player.getUniqueId()) || player.hasPermission("catchball.op") || player.isOp()) { return true; }
-
-        if (!claim.hasExplicitPermission(player, ClaimPermission.valueOf(griefPreventionFlag))) {
-            BukkitTinyTranslations.sendMessage(player, noResidencePermissions);
-            return false;
-        }
-
-        return true;
+        return !griefPreventionEnabled || griefPreventionHook.checkBuild(player, location);
     }
 
     // Check if the two blocks are adjacent to each other.
@@ -765,27 +788,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     // Check if player have Residence permission in this area
     // It will return true if player have permission, and vice versa.
     private boolean resCheck(Player player, Location location) {
-        if (this.getServer().getPluginManager().getPlugin("Residence") == null) {
-            return true;
-        }
-
-        if (ResidenceApi.getResidenceManager().getByLoc(location) == null) {
-            return true;
-        }
-
-        ClaimedResidence residence = ResidenceApi.getResidenceManager().getByLoc(location);
-
-        if (residence.getOwnerUUID().equals(player.getUniqueId()) || player.isOp() || player.hasPermission("catchball.op")) {
-            return true;
-        }
-
-        if (!residence.getPermissions().playerHas(player, Flags.valueOf(residenceFlag.toLowerCase()), true)) {
-
-            BukkitTinyTranslations.sendMessage(player, noResidencePermissions);
-
-            return false;
-        }
-        return true;
+        return !residenceEnabled || residenceHook.checkBuild(player, location);
     }
 
     // Add a new method to check if two block types are the same
