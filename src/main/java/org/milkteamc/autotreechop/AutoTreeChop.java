@@ -474,11 +474,10 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                 residenceEnabled = true;
                 getLogger().info("Residence support enabled");
             } catch (Exception e) {
-                getLogger().info("Residence is not installed");
+                getLogger().warning("Residence can't be hook, please report this to our GitHub: https://github.com/milkteamc/AutoTreeChop/issues");
                 residenceEnabled = false;
             }
         } else {
-            getLogger().info("Residence is not installed");
             residenceEnabled = false;
         }
 
@@ -489,11 +488,10 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                 griefPreventionEnabled = true;
                 getLogger().info("GriefPrevention support enabled");
             } catch (Exception e) {
-                getLogger().info("GriefPrevention is not installed");
+                getLogger().warning("GriefPrevention can't be hook, please report this to our GitHub: https://github.com/milkteamc/AutoTreeChop/issues");
                 griefPreventionEnabled = false;
             }
         } else {
-            getLogger().info("GriefPrevention is not installed");
             griefPreventionEnabled = false;
         }
 
@@ -504,11 +502,10 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                 landsEnabled = true;
                 getLogger().info("Lands support enabled");
             } catch (Exception e) {
-                getLogger().info("Lands is not installed");
+                getLogger().warning("Lands can't be hook, please report this to our GitHub: https://github.com/milkteamc/AutoTreeChop/issues");
                 landsEnabled = false;
             }
         } else {
-            getLogger().info("Lands is not installed");
             landsEnabled = false;
         }
         // Initialize WorldGuard support
@@ -517,11 +514,10 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                 worldGuardHook = new WorldGuardHook();
                 getLogger().info("WorldGuard support enabled");
             } catch (NoClassDefFoundError e) {
-                getLogger().info("WorldGuard is not installed");
+                getLogger().warning("WorldGuard can't be hook, please report this to our GitHub: https://github.com/milkteamc/AutoTreeChop/issues");
                 worldGuardEnabled = false;
             }
         } else {
-            getLogger().info("WorldGuard is not installed");
             worldGuardEnabled = false;
         }
     }
