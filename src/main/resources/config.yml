@@ -13,12 +13,24 @@ locale: en
 # If set to true, the plugin will automatically translate to the locale of the player (if there are translations present)
 use-player-locale: true
 
+# Tree Chopping setting
 # The number of times non-VIP players can chop down trees per day,
 # you can give everyone "autotreechop.vip" permission to disable it.
 max-uses-per-day: 50
-
+# Tree blocks that non-VIP players can chop down every day,
+# you can give everyone "autotreechop.vip" permission to disable it.
+max-blocks-per-day: 500
 # Cooldown time (second), use 0 to disable
 cooldownTime: 5
+
+# VIP setting
+# If disable, VIP have unlimited usage
+limitVipUsage: true
+# Will only work when you enable limitVipUsage
+vip-uses-per-day: 100
+vip-blocks-per-day: 1000
+# Cooldown time for VIP users (second), use 0 to disable
+vipCooldownTime: 2
 
 # MySQL setting
 # If "useMysql: false", plugin will use SQLite
@@ -29,41 +41,25 @@ database: example
 username: root
 password: abc1234
 
-# If disable, VIP have unlimited usage
-limitVipUsage: true
-# Will only work when you enable limitVipUsage
-vip-uses-per-day: 100
-vip-blocks-per-day: 1000
-# Cooldown time for VIP users (second), use 0 to disable
-vipCooldownTime: 2
-
-# Tree blocks that non-VIP players can chop down every day,
-# you can give everyone "autotreechop.vip" permission to disable it.
-max-blocks-per-day: 500
-
+# Misc
 # Use visual effect
 visual-effect: true
-
 # damage tool when chopping tree
 toolDamage: true
-
 # Enable this for better performance, but this may cause issue sometime.
 chopTreeAsync: true
-
-# If you are using Residence, you can set which Flag players have access to AutoTreeChop in residence.
-residenceFlag: build
-
-# If you are using GriefPrevention, you can set which Flag players have access to AutoTreeChop in GriefPrevention.
-griefPreventionFlag: Build
-
-# Stop chopping if the blocks are not connected (not part of the same tree)
-stopChoppingIfNotConnected: false
-
-# Stop chopping if the blocks are of different types
-stopChoppingIfDifferentTypes: false
-
 # How much durability should be decrease when player brock one block.
 toolDamageDecrease: 1
+
+# Protection plugins setting
+# If you are using Residence, you can set which Flag players have access to AutoTreeChop in residence.
+residenceFlag: build
+# If you are using GriefPrevention, you can set which Flag players have access to AutoTreeChop in GriefPrevention.
+griefPreventionFlag: Build
+# Stop chopping if the blocks are not connected (not part of the same tree)
+stopChoppingIfNotConnected: false
+# Stop chopping if the blocks are of different types
+stopChoppingIfDifferentTypes: false
 
 # Define which materials are log
 # Fun fact: If you add "DIAMOND_ORE", this plugin can become an auto mining plugin, lol
