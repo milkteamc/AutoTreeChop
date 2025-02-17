@@ -11,7 +11,7 @@
 locale: en
 
 # If set to true, the plugin will automatically translate to the locale of the player (if there are translations present)
-use-player-locale: false
+use-player-locale: true
 
 # The number of times non-VIP players can chop down trees per day,
 # you can give everyone "autotreechop.vip" permission to disable it.
