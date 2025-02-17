@@ -5,13 +5,13 @@
 # See original config file at: https://github.com/milkteamc/AutoTreeChop/blob/master/src/main/resources/config.yml
 
 # The plugin locale (<language>-<country>-<variant>)
-# en, de, zh, zh-TW, en-US, de-DE, de-AU, ...
+# en, de, zh, es, fr, ja, zh-TW, zh-CN, en-US, de-DE, de-AU, ...
 # See all available language in lang folder.
 # Open a PR at our GitHub to let plugin support more language!
 locale: en
 
 # If set to true, the plugin will automatically translate to the locale of the player (if there are translations present)
-use-player-locale: false
+use-player-locale: true
 
 # The number of times non-VIP players can chop down trees per day,
 # you can give everyone "autotreechop.vip" permission to disable it.

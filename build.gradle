@@ -1,12 +1,12 @@
 plugins {
     id 'java'
     id 'maven-publish'
-    id 'com.github.johnrengelman.shadow' version '8.1.1'
-    id 'xyz.jpenilla.run-paper' version "2.2.4"
+    id 'com.gradleup.shadow' version '8.3.5'
+    id 'xyz.jpenilla.run-paper' version "2.3.1"
 }
 
 group = 'org.milkteamc'
-version = '1.5.5'
+version = '1.6.0'
 
 repositories {
     mavenCentral()
@@ -36,16 +36,23 @@ repositories {
     maven {
         url = "https://repo.jeff-media.com/public/"
     }
+    maven {
+        url "https://maven.enginehub.org/repo/"
+    }
+    maven {
+        url "https://repo.papermc.io/repository/maven-public/"
+    }
 }
 
 dependencies {
+    compileOnly "io.papermc.paper:paper-api:1.20.4-R0.1-SNAPSHOT"
     compileOnly "org.spigotmc:spigot-api:1.20-R0.1-SNAPSHOT"
-    implementation "com.github.Paulem79:Spigot-UpdateChecker:3cfb265fb8"
+    implementation "com.jeff_media:SpigotUpdateChecker:3.0.4"
     compileOnly 'me.clip:placeholderapi:2.11.5'
     implementation "de.cubbossa:TinyTranslations-bukkit:4.5.0"
-    compileOnly "net.coreprotect:coreprotect:22.2"
     compileOnly files("./libs/Residence5.1.4.3.jar")
     compileOnly "com.github.angeschossen:LandsAPI:6.44.0"
+    compileOnly 'com.sk89q.worldguard:worldguard-bukkit:7.0.9'
     compileOnly "com.github.GriefPrevention:GriefPrevention:16.18.4"
     implementation "com.zaxxer:HikariCP:4.0.3"
 }
