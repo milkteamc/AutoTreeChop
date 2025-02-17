@@ -9,7 +9,6 @@ import com.sk89q.worldguard.protection.flags.Flags;
 import com.sk89q.worldguard.protection.flags.StateFlag;
 import com.sk89q.worldguard.protection.regions.RegionContainer;
 import com.sk89q.worldguard.protection.regions.RegionQuery;
-
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
@@ -25,6 +24,6 @@ public class WorldGuardHook {
         ApplicableRegionSet set = query.getApplicableRegions(loc);
         LocalPlayer localPlayer = WorldGuardPlugin.inst().wrapPlayer(player);
         return !(set.queryState(localPlayer, Flags.BUILD) == StateFlag.State.DENY) &&
-               !(set.queryState(localPlayer, Flags.BLOCK_BREAK) == StateFlag.State.DENY);
+                !(set.queryState(localPlayer, Flags.BLOCK_BREAK) == StateFlag.State.DENY);
     }
 } 

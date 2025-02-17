@@ -15,14 +15,14 @@ public class ResidenceHook {
 
     public boolean checkBuild(Player player, Location location) {
         ClaimedResidence residence = ResidenceApi.getResidenceManager().getByLoc(location);
-        
+
         if (residence == null) {
             return true;
         }
 
-        if (residence.getOwnerUUID().equals(player.getUniqueId()) || 
-            player.isOp() || 
-            player.hasPermission("autotreechop.op")) {
+        if (residence.getOwnerUUID().equals(player.getUniqueId()) ||
+                player.isOp() ||
+                player.hasPermission("autotreechop.op")) {
             return true;
         }
 

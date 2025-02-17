@@ -1,28 +1,12 @@
 package org.milkteamc.autotreechop;
 
-import com.bekvon.bukkit.residence.api.ResidenceApi;
-import com.bekvon.bukkit.residence.containers.Flags;
-import com.bekvon.bukkit.residence.protection.ClaimedResidence;
 import com.jeff_media.updatechecker.UpdateCheckSource;
 import com.jeff_media.updatechecker.UpdateChecker;
 import com.jeff_media.updatechecker.UserAgentBuilder;
-import com.sk89q.worldedit.bukkit.BukkitAdapter;
-import com.sk89q.worldguard.LocalPlayer;
-import com.sk89q.worldguard.WorldGuard;
-import com.sk89q.worldguard.bukkit.WorldGuardPlugin;
-import com.sk89q.worldguard.protection.ApplicableRegionSet;
-import com.sk89q.worldguard.protection.flags.StateFlag;
-import com.sk89q.worldguard.protection.regions.RegionContainer;
-import com.sk89q.worldguard.protection.regions.RegionQuery;
 import de.cubbossa.tinytranslations.*;
 import de.cubbossa.tinytranslations.libs.kyori.adventure.text.ComponentLike;
 import de.cubbossa.tinytranslations.storage.properties.PropertiesMessageStorage;
 import de.cubbossa.tinytranslations.storage.properties.PropertiesStyleStorage;
-import me.angeschossen.lands.api.LandsIntegration;
-import me.angeschossen.lands.api.land.LandWorld;
-import me.ryanhamshire.GriefPrevention.Claim;
-import me.ryanhamshire.GriefPrevention.ClaimPermission;
-import me.ryanhamshire.GriefPrevention.GriefPrevention;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.BlockData;
@@ -93,9 +77,10 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             "1.18.2", "1.18.1", "1.18",
             "1.17.1", "1.17"
     );
-    private String bukkitVersion = this.getServer().getBukkitVersion();
     private final Set<Location> checkedLocations = new HashSet<>();
     private final HashMap<UUID, Long> cooldowns = new HashMap<>();
+    private final Set<Location> processingLocations = new HashSet<>();
+    private String bukkitVersion = this.getServer().getBukkitVersion();
     private Metrics metrics;
     private Map<UUID, PlayerConfig> playerConfigs;
     private AutoTreeChopAPI autoTreeChopAPI;
@@ -124,7 +109,6 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     private int vipBlocksPerDay;
     private Set<Material> logTypes;
     private int toolDamageDecrease;
-    private final Set<Location> processingLocations = new HashSet<>();
     private boolean worldGuardEnabled = false;
     private boolean residenceEnabled = false;
     private boolean griefPreventionEnabled = false;
@@ -532,7 +516,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             try {
                 worldGuardHook = new WorldGuardHook();
                 getLogger().info("WorldGuard support enabled");
-            } catch (NoClassDefFoundError  e) {
+            } catch (NoClassDefFoundError e) {
                 getLogger().info("WorldGuard is not installed");
                 worldGuardEnabled = false;
             }
@@ -587,7 +571,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         UUID playerUUID = player.getUniqueId();
         PlayerConfig playerConfig = getPlayerConfig(playerUUID);
         Block block = event.getBlock();
-        
+
         // Skip if this block is already being processed
         if (processingLocations.contains(block.getLocation())) {
             return;
@@ -653,14 +637,14 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
     private void chopTree(Block block, Player player, boolean ConnectedBlocks, Location location, Material material, BlockData blockData) {
         // Permission checks
-        if (!resCheck(player, location) || !landsCheck(player, location) || 
-            !gfCheck(player, location) || !wgCheck(player, location)) {
+        if (!resCheck(player, location) || !landsCheck(player, location) ||
+                !gfCheck(player, location) || !wgCheck(player, location)) {
             return;
         }
 
         // Skip if already checked or being processed
-        if (checkedLocations.contains(block.getLocation()) || 
-            processingLocations.contains(block.getLocation())) {
+        if (checkedLocations.contains(block.getLocation()) ||
+                processingLocations.contains(block.getLocation())) {
             return;
         }
         checkedLocations.add(block.getLocation());
@@ -690,9 +674,9 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                     for (int xOffset = -1; xOffset <= 1; xOffset++) {
                         for (int zOffset = -1; zOffset <= 1; zOffset++) {
                             if (xOffset == 0 && yOffset == 0 && zOffset == 0) continue;
-                            
+
                             Block relativeBlock = block.getRelative(xOffset, yOffset, zOffset);
-                            
+
                             if (stopChoppingIfDifferentTypes && notSameType(block.getType(), relativeBlock.getType())) {
                                 continue;
                             }
@@ -713,16 +697,16 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
                             // Schedule next block processing
                             if (isFolia()) {
-                                this.getServer().getRegionScheduler().run(this, relativeBlock.getLocation(), 
-                                    (task2) -> chopTree(relativeBlock, player, ConnectedBlocks, location, material, blockData));
+                                this.getServer().getRegionScheduler().run(this, relativeBlock.getLocation(),
+                                        (task2) -> chopTree(relativeBlock, player, ConnectedBlocks, location, material, blockData));
                             } else {
                                 if (chopTreeAsync) {
-                                    Bukkit.getScheduler().runTaskAsynchronously(this, () -> 
-                                        Bukkit.getScheduler().runTask(this, () -> 
-                                            chopTree(relativeBlock, player, ConnectedBlocks, location, material, blockData)));
+                                    Bukkit.getScheduler().runTaskAsynchronously(this, () ->
+                                            Bukkit.getScheduler().runTask(this, () ->
+                                                    chopTree(relativeBlock, player, ConnectedBlocks, location, material, blockData)));
                                 } else {
-                                    Bukkit.getScheduler().runTask(this, () -> 
-                                        chopTree(relativeBlock, player, ConnectedBlocks, location, material, blockData));
+                                    Bukkit.getScheduler().runTask(this, () ->
+                                            chopTree(relativeBlock, player, ConnectedBlocks, location, material, blockData));
                                 }
                             }
                         }
@@ -746,7 +730,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     private void setCooldown(Player player, UUID playerUUID) {
         if (player.hasPermission("autotreechop.vip")) {
             cooldowns.put(playerUUID, System.currentTimeMillis() + (vipCooldownTime * 1000L));
-        } else  {
+        } else {
             cooldowns.put(playerUUID, System.currentTimeMillis() + (cooldownTime * 1000L));
         }
     }
