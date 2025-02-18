@@ -46,10 +46,10 @@ password: abc1234
 visual-effect: true
 # damage tool when chopping tree
 toolDamage: true
-# Enable this for better performance, but this may cause issue sometime.
-chopTreeAsync: true
 # How much durability should be decrease when player brock one block.
 toolDamageDecrease: 1
+# Enable this for better performance, but this may cause issue sometime.
+chopTreeAsync: true
 
 # Protection plugins setting
 # If you are using Residence, you can set which Flag players have access to AutoTreeChop in residence.
