@@ -95,6 +95,11 @@ tasks.shadowJar {
     relocate 'com.jeff_media.updatechecker', 'org.milkteamc.autotreechop.libs.updatechecker'
     relocate 'de.cubbossa.tinytranslations', 'org.milkteamc.autotreechop.libs.tinytranslations'
     relocate 'com.zaxxer.hikari', 'org.milkteamc.autotreechop.libs.hikari'
+
+    // Add the license file to the JAR
+    from("LICENSE") {
+        into 'META-INF'
+    }
 }
 
 tasks.jar {
