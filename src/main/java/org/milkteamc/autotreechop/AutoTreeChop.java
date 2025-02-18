@@ -13,8 +13,6 @@ import org.bukkit.block.data.BlockData;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -29,9 +27,7 @@ import org.milkteamc.autotreechop.hooks.ResidenceHook;
 import org.milkteamc.autotreechop.hooks.WorldGuardHook;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecutor {
 
@@ -77,38 +73,17 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             "1.18.2", "1.18.1", "1.18",
             "1.17.1", "1.17"
     );
+
+    private Config config; // Instance of your Config class
+    private AutoTreeChopAPI autoTreeChopAPI;
+    private Map<UUID, PlayerConfig> playerConfigs;
     private final Set<Location> checkedLocations = new HashSet<>();
     private final HashMap<UUID, Long> cooldowns = new HashMap<>();
     private final Set<Location> processingLocations = new HashSet<>();
     private String bukkitVersion = this.getServer().getBukkitVersion();
     private Metrics metrics;
-    private Map<UUID, PlayerConfig> playerConfigs;
-    private AutoTreeChopAPI autoTreeChopAPI;
-    private boolean VisualEffect;
-    private boolean toolDamage;
-    private int maxUsesPerDay;
-    private int maxBlocksPerDay;
-    private int cooldownTime;
-    private int vipCooldownTime;
-    private boolean stopChoppingIfNotConnected;
-    private boolean stopChoppingIfDifferentTypes;
-    private boolean chopTreeAsync;
-    private String residenceFlag;
-    private String griefPreventionFlag;
-    private Locale locale;
     private MessageTranslator translations;
-    private boolean useClientLocale;
-    private boolean useMysql;
-    private String hostname;
-    private int port;
-    private String database;
-    private String username;
-    private String password;
-    private boolean limitVipUsage;
-    private int vipUsesPerDay;
-    private int vipBlocksPerDay;
-    private Set<Material> logTypes;
-    private int toolDamageDecrease;
+
     private boolean worldGuardEnabled = false;
     private boolean residenceEnabled = false;
     private boolean griefPreventionEnabled = false;
@@ -120,39 +95,6 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
     public static void sendMessage(CommandSender sender, ComponentLike message) {
         BukkitTinyTranslations.sendMessageIfNotEmpty(sender, message);
-    }
-
-    // Auto edit add missing key
-    @NotNull
-    private static FileConfiguration getDefaultConfig() {
-        FileConfiguration defaultConfig;
-
-        defaultConfig = new YamlConfiguration();
-        defaultConfig.set("visual-effect", true);
-        defaultConfig.set("toolDamage", true);
-        defaultConfig.set("max-uses-per-day", 50);
-        defaultConfig.set("max-blocks-per-day", 500);
-        defaultConfig.set("cooldownTime", 5);
-        defaultConfig.set("vipCooldownTime", 2);
-        defaultConfig.set("stopChoppingIfNotConnected", false);
-        defaultConfig.set("stopChoppingIfDifferentTypes", false);
-        defaultConfig.set("chopTreeAsync", true);
-        defaultConfig.set("use-player-locale", false);
-        defaultConfig.set("useMysql", false);
-        defaultConfig.set("hostname", "example.com");
-        defaultConfig.set("port", 3306);
-        defaultConfig.set("database", "example");
-        defaultConfig.set("username", "root");
-        defaultConfig.set("password", "abc1234");
-        defaultConfig.set("locale", Locale.ENGLISH);
-        defaultConfig.set("residenceFlag", "build");
-        defaultConfig.set("griefPreventionFlag", "Build");
-        defaultConfig.set("limitVipUsage", true);
-        defaultConfig.set("vip-uses-per-day", 50);
-        defaultConfig.set("vip-blocks-per-day", 500);
-        defaultConfig.set("toolDamageDecrease", 1);
-        defaultConfig.set("log-types", Arrays.asList("OAK_LOG", "SPRUCE_LOG", "BIRCH_LOG", "JUNGLE_LOG", "ACACIA_LOG", "DARK_OAK_LOG", "MANGROVE_LOG", "CHERRY_LOG"));
-        return defaultConfig;
     }
 
     private static boolean isFolia() {
@@ -170,71 +112,150 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         player.getWorld().spawnParticle(Particle.REDSTONE, block.getLocation().add(0.5, 0.5, 0.5), 50, 0.5, 0.5, 0.5, 0, new Particle.DustOptions(Color.RED, 1));
     }
 
-    private FileConfiguration loadConfig() {
-        File configFile = new File(getDataFolder(), "config.yml");
-        FileConfiguration defaultConfig = getDefaultConfig();
+    @Override
+    public void onEnable() {
+        // Initialize Config
+        config = new Config(this);
 
-        if (!configFile.exists()) {
+        // Bukkit version checker
+        // Put your version check *after* loading the config, in case you add version-specific settings.
+        if (bukkitVersion.length() > 14) {
+            bukkitVersion = bukkitVersion.substring(0, bukkitVersion.length() - 14);
+            if (!SUPPORTED_VERSIONS.contains(bukkitVersion)) {
+                getLogger().warning("Your Minecraft version didn't fully tested yet.");
+                getLogger().warning("IF you have any issues, feel free to report it at our GitHub: https://github.com/milkteamc/AutoTreeChop/issues");
+            }
+        }
+
+        metrics = new Metrics(this, 20053); //bstats
+        getServer().getPluginManager().registerEvents(this, this);
+        getCommand("autotreechop").setExecutor(this);
+        getCommand("atc").setExecutor(this);
+        //saveDefaultConfig(); No longer needed, handled in Config class.
+        //loadConfig();  No longer needed, handled in Config class constructor.
+
+        translations = BukkitTinyTranslations.application(this);
+        translations.setMessageStorage(new PropertiesMessageStorage(new File(getDataFolder(), "/lang/")));
+        translations.setStyleStorage(new PropertiesStyleStorage(new File(getDataFolder(), "/lang/styles.properties")));
+        translations.addMessages(TinyTranslations.messageFieldsFromClass(AutoTreeChop.class));
+
+        loadLocale(); //Still needs to be called to *use* the locale.
+
+        if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
+            new AutoTreeChopExpansion(this).register();
+            getLogger().info("PlaceholderAPI expansion for AutoTreeChop has been registered.");
+        } else {
+            getLogger().warning("PlaceholderAPI not found. Placeholder expansion for AutoTreeChop will not work.");
+        }
+
+        new UpdateChecker(this, UpdateCheckSource.SPIGOT, SPIGOT_RESOURCE_ID)
+                .checkEveryXHours(24)
+                .setDonationLink("https://ko-fi.com/maoyue")
+                .setChangelogLink("https://modrinth.com/plugin/autotreechop/version/latest")
+                .setDownloadLink("https://modrinth.com/plugin/autotreechop/version/latest")
+                .setNotifyOpsOnJoin(true)
+                .setNotifyByPermissionOnJoin("autotreechop.updatechecker")
+                .setUserAgent(new UserAgentBuilder().addPluginNameAndVersion())
+                .checkNow();
+
+        autoTreeChopAPI = new AutoTreeChopAPI(this);
+        playerConfigs = new HashMap<>();
+        initializeHooks(); // Initialize protection plugin hooks
+    }
+
+
+    private void initializeHooks() {
+        // Residence hook initialization
+        if (Bukkit.getPluginManager().getPlugin("Residence") != null) {
             try {
-                if (!configFile.getParentFile().exists()) {
-                    configFile.getParentFile().mkdirs();
-                }
-                configFile.createNewFile();
-            } catch (IOException e) {
-                getLogger().warning("An error occurred:" + e);
-                return defaultConfig;
+                residenceHook = new ResidenceHook(config.getResidenceFlag());
+                residenceEnabled = true;
+                getLogger().info("Residence support enabled");
+            } catch (Exception e) {
+                getLogger().warning("Residence can't be hook, please report this to our GitHub: https://github.com/milkteamc/AutoTreeChop/issues");
+                residenceEnabled = false;
             }
+        } else {
+            residenceEnabled = false;
         }
-
-        FileConfiguration config = YamlConfiguration.loadConfiguration(configFile);
-        for (String key : defaultConfig.getKeys(true)) {
-            if (!config.contains(key)) {
-                config.set(key, defaultConfig.get(key));
+        // GriefPrevention hook initialization
+        if (Bukkit.getPluginManager().getPlugin("GriefPrevention") != null) {
+            try {
+                griefPreventionHook = new GriefPreventionHook(config.getGriefPreventionFlag());
+                griefPreventionEnabled = true;
+                getLogger().info("GriefPrevention support enabled");
+            } catch (Exception e) {
+                getLogger().warning("GriefPrevention can't be hook, please report this to our GitHub: https://github.com/milkteamc/AutoTreeChop/issues");
+                griefPreventionEnabled = false;
             }
+        } else {
+            griefPreventionEnabled = false;
         }
-
-        try {
-            config.save(configFile);
-        } catch (IOException e) {
-            getLogger().warning("An error occurred:" + e);
+        // Lands hook initialization
+        if (Bukkit.getPluginManager().getPlugin("Lands") != null) {
+            try {
+                landsHook = new LandsHook(this);
+                landsEnabled = true;
+                getLogger().info("Lands support enabled");
+            } catch (Exception e) {
+                getLogger().warning("Lands can't be hook, please report this to our GitHub: https://github.com/milkteamc/AutoTreeChop/issues");
+                landsEnabled = false;
+            }
+        } else {
+            landsEnabled = false;
         }
-
-        VisualEffect = config.getBoolean("visual-effect");
-        toolDamage = config.getBoolean("toolDamage");
-        maxUsesPerDay = config.getInt("max-uses-per-day");
-        maxBlocksPerDay = config.getInt("max-blocks-per-day");
-        stopChoppingIfNotConnected = config.getBoolean("stopChoppingIfNotConnected");
-        stopChoppingIfDifferentTypes = config.getBoolean("stopChoppingIfDifferentTypes");
-        chopTreeAsync = config.getBoolean("chopTreeAsync");
-        Object locale = config.get("locale");
-        residenceFlag = config.getString("residenceFlag");
-        griefPreventionFlag = config.getString("griefPreventionFlag");
-        cooldownTime = config.getInt("cooldownTime");
-        vipCooldownTime = config.getInt("vipCooldownTime");
-        if (locale instanceof String s) {
-            this.locale = Locale.forLanguageTag(s);
-        } else if (locale instanceof Locale l) {
-            this.locale = l;
+        // Initialize WorldGuard support
+        if (Bukkit.getPluginManager().getPlugin("WorldGuard") != null) {
+            try {
+                worldGuardHook = new WorldGuardHook();
+                getLogger().info("WorldGuard support enabled");
+            } catch (NoClassDefFoundError e) {
+                getLogger().warning("WorldGuard can't be hook, please report this to our GitHub: https://github.com/milkteamc/AutoTreeChop/issues");
+                worldGuardEnabled = false;
+            }
+        } else {
+            worldGuardEnabled = false;
         }
-        useClientLocale = config.getBoolean("use-player-locale");
+    }
 
-        // MySQL
-        useMysql = config.getBoolean("useMysql");
-        hostname = config.getString("hostname");
-        port = config.getInt("port");
-        database = config.getString("database");
-        username = config.getString("username");
-        password = config.getString("password");
 
-        limitVipUsage = config.getBoolean("limitVipUsage");
-        vipUsesPerDay = config.getInt("vip-uses-per-day");
-        vipBlocksPerDay = config.getInt("vip-blocks-per-day");
-        toolDamageDecrease = config.getInt("toolDamageDecrease");
-        // Load log types
-        List<String> logTypeStrings = config.getStringList("log-types");
-        logTypes = logTypeStrings.stream().map(Material::getMaterial).collect(Collectors.toSet());
+    private void loadLocale() {
+        //These are now handled by the config
+        //translations.saveLocale(Locale.ENGLISH);
+        //saveResourceIfNotExists("lang/styles.properties");
+        //saveResourceIfNotExists("lang/de.properties");
+        //saveResourceIfNotExists("lang/zh.properties");
+        translations.setUseClientLocale(config.isUseClientLocale());
+        translations.defaultLocale(config.getLocale() == null ? Locale.getDefault() : config.getLocale());
+        translations.loadStyles();
+        translations.loadLocales();
+    }
 
-        return config;
+    private void saveResourceIfNotExists(String resourcePath) {
+        if (!new File(getDataFolder(), resourcePath).exists()) {
+            saveResource(resourcePath, false);
+        }
+    }
+
+    @Override
+    public void onDisable() {
+        translations.close();
+        metrics.shutdown();
+    }
+
+
+    // VIP limit checker
+    private boolean hasvipUses(Player player, PlayerConfig playerConfig) {
+        if (!config.getLimitVipUsage()) return player.hasPermission("autotreechop.vip");
+        if (player.hasPermission("autotreechop.vip")) return playerConfig.getDailyUses() <= config.getVipUsesPerDay();
+        return false;
+    }
+
+    private boolean hasvipBlock(Player player, PlayerConfig playerConfig) {
+        if (!config.getLimitVipUsage()) return player.hasPermission("autotreechop.vip");
+        if (player.hasPermission("autotreechop.vip"))
+            return playerConfig.getDailyBlocksBroken() <= config.getVipBlocksPerDay();
+        return false;
     }
 
     @Override
@@ -242,11 +263,9 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         if (!cmd.getName().equalsIgnoreCase("autotreechop") && !cmd.getName().equalsIgnoreCase("atc")) {
             return null;
         }
-
         if (args.length != 1) {
             return null;
         }
-
         List<String> completions = new ArrayList<>();
         completions.add("usage");
 
@@ -260,11 +279,9 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                     .limit(10) // Limit to 10 players
                     .forEach(player -> completions.add(player.getName()));
         }
-
         if (hasOpPermission) {
             completions.add("reload");
         }
-
         return completions;
     }
 
@@ -276,15 +293,14 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
         if (args.length > 0 && args[0].equalsIgnoreCase("reload")) {
             if (sender.hasPermission("autotreechop.reload")) {
-                loadConfig();
-                loadLocale();
+                config.load(); // Reload the config
+                loadLocale();   //And reload the locale.
                 sender.sendMessage("Config reloaded successfully.");
             } else {
                 sendMessage(sender, NO_PERMISSION_MESSAGE);
             }
             return true;
         }
-
         if (args.length > 0 && args[0].equalsIgnoreCase("enable-all")) {
             if (sender.hasPermission("autotreechop.other") || sender.hasPermission("autotreechop.op")) {
                 toggleAutoTreeChopForAll(sender, true);
@@ -294,7 +310,6 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             }
             return true;
         }
-
         if (args.length > 0 && args[0].equalsIgnoreCase("disable-all")) {
             if (sender.hasPermission("autotreechop.other") || sender.hasPermission("autotreechop.op")) {
                 toggleAutoTreeChopForAll(sender, false);
@@ -304,7 +319,6 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             }
             return true;
         }
-
         if (!(sender instanceof Player player)) {
             if (args.length > 0) {
                 handleTargetPlayerToggle(sender, args[0]);
@@ -338,19 +352,19 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             PlayerConfig playerConfig = getPlayerConfig(player.getUniqueId());
             BukkitTinyTranslations.sendMessage(player, USAGE_MESSAGE
                     .insertNumber("current_uses", playerConfig.getDailyUses())
-                    .insertNumber("max_uses", maxUsesPerDay));
+                    .insertNumber("max_uses", config.getMaxUsesPerDay()));
             BukkitTinyTranslations.sendMessage(player, BLOCKS_BROKEN_MESSAGE
                     .insertNumber("current_blocks", playerConfig.getDailyBlocksBroken())
-                    .insertNumber("max_blocks", maxBlocksPerDay));
-        } else if (player.hasPermission("autotreechop.vip") && limitVipUsage) {
+                    .insertNumber("max_blocks", config.getMaxBlocksPerDay()));
+        } else if (player.hasPermission("autotreechop.vip") && config.getLimitVipUsage()) {
             PlayerConfig playerConfig = getPlayerConfig(player.getUniqueId());
             BukkitTinyTranslations.sendMessage(player, USAGE_MESSAGE
                     .insertNumber("current_uses", playerConfig.getDailyUses())
-                    .insertNumber("max_uses", vipUsesPerDay));
+                    .insertNumber("max_uses", config.getVipUsesPerDay()));
             BukkitTinyTranslations.sendMessage(player, BLOCKS_BROKEN_MESSAGE
                     .insertNumber("current_blocks", playerConfig.getDailyBlocksBroken())
-                    .insertNumber("max_blocks", vipBlocksPerDay));
-        } else if (player.hasPermission("autotreechop.vip") && !limitVipUsage) {
+                    .insertNumber("max_blocks", config.getVipBlocksPerDay()));
+        } else if (player.hasPermission("autotreechop.vip") && !config.getLimitVipUsage()) {
             PlayerConfig playerConfig = getPlayerConfig(player.getUniqueId());
             BukkitTinyTranslations.sendMessage(player, USAGE_MESSAGE
                     .insertNumber("current_uses", playerConfig.getDailyUses())
@@ -367,7 +381,6 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             sender.sendMessage("Player not found: " + targetPlayerName);
             return;
         }
-
         UUID targetUUID = targetPlayer.getUniqueId();
         PlayerConfig playerConfig = getPlayerConfig(targetUUID);
         boolean autoTreeChopEnabled = !playerConfig.isAutoTreeChopEnabled();
@@ -409,158 +422,6 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         });
     }
 
-    @Override
-    public void onEnable() {
-        // Bukkit version checker
-        if (bukkitVersion.length() > 14) {
-            bukkitVersion = bukkitVersion.substring(0, bukkitVersion.length() - 14);
-
-            if (!SUPPORTED_VERSIONS.contains(bukkitVersion)) {
-                getLogger().warning("Your Minecraft version didn't fully tested yet.");
-                getLogger().warning("IF you have any issues, feel free to report it at our GitHub: https://github.com/milkteamc/AutoTreeChop/issues");
-            }
-        }
-
-        metrics = new Metrics(this, 20053); //bstats
-
-        getServer().getPluginManager().registerEvents(this, this);
-        getCommand("autotreechop").setExecutor(this);
-        getCommand("atc").setExecutor(this);
-
-        saveDefaultConfig();
-        loadConfig();
-
-        translations = BukkitTinyTranslations.application(this);
-
-        translations.setMessageStorage(new PropertiesMessageStorage(new File(getDataFolder(), "/lang/")));
-        translations.setStyleStorage(new PropertiesStyleStorage(new File(getDataFolder(), "/lang/styles.properties")));
-
-        // Register all messages from this class and save them into an en.properties.
-        // If already exists, this will only write missing values into the file.
-        translations.addMessages(TinyTranslations.messageFieldsFromClass(AutoTreeChop.class));
-
-        loadLocale();
-        // Now ready to use sendMessage method
-
-        if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
-            new AutoTreeChopExpansion(this).register();
-            getLogger().info("PlaceholderAPI expansion for AutoTreeChop has been registered.");
-        } else {
-            getLogger().warning("PlaceholderAPI not found. Placeholder expansion for AutoTreeChop will not work.");
-        }
-
-        new UpdateChecker(this, UpdateCheckSource.SPIGOT, SPIGOT_RESOURCE_ID) // You can also use Spigot instead of Spigot - Spigot's API is usually much faster up to date.
-                .checkEveryXHours(24) // Check every 24 hours
-                .setDonationLink("https://ko-fi.com/maoyue")
-                .setChangelogLink("https://modrinth.com/plugin/autotreechop/version/latest") // Same as for the Download link: URL or Spigot Resource ID
-                .setDownloadLink("https://modrinth.com/plugin/autotreechop/version/latest")
-                .setNotifyOpsOnJoin(true) // Notify OPs on Join when a new version is found (default)
-                .setNotifyByPermissionOnJoin("autotreechop.updatechecker") // Also notify people on join with this permission
-                .setUserAgent(new UserAgentBuilder().addPluginNameAndVersion())
-                .checkNow(); // And check right now
-
-        autoTreeChopAPI = new AutoTreeChopAPI(this);
-        playerConfigs = new HashMap<>();
-
-        // Initialize protection plugin hooks
-        initializeHooks();
-    }
-
-    private void initializeHooks() {
-        // Residence hook initialization
-        if (Bukkit.getPluginManager().getPlugin("Residence") != null) {
-            try {
-                residenceHook = new ResidenceHook(residenceFlag);
-                residenceEnabled = true;
-                getLogger().info("Residence support enabled");
-            } catch (Exception e) {
-                getLogger().warning("Residence can't be hook, please report this to our GitHub: https://github.com/milkteamc/AutoTreeChop/issues");
-                residenceEnabled = false;
-            }
-        } else {
-            residenceEnabled = false;
-        }
-
-        // GriefPrevention hook initialization
-        if (Bukkit.getPluginManager().getPlugin("GriefPrevention") != null) {
-            try {
-                griefPreventionHook = new GriefPreventionHook(griefPreventionFlag);
-                griefPreventionEnabled = true;
-                getLogger().info("GriefPrevention support enabled");
-            } catch (Exception e) {
-                getLogger().warning("GriefPrevention can't be hook, please report this to our GitHub: https://github.com/milkteamc/AutoTreeChop/issues");
-                griefPreventionEnabled = false;
-            }
-        } else {
-            griefPreventionEnabled = false;
-        }
-
-        // Lands hook initialization
-        if (Bukkit.getPluginManager().getPlugin("Lands") != null) {
-            try {
-                landsHook = new LandsHook(this);
-                landsEnabled = true;
-                getLogger().info("Lands support enabled");
-            } catch (Exception e) {
-                getLogger().warning("Lands can't be hook, please report this to our GitHub: https://github.com/milkteamc/AutoTreeChop/issues");
-                landsEnabled = false;
-            }
-        } else {
-            landsEnabled = false;
-        }
-        // Initialize WorldGuard support
-        if (Bukkit.getPluginManager().getPlugin("WorldGuard") != null) {
-            try {
-                worldGuardHook = new WorldGuardHook();
-                getLogger().info("WorldGuard support enabled");
-            } catch (NoClassDefFoundError e) {
-                getLogger().warning("WorldGuard can't be hook, please report this to our GitHub: https://github.com/milkteamc/AutoTreeChop/issues");
-                worldGuardEnabled = false;
-            }
-        } else {
-            worldGuardEnabled = false;
-        }
-    }
-
-    private void loadLocale() {
-
-        translations.saveLocale(Locale.ENGLISH);
-        saveResourceIfNotExists("lang/styles.properties");
-        saveResourceIfNotExists("lang/de.properties");
-        saveResourceIfNotExists("lang/zh.properties");
-
-        translations.setUseClientLocale(useClientLocale);
-        translations.defaultLocale(locale == null ? Locale.getDefault() : locale);
-
-        translations.loadStyles();
-        translations.loadLocales();
-    }
-
-    private void saveResourceIfNotExists(String resourcePath) {
-        if (!new File(getDataFolder(), resourcePath).exists()) {
-            saveResource(resourcePath, false);
-        }
-    }
-
-    @Override
-    public void onDisable() {
-        translations.close();
-        metrics.shutdown();
-    }
-
-    // VIP limit checker
-    private boolean hasvipUses(Player player, PlayerConfig playerConfig) {
-        if (!limitVipUsage) return player.hasPermission("autotreechop.vip");
-        if (player.hasPermission("autotreechop.vip")) return playerConfig.getDailyUses() <= vipUsesPerDay;
-        return false;
-    }
-
-    private boolean hasvipBlock(Player player, PlayerConfig playerConfig) {
-        if (!limitVipUsage) return player.hasPermission("autotreechop.vip");
-        if (player.hasPermission("autotreechop.vip")) return playerConfig.getDailyBlocksBroken() <= vipBlocksPerDay;
-        return false;
-    }
-
     @EventHandler(priority = EventPriority.NORMAL)
     public void onBlockBreak(BlockBreakEvent event) {
         Player player = event.getPlayer();
@@ -586,30 +447,26 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         BlockData blockData = block.getBlockData();
 
         if (playerConfig.isAutoTreeChopEnabled() && isLog(material)) {
-            if (!hasvipBlock(player, playerConfig) && playerConfig.getDailyBlocksBroken() >= maxBlocksPerDay) {
+            if (!hasvipBlock(player, playerConfig) && playerConfig.getDailyBlocksBroken() >= config.getMaxBlocksPerDay()) {
                 sendMaxBlockLimitReachedMessage(player, block);
                 event.setCancelled(true);
                 return;
             }
-
-            if (!hasvipUses(player, playerConfig) && playerConfig.getDailyUses() >= maxUsesPerDay) {
+            if (!hasvipUses(player, playerConfig) && playerConfig.getDailyUses() >= config.getMaxUsesPerDay()) {
                 BukkitTinyTranslations.sendMessage(player, HIT_MAX_USAGE_MESSAGE);
                 return;
             }
 
-            if (VisualEffect) {
+            if (config.isVisualEffect()) {  // Use the getter from the Config object
                 showChopEffect(player, block);
             }
 
             event.setCancelled(true);
             checkedLocations.clear();
-
-            chopTree(block, player, stopChoppingIfNotConnected, location, material, blockData);
-
+            chopTree(block, player, config.isStopChoppingIfNotConnected(), location, material, blockData); // Pass config values
             checkedLocations.clear();
-
             playerConfig.incrementDailyUses();
-            setCooldown(player, playerUUID);
+            setCooldown(player, playerUUID); // Pass config values
         }
     }
 
@@ -624,7 +481,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         if (tool.getType().getMaxDurability() > 0) {
             int newDurability = tool.getDurability() + amount;
             if (newDurability > tool.getType().getMaxDurability()) {
-                player.getInventory().setItemInMainHand(null);
+                player.getInventory().setItemInMainHand(null); // Remove the item if it breaks
             } else {
                 tool.setDurability((short) newDurability);
             }
@@ -637,18 +494,17 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                 !gfCheck(player, location) || !wgCheck(player, location)) {
             return;
         }
-
         // Skip if already checked or being processed
         if (checkedLocations.contains(block.getLocation()) ||
                 processingLocations.contains(block.getLocation())) {
             return;
         }
+
         checkedLocations.add(block.getLocation());
 
         if (!isLog(block.getType())) {
             return;
         }
-
         // Add to processing set to prevent recursion
         processingLocations.add(block.getLocation());
 
@@ -660,8 +516,8 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             // Break the block and update player stats
             block.breakNaturally();
             getPlayerConfig(player.getUniqueId()).incrementDailyBlocksBroken();
-            if (toolDamage) {
-                damageTool(player, toolDamageDecrease);
+            if (config.isToolDamage()) {
+                damageTool(player, config.getToolDamageDecrease());
             }
 
             // Process adjacent blocks
@@ -673,7 +529,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
                             Block relativeBlock = block.getRelative(xOffset, yOffset, zOffset);
 
-                            if (stopChoppingIfDifferentTypes && notSameType(block.getType(), relativeBlock.getType())) {
+                            if (config.isStopChoppingIfDifferentTypes() && notSameType(block.getType(), relativeBlock.getType())) {
                                 continue;
                             }
                             if (ConnectedBlocks && blockNotConnected(block, relativeBlock)) {
@@ -681,12 +537,12 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                             }
 
                             // Check limits before processing next block
-                            PlayerConfig config = getPlayerConfig(player.getUniqueId());
-                            if (config.getDailyUses() >= maxUsesPerDay && !hasvipBlock(player, config)) {
+                            PlayerConfig configPlayer = getPlayerConfig(player.getUniqueId());
+                            if (configPlayer.getDailyUses() >= config.getMaxUsesPerDay() && !hasvipBlock(player, configPlayer)) {
                                 BukkitTinyTranslations.sendMessage(player, HIT_MAX_USAGE_MESSAGE);
                                 return;
                             }
-                            if (config.getDailyBlocksBroken() >= maxBlocksPerDay && !hasvipBlock(player, config)) {
+                            if (configPlayer.getDailyBlocksBroken() >= config.getMaxBlocksPerDay() && !hasvipBlock(player, configPlayer)) {
                                 BukkitTinyTranslations.sendMessage(player, HIT_MAX_BLOCK_MESSAGE);
                                 return;
                             }
@@ -696,7 +552,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
                                 this.getServer().getRegionScheduler().run(this, relativeBlock.getLocation(),
                                         (task2) -> chopTree(relativeBlock, player, ConnectedBlocks, location, material, blockData));
                             } else {
-                                if (chopTreeAsync) {
+                                if (config.isChopTreeAsync()) {
                                     Bukkit.getScheduler().runTaskAsynchronously(this, () ->
                                             Bukkit.getScheduler().runTask(this, () ->
                                                     chopTree(relativeBlock, player, ConnectedBlocks, location, material, blockData)));
@@ -713,7 +569,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             };
 
             // Execute the task based on configuration and environment
-            if (!isFolia() && chopTreeAsync) {
+            if (!isFolia() && config.isChopTreeAsync()) {
                 Bukkit.getScheduler().runTaskAsynchronously(this, task);
             } else {
                 task.run();
@@ -725,9 +581,9 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
     private void setCooldown(Player player, UUID playerUUID) {
         if (player.hasPermission("autotreechop.vip")) {
-            cooldowns.put(playerUUID, System.currentTimeMillis() + (vipCooldownTime * 1000L));
+            cooldowns.put(playerUUID, System.currentTimeMillis() + (config.getVipCooldownTime() * 1000L));
         } else {
-            cooldowns.put(playerUUID, System.currentTimeMillis() + (cooldownTime * 1000L));
+            cooldowns.put(playerUUID, System.currentTimeMillis() + (config.getCooldownTime() * 1000L));
         }
     }
 
@@ -787,15 +643,14 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         return type1 != type2;
     }
 
-
     private boolean isLog(Material material) {
-        return logTypes.contains(material);
+        return config.getLogTypes().contains(material);  // Use the getter
     }
 
     PlayerConfig getPlayerConfig(UUID playerUUID) {
         PlayerConfig playerConfig = playerConfigs.get(playerUUID);
         if (playerConfig == null) {
-            playerConfig = new PlayerConfig(playerUUID, useMysql, hostname, database, port, username, password);
+            playerConfig = new PlayerConfig(playerUUID, config.isUseMysql(), config.getHostname(), config.getDatabase(), config.getPort(), config.getUsername(), config.getPassword());
             playerConfigs.put(playerUUID, playerConfig);
         }
         return playerConfig;
@@ -811,5 +666,10 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
     public AutoTreeChopAPI getAutoTreeChopAPI() {
         return autoTreeChopAPI;
+    }
+
+    // Add a getter for the Config instance
+    public Config getPluginConfig() {
+        return config;
     }
 }
