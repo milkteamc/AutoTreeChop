@@ -7,10 +7,11 @@ import de.cubbossa.tinytranslations.*;
 import de.cubbossa.tinytranslations.libs.kyori.adventure.text.ComponentLike;
 import de.cubbossa.tinytranslations.storage.properties.PropertiesMessageStorage;
 import de.cubbossa.tinytranslations.storage.properties.PropertiesStyleStorage;
-import org.bukkit.*;
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.BlockData;
-import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -18,13 +19,15 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
-import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.jetbrains.annotations.NotNull;
 import org.milkteamc.autotreechop.hooks.GriefPreventionHook;
 import org.milkteamc.autotreechop.hooks.LandsHook;
 import org.milkteamc.autotreechop.hooks.ResidenceHook;
 import org.milkteamc.autotreechop.hooks.WorldGuardHook;
+import org.milkteamc.autotreechop.utils.CooldownManager;
+import org.milkteamc.autotreechop.utils.EffectUtils;
+import org.milkteamc.autotreechop.utils.PermissionUtils;
+import org.milkteamc.autotreechop.utils.TreeChopUtils;
 
 import java.io.File;
 import java.util.*;
@@ -78,7 +81,6 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     private AutoTreeChopAPI autoTreeChopAPI;
     private Map<UUID, PlayerConfig> playerConfigs;
     private final Set<Location> checkedLocations = new HashSet<>();
-    private final HashMap<UUID, Long> cooldowns = new HashMap<>();
     private final Set<Location> processingLocations = new HashSet<>();
     private String bukkitVersion = this.getServer().getBukkitVersion();
     private Metrics metrics;
@@ -93,23 +95,19 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     private GriefPreventionHook griefPreventionHook = null;
     private LandsHook landsHook = null;
 
+    private CooldownManager cooldownManager;
+
     public static void sendMessage(CommandSender sender, ComponentLike message) {
         BukkitTinyTranslations.sendMessageIfNotEmpty(sender, message);
     }
 
-    private static boolean isFolia() {
+    public static boolean isFolia() {
         try {
             Class.forName("io.papermc.paper.threadedregions.RegionizedServer");
             return true;
         } catch (ClassNotFoundException e) {
             return false;
         }
-    }
-
-    // Sends a message to the player and shows a red particle effect indicating the block limit has been reached
-    private static void sendMaxBlockLimitReachedMessage(Player player, Block block) {
-        sendMessage(player, HIT_MAX_BLOCK_MESSAGE);
-        player.getWorld().spawnParticle(Particle.REDSTONE, block.getLocation().add(0.5, 0.5, 0.5), 50, 0.5, 0.5, 0.5, 0, new Particle.DustOptions(Color.RED, 1));
     }
 
     @Override
@@ -129,10 +127,13 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
         metrics = new Metrics(this, 20053); //bstats
         getServer().getPluginManager().registerEvents(this, this);
-        getCommand("autotreechop").setExecutor(this);
-        getCommand("atc").setExecutor(this);
-        //saveDefaultConfig(); No longer needed, handled in Config class.
-        //loadConfig();  No longer needed, handled in Config class constructor.
+
+        // Register command and tab completer
+        org.milkteamc.autotreechop.command.Command command = new org.milkteamc.autotreechop.command.Command(this);
+        getCommand("autotreechop").setExecutor(command);
+        getCommand("atc").setExecutor(command);
+        getCommand("autotreechop").setTabCompleter(new org.milkteamc.autotreechop.command.TabCompleter());
+        getCommand("atc").setTabCompleter(new org.milkteamc.autotreechop.command.TabCompleter());
 
         translations = BukkitTinyTranslations.application(this);
         translations.setMessageStorage(new PropertiesMessageStorage(new File(getDataFolder(), "/lang/")));
@@ -161,6 +162,8 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         autoTreeChopAPI = new AutoTreeChopAPI(this);
         playerConfigs = new HashMap<>();
         initializeHooks(); // Initialize protection plugin hooks
+
+        cooldownManager = new CooldownManager(this);
     }
 
 
@@ -225,7 +228,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         saveResourceIfNotExists("lang/es.properties");
         saveResourceIfNotExists("lang/fr.properties");
         saveResourceIfNotExists("lang/ja.properties");
-        saveResourceIfNotExists("lang/zh.properties");
+        saveResourceIfNotExists("lang/zh-TW.properties");
         saveResourceIfNotExists("lang/zh-CN.properties");
         translations.setUseClientLocale(config.isUseClientLocale());
         translations.defaultLocale(config.getLocale() == null ? Locale.getDefault() : config.getLocale());
@@ -245,185 +248,6 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         metrics.shutdown();
     }
 
-
-    // VIP limit checker
-    private boolean hasvipUses(Player player, PlayerConfig playerConfig) {
-        if (!config.getLimitVipUsage()) return player.hasPermission("autotreechop.vip");
-        if (player.hasPermission("autotreechop.vip")) return playerConfig.getDailyUses() <= config.getVipUsesPerDay();
-        return false;
-    }
-
-    private boolean hasvipBlock(Player player, PlayerConfig playerConfig) {
-        if (!config.getLimitVipUsage()) return player.hasPermission("autotreechop.vip");
-        if (player.hasPermission("autotreechop.vip"))
-            return playerConfig.getDailyBlocksBroken() <= config.getVipBlocksPerDay();
-        return false;
-    }
-
-    @Override
-    public List<String> onTabComplete(@NotNull CommandSender sender, Command cmd, @NotNull String alias, String[] args) {
-        if (!cmd.getName().equalsIgnoreCase("autotreechop") && !cmd.getName().equalsIgnoreCase("atc")) {
-            return null;
-        }
-        if (args.length != 1) {
-            return null;
-        }
-        List<String> completions = new ArrayList<>();
-        completions.add("usage");
-
-        boolean hasOtherPermission = sender.hasPermission("autotreechop.other") || sender.hasPermission("autotreechop.op");
-        boolean hasOpPermission = sender.hasPermission("autotreechop.op");
-
-        if (hasOtherPermission) {
-            completions.add("enable-all");
-            completions.add("disable-all");
-            Bukkit.getOnlinePlayers().stream()
-                    .limit(10) // Limit to 10 players
-                    .forEach(player -> completions.add(player.getName()));
-        }
-        if (hasOpPermission) {
-            completions.add("reload");
-        }
-        return completions;
-    }
-
-    @Override
-    public boolean onCommand(@NotNull CommandSender sender, Command cmd, @NotNull String label, String[] args) {
-        if (!cmd.getName().equalsIgnoreCase("autotreechop") && !cmd.getName().equalsIgnoreCase("atc")) {
-            return false;
-        }
-
-        if (args.length > 0 && args[0].equalsIgnoreCase("reload")) {
-            if (sender.hasPermission("autotreechop.reload")) {
-                config.load(); // Reload the config
-                loadLocale();   //And reload the locale.
-                sender.sendMessage("Config reloaded successfully.");
-            } else {
-                sendMessage(sender, NO_PERMISSION_MESSAGE);
-            }
-            return true;
-        }
-        if (args.length > 0 && args[0].equalsIgnoreCase("enable-all")) {
-            if (sender.hasPermission("autotreechop.other") || sender.hasPermission("autotreechop.op")) {
-                toggleAutoTreeChopForAll(sender, true);
-                sendMessage(sender, ENABLED_FOR_OTHER_MESSAGE.insertString("player", "everyone"));
-            } else {
-                sendMessage(sender, NO_PERMISSION_MESSAGE);
-            }
-            return true;
-        }
-        if (args.length > 0 && args[0].equalsIgnoreCase("disable-all")) {
-            if (sender.hasPermission("autotreechop.other") || sender.hasPermission("autotreechop.op")) {
-                toggleAutoTreeChopForAll(sender, false);
-                sendMessage(sender, DISABLED_FOR_OTHER_MESSAGE.insertString("player", "everyone"));
-            } else {
-                sendMessage(sender, NO_PERMISSION_MESSAGE);
-            }
-            return true;
-        }
-        if (!(sender instanceof Player player)) {
-            if (args.length > 0) {
-                handleTargetPlayerToggle(sender, args[0]);
-            } else {
-                sendMessage(sender, ONLY_PLAYERS_MESSAGE);
-            }
-            return true;
-        }
-
-        if (!player.hasPermission("autotreechop.use")) {
-            sendMessage(player, NO_PERMISSION_MESSAGE);
-            return true;
-        }
-
-        if (args.length > 0 && args[0].equalsIgnoreCase("usage")) {
-            handleUsageCommand(player);
-            return true;
-        }
-
-        if (args.length > 0) {
-            handleTargetPlayerToggle(player, args[0]);
-            return true;
-        }
-
-        toggleAutoTreeChop(player, player.getUniqueId());
-        return true;
-    }
-
-    private void handleUsageCommand(Player player) {
-        if (!player.hasPermission("autotreechop.vip")) {
-            PlayerConfig playerConfig = getPlayerConfig(player.getUniqueId());
-            BukkitTinyTranslations.sendMessage(player, USAGE_MESSAGE
-                    .insertNumber("current_uses", playerConfig.getDailyUses())
-                    .insertNumber("max_uses", config.getMaxUsesPerDay()));
-            BukkitTinyTranslations.sendMessage(player, BLOCKS_BROKEN_MESSAGE
-                    .insertNumber("current_blocks", playerConfig.getDailyBlocksBroken())
-                    .insertNumber("max_blocks", config.getMaxBlocksPerDay()));
-        } else if (player.hasPermission("autotreechop.vip") && config.getLimitVipUsage()) {
-            PlayerConfig playerConfig = getPlayerConfig(player.getUniqueId());
-            BukkitTinyTranslations.sendMessage(player, USAGE_MESSAGE
-                    .insertNumber("current_uses", playerConfig.getDailyUses())
-                    .insertNumber("max_uses", config.getVipUsesPerDay()));
-            BukkitTinyTranslations.sendMessage(player, BLOCKS_BROKEN_MESSAGE
-                    .insertNumber("current_blocks", playerConfig.getDailyBlocksBroken())
-                    .insertNumber("max_blocks", config.getVipBlocksPerDay()));
-        } else if (player.hasPermission("autotreechop.vip") && !config.getLimitVipUsage()) {
-            PlayerConfig playerConfig = getPlayerConfig(player.getUniqueId());
-            BukkitTinyTranslations.sendMessage(player, USAGE_MESSAGE
-                    .insertNumber("current_uses", playerConfig.getDailyUses())
-                    .insertString("max_uses", "\u221e"));
-            BukkitTinyTranslations.sendMessage(player, BLOCKS_BROKEN_MESSAGE
-                    .insertNumber("current_blocks", playerConfig.getDailyBlocksBroken())
-                    .insertString("max_blocks", "\u221e"));
-        }
-    }
-
-    private void handleTargetPlayerToggle(CommandSender sender, String targetPlayerName) {
-        Player targetPlayer = Bukkit.getPlayer(targetPlayerName);
-        if (targetPlayer == null) {
-            sender.sendMessage("Player not found: " + targetPlayerName);
-            return;
-        }
-        UUID targetUUID = targetPlayer.getUniqueId();
-        PlayerConfig playerConfig = getPlayerConfig(targetUUID);
-        boolean autoTreeChopEnabled = !playerConfig.isAutoTreeChopEnabled();
-        playerConfig.setAutoTreeChopEnabled(autoTreeChopEnabled);
-
-        if (autoTreeChopEnabled) {
-            sendMessage(sender, ENABLED_FOR_OTHER_MESSAGE.insertString("player", targetPlayer.getName()));
-            sendMessage(targetPlayer, ENABLED_BY_OTHER_MESSAGE.insertString("player", sender.getName()));
-        } else {
-            sendMessage(sender, DISABLED_FOR_OTHER_MESSAGE.insertString("player", targetPlayer.getName()));
-            sendMessage(targetPlayer, DISABLED_BY_OTHER_MESSAGE.insertString("player", sender.getName()));
-        }
-    }
-
-    private void toggleAutoTreeChop(Player player, UUID playerUUID) {
-        PlayerConfig playerConfig = getPlayerConfig(playerUUID);
-        boolean autoTreeChopEnabled = !playerConfig.isAutoTreeChopEnabled();
-        playerConfig.setAutoTreeChopEnabled(autoTreeChopEnabled);
-
-        if (autoTreeChopEnabled) {
-            BukkitTinyTranslations.sendMessage(player, ENABLED_MESSAGE);
-        } else {
-            BukkitTinyTranslations.sendMessage(player, DISABLED_MESSAGE);
-        }
-    }
-
-    // Logic when using /atc enable-all disable-all
-    private void toggleAutoTreeChopForAll(CommandSender sender, boolean autoTreeChopEnabled) {
-        ComponentLike message = autoTreeChopEnabled
-                ? ENABLED_BY_OTHER_MESSAGE.insertString("player", sender.getName())
-                : DISABLED_BY_OTHER_MESSAGE.insertString("player", sender.getName());
-
-        // Use parallelStream for better performance
-        Bukkit.getOnlinePlayers().parallelStream().forEach(onlinePlayer -> {
-            UUID playerUUID = onlinePlayer.getUniqueId();
-            PlayerConfig playerConfig = getPlayerConfig(playerUUID);
-            playerConfig.setAutoTreeChopEnabled(autoTreeChopEnabled);
-            sendMessage(onlinePlayer, message);
-        });
-    }
-
     @EventHandler(priority = EventPriority.NORMAL)
     public void onBlockBreak(BlockBreakEvent event) {
         Player player = event.getPlayer();
@@ -436,9 +260,9 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             return;
         }
 
-        if (isInCooldown(playerUUID)) {
+        if (cooldownManager.isInCooldown(playerUUID)) {
             sendMessage(player, STILL_IN_COOLDOWN_MESSAGE
-                    .insertNumber("cooldown_time", getRemainingCooldown(playerUUID))
+                    .insertNumber("cooldown_time", cooldownManager.getRemainingCooldown(playerUUID))
             );
             event.setCancelled(true);
             return;
@@ -448,208 +272,33 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         Location location = block.getLocation();
         BlockData blockData = block.getBlockData();
 
-        if (playerConfig.isAutoTreeChopEnabled() && isLog(material)) {
-            if (!hasvipBlock(player, playerConfig) && playerConfig.getDailyBlocksBroken() >= config.getMaxBlocksPerDay()) {
-                sendMaxBlockLimitReachedMessage(player, block);
-                event.setCancelled(true);
-                return;
+        if (playerConfig.isAutoTreeChopEnabled() && TreeChopUtils.isLog(material, config)) {
+            if (!PermissionUtils.hasVipBlock(player, playerConfig, config)) {
+                if (playerConfig.getDailyBlocksBroken() >= config.getMaxBlocksPerDay()) {
+                    EffectUtils.sendMaxBlockLimitReachedMessage(player, block, HIT_MAX_BLOCK_MESSAGE);
+                    event.setCancelled(true);
+                    return;
+                }
             }
-            if (!hasvipUses(player, playerConfig) && playerConfig.getDailyUses() >= config.getMaxUsesPerDay()) {
+            if (!PermissionUtils.hasVipUses(player, playerConfig, config) && playerConfig.getDailyUses() >= config.getMaxUsesPerDay()) {
                 BukkitTinyTranslations.sendMessage(player, HIT_MAX_USAGE_MESSAGE);
                 return;
             }
 
             if (config.isVisualEffect()) {  // Use the getter from the Config object
-                showChopEffect(player, block);
+                EffectUtils.showChopEffect(player, block);
             }
 
             event.setCancelled(true);
             checkedLocations.clear();
-            chopTree(block, player, config.isStopChoppingIfNotConnected(), location, material, blockData); // Pass config values
+            TreeChopUtils.chopTree(block, player, config.isStopChoppingIfNotConnected(), location, material, blockData, this, processingLocations, checkedLocations, config, playerConfig, worldGuardEnabled, residenceEnabled, griefPreventionEnabled, landsEnabled, landsHook, residenceHook, griefPreventionHook, worldGuardHook); // Pass config values
             checkedLocations.clear();
             playerConfig.incrementDailyUses();
-            setCooldown(player, playerUUID); // Pass config values
+            cooldownManager.setCooldown(player, playerUUID, config); // Pass config values
         }
     }
 
-    // Shows a green particle effect indicating the block has been chopped
-    private void showChopEffect(Player player, Block block) {
-        player.getWorld().spawnParticle(Particle.VILLAGER_HAPPY, block.getLocation().add(0.5, 0.5, 0.5), 50, 0.5, 0.5, 0.5, 0);
-    }
-
-    // Method to reduce the durability value of tools
-    private void damageTool(Player player, int amount) {
-        ItemStack tool = player.getInventory().getItemInMainHand();
-        if (tool.getType().getMaxDurability() > 0) {
-            int newDurability = tool.getDurability() + amount;
-            if (newDurability > tool.getType().getMaxDurability()) {
-                player.getInventory().setItemInMainHand(null); // Remove the item if it breaks
-            } else {
-                tool.setDurability((short) newDurability);
-            }
-        }
-    }
-
-    private void chopTree(Block block, Player player, boolean ConnectedBlocks, Location location, Material material, BlockData blockData) {
-        // Permission checks
-        if (!resCheck(player, location) || !landsCheck(player, location) ||
-                !gfCheck(player, location) || !wgCheck(player, location)) {
-            return;
-        }
-        // Skip if already checked or being processed
-        if (checkedLocations.contains(block.getLocation()) ||
-                processingLocations.contains(block.getLocation())) {
-            return;
-        }
-
-        checkedLocations.add(block.getLocation());
-
-        if (!isLog(block.getType())) {
-            return;
-        }
-        // Add to processing set to prevent recursion
-        processingLocations.add(block.getLocation());
-
-        // Call BlockBreakEvent for this block
-        BlockBreakEvent breakEvent = new BlockBreakEvent(block, player);
-        Bukkit.getPluginManager().callEvent(breakEvent);
-
-        if (!breakEvent.isCancelled()) {
-            // Break the block and update player stats
-            block.breakNaturally();
-            getPlayerConfig(player.getUniqueId()).incrementDailyBlocksBroken();
-            if (config.isToolDamage()) {
-                damageTool(player, config.getToolDamageDecrease());
-            }
-
-            // Process adjacent blocks
-            Runnable task = () -> {
-                for (int yOffset = -1; yOffset <= 1; yOffset++) {
-                    for (int xOffset = -1; xOffset <= 1; xOffset++) {
-                        for (int zOffset = -1; zOffset <= 1; zOffset++) {
-                            if (xOffset == 0 && yOffset == 0 && zOffset == 0) continue;
-
-                            Block relativeBlock = block.getRelative(xOffset, yOffset, zOffset);
-
-                            if (config.isStopChoppingIfDifferentTypes() && notSameType(block.getType(), relativeBlock.getType())) {
-                                continue;
-                            }
-                            if (ConnectedBlocks && blockNotConnected(block, relativeBlock)) {
-                                continue;
-                            }
-
-                            // Check limits before processing next block
-                            PlayerConfig configPlayer = getPlayerConfig(player.getUniqueId());
-                            if (configPlayer.getDailyUses() >= config.getMaxUsesPerDay() && !hasvipBlock(player, configPlayer)) {
-                                BukkitTinyTranslations.sendMessage(player, HIT_MAX_USAGE_MESSAGE);
-                                return;
-                            }
-                            if (configPlayer.getDailyBlocksBroken() >= config.getMaxBlocksPerDay() && !hasvipBlock(player, configPlayer)) {
-                                BukkitTinyTranslations.sendMessage(player, HIT_MAX_BLOCK_MESSAGE);
-                                return;
-                            }
-
-                            // Schedule next block processing
-                            if (isFolia()) {
-                                this.getServer().getRegionScheduler().run(this, relativeBlock.getLocation(),
-                                        (task2) -> chopTree(relativeBlock, player, ConnectedBlocks, location, material, blockData));
-                            } else {
-                                if (config.isChopTreeAsync()) {
-                                    Bukkit.getScheduler().runTaskAsynchronously(this, () ->
-                                            Bukkit.getScheduler().runTask(this, () ->
-                                                    chopTree(relativeBlock, player, ConnectedBlocks, location, material, blockData)));
-                                } else {
-                                    Bukkit.getScheduler().runTask(this, () ->
-                                            chopTree(relativeBlock, player, ConnectedBlocks, location, material, blockData));
-                                }
-                            }
-                        }
-                    }
-                }
-                // Remove from processing set after all adjacent blocks are handled
-                processingLocations.remove(block.getLocation());
-            };
-
-            // Execute the task based on configuration and environment
-            if (!isFolia() && config.isChopTreeAsync()) {
-                Bukkit.getScheduler().runTaskAsynchronously(this, task);
-            } else {
-                task.run();
-            }
-        } else {
-            processingLocations.remove(block.getLocation());
-        }
-    }
-
-    private void setCooldown(Player player, UUID playerUUID) {
-        if (player.hasPermission("autotreechop.vip")) {
-            cooldowns.put(playerUUID, System.currentTimeMillis() + (config.getVipCooldownTime() * 1000L));
-        } else {
-            cooldowns.put(playerUUID, System.currentTimeMillis() + (config.getCooldownTime() * 1000L));
-        }
-    }
-
-    private boolean isInCooldown(UUID playerUUID) {
-        Long cooldownEnd = cooldowns.get(playerUUID);
-        if (cooldownEnd == null) {
-            return false;
-        }
-        return System.currentTimeMillis() < cooldownEnd;
-    }
-
-    private long getRemainingCooldown(UUID playerUUID) {
-        Long cooldownEnd = cooldowns.get(playerUUID);
-        if (cooldownEnd == null) {
-            return 0;
-        }
-        long remainingTime = cooldownEnd - System.currentTimeMillis();
-        return Math.max(0, remainingTime / 1000);
-    }
-
-    // Check if player have Lands permission in this area
-    // It will return true if player have permission, and vice versa.
-    public boolean landsCheck(Player player, @NotNull Location location) {
-        return !landsEnabled || landsHook.checkBuild(player, location);
-    }
-
-    public boolean wgCheck(Player player, Location location) {
-        if (!worldGuardEnabled) {
-            return true;
-        }
-        return worldGuardHook.checkBuild(player, location);
-    }
-
-    public boolean gfCheck(Player player, Location location) {
-        return !griefPreventionEnabled || griefPreventionHook.checkBuild(player, location);
-    }
-
-    // Check if the two blocks are adjacent to each other.
-    private boolean blockNotConnected(Block block1, Block block2) {
-        if (block1.getX() == block2.getX() && block1.getY() == block2.getY() && Math.abs(block1.getZ() - block2.getZ()) == 1) {
-            return false;
-        }
-        if (block1.getX() == block2.getX() && Math.abs(block1.getY() - block2.getY()) == 1 && block1.getZ() == block2.getZ()) {
-            return false;
-        }
-        return Math.abs(block1.getX() - block2.getX()) != 1 || block1.getY() != block2.getY() || block1.getZ() != block2.getZ();
-    }
-
-    // Check if player have Residence permission in this area
-    // It will return true if player have permission, and vice versa.
-    private boolean resCheck(Player player, Location location) {
-        return !residenceEnabled || residenceHook.checkBuild(player, location);
-    }
-
-    // Add a new method to check if two block types are the same
-    private boolean notSameType(Material type1, Material type2) {
-        return type1 != type2;
-    }
-
-    private boolean isLog(Material material) {
-        return config.getLogTypes().contains(material);  // Use the getter
-    }
-
-    PlayerConfig getPlayerConfig(UUID playerUUID) {
+    public PlayerConfig getPlayerConfig(UUID playerUUID) {
         PlayerConfig playerConfig = playerConfigs.get(playerUUID);
         if (playerConfig == null) {
             playerConfig = new PlayerConfig(playerUUID, config.isUseMysql(), config.getHostname(), config.getDatabase(), config.getPort(), config.getUsername(), config.getPassword());
