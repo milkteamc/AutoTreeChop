@@ -39,6 +39,16 @@ public class Command implements CommandExecutor {
             }
             return true;
         }
+
+        if (args.length > 0 && args[0].equalsIgnoreCase("about")) {
+            sender.sendMessage("AutoTreeChop - " + plugin.getDescription().getVersion() + " is made by MilkTeaMC team and contributors");
+            sender.sendMessage("This JAR and the source code is licensed under the GNU General Public License v3.0 (GPL-3.0)");
+            sender.sendMessage("GitHub: https://github.com/milkteamc/autotreechop");
+            sender.sendMessage("Discord: https://discord.gg/uQ4UXANnP2");
+            sender.sendMessage("Modrinth: https://modrinth.com/plugin/autotreechop");
+            return true;
+        }
+
         if (args.length > 0 && args[0].equalsIgnoreCase("enable-all")) {
             if (sender.hasPermission("autotreechop.other") || sender.hasPermission("autotreechop.op")) {
                 toggleAutoTreeChopForAll(sender, true);
@@ -73,15 +83,6 @@ public class Command implements CommandExecutor {
 
         if (args.length > 0 && args[0].equalsIgnoreCase("usage")) {
             handleUsageCommand(player);
-            return true;
-        }
-
-        if (args.length > 0 && args[0].equalsIgnoreCase("about")) {
-            sender.sendMessage("AutoTreeChop - " + plugin.getDescription().getVersion() + "is made by MilkTeaMC team and contributors");
-            sender.sendMessage("This JAR and the source code is licensed under the GNU General Public License v3.0 (GPL-3.0)");
-            sender.sendMessage("GitHub: https://github.com/milkteamc/autotreechop");
-            sender.sendMessage("Discord: https://discord.gg/uQ4UXANnP2");
-            sender.sendMessage("Modrinth: https://modrinth.com/plugin/autotreechop");
             return true;
         }
 
