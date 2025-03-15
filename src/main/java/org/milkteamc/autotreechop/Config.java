@@ -38,6 +38,7 @@ public class Config {
     private int vipBlocksPerDay;
     private int toolDamageDecrease;
     private boolean mustUseTool;
+    private boolean defaultTreeChop;
     private Set<Material> logTypes;
 
 
@@ -102,6 +103,7 @@ public class Config {
         vipBlocksPerDay = config.getInt("vip-blocks-per-day");
         toolDamageDecrease = config.getInt("toolDamageDecrease");
         mustUseTool = config.getBoolean("mustUseTool");
+        defaultTreeChop = config.getBoolean("defaultTreeChop");
 
         // Load log types
         List<String> logTypeStrings = config.getStringList("log-types");
@@ -149,6 +151,7 @@ public class Config {
         defaultConfig.set("vip-blocks-per-day", 500);
         defaultConfig.set("toolDamageDecrease", 1);
         defaultConfig.set("mustUseTool", false);
+        defaultConfig.set("defaultTreeChop", false);
         defaultConfig.set("log-types", Arrays.asList("OAK_LOG", "SPRUCE_LOG", "BIRCH_LOG", "JUNGLE_LOG", "ACACIA_LOG", "DARK_OAK_LOG", "MANGROVE_LOG", "CHERRY_LOG"));
         return defaultConfig;
     }
@@ -249,6 +252,10 @@ public class Config {
 
     public boolean getMustUseTool() {
         return mustUseTool;
+    }
+
+    public boolean getDefaultTreeChop() {
+        return defaultTreeChop;
     }
 
     public Set<Material> getLogTypes() {

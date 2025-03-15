@@ -18,11 +18,11 @@ public class PlayerConfig {
     private int dailyBlocksBroken;
     private LocalDate lastUseDate;
 
-    public PlayerConfig(UUID playerUUID, boolean useMysql, String hostname, String database, int port, String username, String password) {
+    public PlayerConfig(UUID playerUUID, boolean useMysql, String hostname, String database, int port, String username, String password, boolean defaultTreeChop) {
         this.playerUUID = playerUUID;
         this.connection = establishConnection(useMysql, hostname, port, database, username, password);
         createTable();
-        loadConfig();
+        loadConfig(defaultTreeChop);
     }
 
     private Connection establishConnection(boolean useMysql, String hostname, int port, String database, String username, String password) {
@@ -69,7 +69,7 @@ public class PlayerConfig {
         }
     }
 
-    private void loadConfig() {
+    private void loadConfig(boolean defaultTreeChop) {
         try (PreparedStatement statement = connection.prepareStatement("SELECT * FROM player_data WHERE uuid = ?")) {
             statement.setString(1, playerUUID.toString());
             ResultSet resultSet = statement.executeQuery();
@@ -80,7 +80,7 @@ public class PlayerConfig {
                 dailyBlocksBroken = resultSet.getInt("dailyBlocksBroken");
                 lastUseDate = LocalDate.parse(resultSet.getString("lastUseDate"));
             } else {
-                autoTreeChopEnabled = false;
+                autoTreeChopEnabled = defaultTreeChop;
                 dailyUses = 0;
                 dailyBlocksBroken = 0;
                 lastUseDate = LocalDate.now();
