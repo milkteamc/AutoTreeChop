@@ -52,6 +52,8 @@ toolDamageDecrease: 1
 chopTreeAsync: true
 # Enable this if you want players must hold tools to use AutoTreeChop
 mustUseTool: false
+# Set the default AutoTreeChop state for new players.
+defaultTreeChop: false
 
 # Protection plugins setting
 # If you are using Residence, you can set which Flag players have access to AutoTreeChop in residence.
