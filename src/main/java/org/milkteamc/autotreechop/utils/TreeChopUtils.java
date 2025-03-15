@@ -40,6 +40,9 @@ public class TreeChopUtils {
         if (!isLog(block.getType(), config)) {
             return;
         }
+
+
+
         // Add to processing set to prevent recursion
         processingLocations.add(block.getLocation());
 
@@ -167,5 +170,57 @@ public class TreeChopUtils {
 
     public static boolean isLog(Material material, Config config) {
         return config.getLogTypes().contains(material);  // Use the getter
+    }
+
+    // Check if the item on player main hand is tool.
+    public boolean isTool(Player player) {
+        ItemStack item = player.getInventory().getItemInMainHand();
+        if (item == null || item.getType() == Material.AIR) {
+            return false;
+        }
+
+        Material material = item.getType();
+
+        // Check for axes
+        if (material.toString().endsWith("_AXE")) {
+            return true;
+        }
+
+        // Check for hoes
+        if (material.toString().endsWith("_HOE")) {
+            return true;
+        }
+
+        // Check for pickaxes
+        if (material.toString().endsWith("_PICKAXE")) {
+            return true;
+        }
+
+        // Check for shovels
+        if (material.toString().endsWith("_SHOVEL")) {
+            return true;
+        }
+
+        // Check for swords (some consider them tools)
+        if (material.toString().endsWith("_SWORD")) {
+            return true;
+        }
+
+        // Check for shears
+        if(material == Material.SHEARS){
+            return true;
+        }
+
+        //Check for fishing rod
+        if(material == Material.FISHING_ROD){
+            return true;
+        }
+
+        //Check for flint and steel
+        if(material == Material.FLINT_AND_STEEL){
+            return true;
+        }
+
+        return false;
     }
 }

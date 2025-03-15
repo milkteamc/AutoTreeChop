@@ -5,7 +5,7 @@
 # See original config file at: https://github.com/milkteamc/AutoTreeChop/blob/master/src/main/resources/config.yml
 
 # The plugin locale (<language>-<country>-<variant>)
-# en, de, zh, es, fr, ja, zh-TW, zh-CN, en-US, de-DE, de-AU, ...
+# en, de, zh, es, fr, ja, zh-TW, en-US, de-DE, de-AU, ...
 # See all available language in lang folder.
 # Open a PR at our GitHub to let plugin support more language!
 locale: en
@@ -50,6 +50,8 @@ toolDamage: true
 toolDamageDecrease: 1
 # Enable this for better performance, but this may cause issue sometime.
 chopTreeAsync: true
+# Enable this if you want players must hold tools to use AutoTreeChop
+mustUseTool: false
 
 # Protection plugins setting
 # If you are using Residence, you can set which Flag players have access to AutoTreeChop in residence.
