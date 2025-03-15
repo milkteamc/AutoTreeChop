@@ -41,7 +41,9 @@ public class TreeChopUtils {
             return;
         }
 
-
+        if (config.getMustUseTool() && !isTool(player)) {
+            return;
+        }
 
         // Add to processing set to prevent recursion
         processingLocations.add(block.getLocation());
@@ -173,7 +175,7 @@ public class TreeChopUtils {
     }
 
     // Check if the item on player main hand is tool.
-    public boolean isTool(Player player) {
+    public static boolean isTool(Player player) {
         ItemStack item = player.getInventory().getItemInMainHand();
         if (item == null || item.getType() == Material.AIR) {
             return false;
