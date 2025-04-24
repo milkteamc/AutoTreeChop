@@ -1,113 +1,46 @@
 plugins {
-    id 'java'
+    id 'java-library'
     id 'maven-publish'
-    id 'com.gradleup.shadow' version '8.3.5'
-    id 'xyz.jpenilla.run-paper' version "2.3.1"
+    id 'com.gradleup.shadow' version '8.3.5' apply false
+    id 'xyz.jpenilla.run-paper' version "2.3.1" apply false
 }
 
-group = 'org.milkteamc'
-version = '1.6.1'
+allprojects {
+    group = 'org.milkteamc'
+    version = '2.0.0-SNAPSHOT'
 
-repositories {
-    mavenCentral()
-    maven {
-        name = "spigotmc-repo"
-        url = "https://hub.spigotmc.org/nexus/content/repositories/snapshots/"
-    }
-    maven {
-        name = "sonatype"
-        url = "https://oss.sonatype.org/content/groups/public/"
-    }
-    maven {
-        url = 'https://repo.extendedclip.com/content/repositories/placeholderapi/'
-    }
-    maven {
-        url = "https://nexus.leonardbausenwein.de/repository/maven-public/"
-    }
-    maven {
-        url = "https://maven.playpro.com/"
-    }
-    maven {
-        url = 'https://jitpack.io'
-    }
-    maven {
-        url = 'https://repo.xenondevs.xyz/releases'
-    }
-    maven {
-        url = "https://repo.jeff-media.com/public/"
-    }
-    maven {
-        url "https://maven.enginehub.org/repo/"
-    }
-    maven {
-        url "https://repo.papermc.io/repository/maven-public/"
+    repositories {
+        mavenCentral()
+        maven { url = "https://hub.spigotmc.org/nexus/content/repositories/snapshots/" }
+        maven { url = "https://oss.sonatype.org/content/groups/public/" }
+        maven { url = 'https://repo.extendedclip.com/content/repositories/placeholderapi/' }
+        maven { url = "https://nexus.leonardbausenwein.de/repository/maven-public/" }
+        maven { url = "https://maven.playpro.com/" }
+        maven { url = 'https://jitpack.io' }
+        maven { url = 'https://repo.xenondevs.xyz/releases' }
+        maven { url = "https://repo.jeff-media.com/public/" }
+        maven { url = "https://maven.enginehub.org/repo/" }
+        maven { url = "https://repo.papermc.io/repository/maven-public/" }
     }
 }
 
-dependencies {
-    compileOnly "io.papermc.paper:paper-api:1.20.4-R0.1-SNAPSHOT"
-    compileOnly "org.spigotmc:spigot-api:1.20-R0.1-SNAPSHOT"
-    implementation "com.jeff_media:SpigotUpdateChecker:3.0.4"
-    compileOnly 'me.clip:placeholderapi:2.11.5'
-    implementation "de.cubbossa:TinyTranslations-bukkit:4.5.0"
-    compileOnly files("./libs/Residence5.1.4.3.jar")
-    compileOnly "com.github.angeschossen:LandsAPI:6.44.0"
-    compileOnly 'com.sk89q.worldguard:worldguard-bukkit:7.0.9'
-    compileOnly "com.github.GriefPrevention:GriefPrevention:16.18.4"
-    implementation "com.zaxxer:HikariCP:4.0.3"
-}
+subprojects {
+    apply plugin: 'java-library'
+    apply plugin: 'maven-publish'
 
-def targetJavaVersion = 17
-java {
-    def javaVersion = JavaVersion.toVersion(targetJavaVersion)
-    sourceCompatibility = javaVersion
-    targetCompatibility = javaVersion
-    if (JavaVersion.current() < javaVersion) {
-        toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
+    def targetJavaVersion = 17
+    java {
+        def javaVersion = JavaVersion.toVersion(targetJavaVersion)
+        sourceCompatibility = javaVersion
+        targetCompatibility = javaVersion
+        if (JavaVersion.current() < javaVersion) {
+            toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
+        }
+    }
+
+    tasks.withType(JavaCompile).configureEach {
+        if (targetJavaVersion >= 10 || JavaVersion.current().isJava10Compatible()) {
+            options.release = targetJavaVersion
+        }
     }
 }
-
-tasks.withType(JavaCompile).configureEach {
-    if (targetJavaVersion >= 10 || JavaVersion.current().isJava10Compatible()) {
-        options.release = targetJavaVersion
-    }
-}
-
-processResources {
-    def props = [version: version]
-    inputs.properties props
-    filteringCharset 'UTF-8'
-    filesMatching('plugin.yml') {
-        expand props
-    }
-}
-
-tasks.build {
-    dependsOn("shadowJar")
-}
-
-
-tasks.shadowJar {
-    archiveFileName = "AutoTreeChop-${version}.jar"
-    configurations = [project.configurations.runtimeClasspath]
-    minimize()
-
-    relocate 'com.jeff_media.updatechecker', 'org.milkteamc.autotreechop.libs.updatechecker'
-    relocate 'de.cubbossa.tinytranslations', 'org.milkteamc.autotreechop.libs.tinytranslations'
-    relocate 'com.zaxxer.hikari', 'org.milkteamc.autotreechop.libs.hikari'
-
-    // Add the license file to the JAR
-    from("LICENSE") {
-        into 'META-INF'
-    }
-}
-
-tasks.jar {
-    archiveFileName = "AutoTreeChop-${version}-original.jar"
-}
-
-tasks.runServer {
-    minecraftVersion("1.21.4")
-}
-
-runPaper.folia.registerTask()

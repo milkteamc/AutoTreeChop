@@ -1,8 +1,8 @@
-package org.milkteamc.autotreechop.utils;
+package org.milkteamc.autotreechop.spigot.utils;
 
 import org.bukkit.entity.Player;
-import org.milkteamc.autotreechop.Config;
-import org.milkteamc.autotreechop.PlayerConfig;
+import org.milkteamc.autotreechop.spigot.Config;
+import org.milkteamc.autotreechop.spigot.PlayerConfig;
 
 public class PermissionUtils {
 

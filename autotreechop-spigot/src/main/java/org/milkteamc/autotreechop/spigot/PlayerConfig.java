@@ -1,4 +1,4 @@
-package org.milkteamc.autotreechop;
+package org.milkteamc.autotreechop.spigot;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;

@@ -1,4 +1,4 @@
-package org.milkteamc.autotreechop.hooks;
+package org.milkteamc.autotreechop.spigot.hooks;
 
 import me.ryanhamshire.GriefPrevention.Claim;
 import me.ryanhamshire.GriefPrevention.ClaimPermission;

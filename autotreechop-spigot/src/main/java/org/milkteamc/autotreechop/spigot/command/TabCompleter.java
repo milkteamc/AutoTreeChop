@@ -1,5 +1,5 @@
 // TabCompleter Class
-package org.milkteamc.autotreechop.command;
+package org.milkteamc.autotreechop.spigot.command;
 
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;

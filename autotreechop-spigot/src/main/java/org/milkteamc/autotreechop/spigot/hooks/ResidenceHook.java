@@ -1,4 +1,4 @@
-package org.milkteamc.autotreechop.hooks;
+package org.milkteamc.autotreechop.spigot.hooks;
 
 import com.bekvon.bukkit.residence.api.ResidenceApi;
 import com.bekvon.bukkit.residence.containers.Flags;

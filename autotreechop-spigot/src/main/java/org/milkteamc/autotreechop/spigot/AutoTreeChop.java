@@ -1,4 +1,4 @@
-package org.milkteamc.autotreechop;
+package org.milkteamc.autotreechop.spigot;
 
 import com.jeff_media.updatechecker.UpdateCheckSource;
 import com.jeff_media.updatechecker.UpdateChecker;
@@ -20,14 +20,16 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.milkteamc.autotreechop.hooks.GriefPreventionHook;
-import org.milkteamc.autotreechop.hooks.LandsHook;
-import org.milkteamc.autotreechop.hooks.ResidenceHook;
-import org.milkteamc.autotreechop.hooks.WorldGuardHook;
-import org.milkteamc.autotreechop.utils.CooldownManager;
-import org.milkteamc.autotreechop.utils.EffectUtils;
-import org.milkteamc.autotreechop.utils.PermissionUtils;
-import org.milkteamc.autotreechop.utils.TreeChopUtils;
+import org.milkteamc.autotreechop.spigot.hooks.GriefPreventionHook;
+import org.milkteamc.autotreechop.spigot.hooks.LandsHook;
+import org.milkteamc.autotreechop.spigot.hooks.ResidenceHook;
+import org.milkteamc.autotreechop.spigot.hooks.WorldGuardHook;
+import org.milkteamc.autotreechop.spigot.command.Command;
+import org.milkteamc.autotreechop.spigot.command.TabCompleter;
+import org.milkteamc.autotreechop.spigot.utils.CooldownManager;
+import org.milkteamc.autotreechop.spigot.utils.EffectUtils;
+import org.milkteamc.autotreechop.spigot.utils.PermissionUtils;
+import org.milkteamc.autotreechop.spigot.utils.TreeChopUtils;
 
 import java.io.File;
 import java.util.*;
@@ -129,11 +131,11 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         getServer().getPluginManager().registerEvents(this, this);
 
         // Register command and tab completer
-        org.milkteamc.autotreechop.command.Command command = new org.milkteamc.autotreechop.command.Command(this);
+        Command command = new Command(this);
         getCommand("autotreechop").setExecutor(command);
         getCommand("atc").setExecutor(command);
-        getCommand("autotreechop").setTabCompleter(new org.milkteamc.autotreechop.command.TabCompleter());
-        getCommand("atc").setTabCompleter(new org.milkteamc.autotreechop.command.TabCompleter());
+        getCommand("autotreechop").setTabCompleter(new TabCompleter());
+        getCommand("atc").setTabCompleter(new TabCompleter());
 
         translations = BukkitTinyTranslations.application(this);
         translations.setMessageStorage(new PropertiesMessageStorage(new File(getDataFolder(), "/lang/")));

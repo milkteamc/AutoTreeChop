@@ -1,4 +1,4 @@
-package org.milkteamc.autotreechop.hooks;
+package org.milkteamc.autotreechop.spigot.hooks;
 
 import me.angeschossen.lands.api.LandsIntegration;
 import me.angeschossen.lands.api.land.LandWorld;

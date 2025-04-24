@@ -1,8 +1,8 @@
-package org.milkteamc.autotreechop.utils;
+package org.milkteamc.autotreechop.spigot.utils;
 
 import org.bukkit.entity.Player;
-import org.milkteamc.autotreechop.AutoTreeChop;
-import org.milkteamc.autotreechop.Config;
+import org.milkteamc.autotreechop.spigot.AutoTreeChop;
+import org.milkteamc.autotreechop.spigot.Config;
 
 import java.util.HashMap;
 import java.util.UUID;
