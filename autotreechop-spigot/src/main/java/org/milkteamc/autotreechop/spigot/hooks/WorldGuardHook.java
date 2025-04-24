@@ -1,4 +1,4 @@
-package org.milkteamc.autotreechop.hooks;
+package org.milkteamc.autotreechop.spigot.hooks;
 
 import com.sk89q.worldedit.bukkit.BukkitAdapter;
 import com.sk89q.worldguard.LocalPlayer;

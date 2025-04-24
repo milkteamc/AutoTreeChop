@@ -1,4 +1,4 @@
-package org.milkteamc.autotreechop.utils;
+package org.milkteamc.autotreechop.spigot.utils;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -9,17 +9,17 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
-import org.milkteamc.autotreechop.AutoTreeChop;
-import org.milkteamc.autotreechop.Config;
-import org.milkteamc.autotreechop.PlayerConfig;
-import org.milkteamc.autotreechop.hooks.GriefPreventionHook;
-import org.milkteamc.autotreechop.hooks.LandsHook;
-import org.milkteamc.autotreechop.hooks.ResidenceHook;
-import org.milkteamc.autotreechop.hooks.WorldGuardHook;
+import org.milkteamc.autotreechop.spigot.AutoTreeChop;
+import org.milkteamc.autotreechop.spigot.Config;
+import org.milkteamc.autotreechop.spigot.PlayerConfig;
+import org.milkteamc.autotreechop.spigot.hooks.GriefPreventionHook;
+import org.milkteamc.autotreechop.spigot.hooks.LandsHook;
+import org.milkteamc.autotreechop.spigot.hooks.ResidenceHook;
+import org.milkteamc.autotreechop.spigot.hooks.WorldGuardHook;
 
 import java.util.Set;
 
-import static org.milkteamc.autotreechop.AutoTreeChop.sendMessage;
+import static org.milkteamc.autotreechop.spigot.AutoTreeChop.sendMessage;
 
 public class TreeChopUtils {
 

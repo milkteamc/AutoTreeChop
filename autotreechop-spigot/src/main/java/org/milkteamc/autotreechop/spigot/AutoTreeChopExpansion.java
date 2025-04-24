@@ -1,4 +1,4 @@
-package org.milkteamc.autotreechop;
+package org.milkteamc.autotreechop.spigot;
 
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 import org.bukkit.entity.Player;

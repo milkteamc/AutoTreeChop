@@ -12,7 +12,7 @@
  *
  * Violations will result in a ban of your plugin and account from bStats.
  */
-package org.milkteamc.autotreechop;
+package org.milkteamc.autotreechop.spigot;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;

@@ -1,6 +1,6 @@
 name: AutoTreeChop
 version: '${version}'
-main: org.milkteamc.autotreechop.AutoTreeChop
+main: org.milkteamc.autotreechop.spigot.AutoTreeChop
 api-version: 1.17
 author: Maoyue
 description: A auto tree chopping plugin for milkteamc

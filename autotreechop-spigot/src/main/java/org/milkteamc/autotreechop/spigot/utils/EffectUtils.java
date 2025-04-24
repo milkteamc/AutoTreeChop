@@ -1,4 +1,4 @@
-package org.milkteamc.autotreechop.utils;
+package org.milkteamc.autotreechop.spigot.utils;
 
 import de.cubbossa.tinytranslations.Message;
 import org.bukkit.Color;
@@ -6,7 +6,7 @@ import org.bukkit.Particle;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 
-import static org.milkteamc.autotreechop.AutoTreeChop.sendMessage;
+import static org.milkteamc.autotreechop.spigot.AutoTreeChop.sendMessage;
 
 public class EffectUtils {
 

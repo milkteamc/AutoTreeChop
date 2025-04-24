@@ -1,4 +1,4 @@
-package org.milkteamc.autotreechop.command;
+package org.milkteamc.autotreechop.spigot.command;
 
 import de.cubbossa.tinytranslations.BukkitTinyTranslations;
 import org.bukkit.Bukkit;
@@ -6,13 +6,13 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
-import org.milkteamc.autotreechop.AutoTreeChop;
-import org.milkteamc.autotreechop.Config;
-import org.milkteamc.autotreechop.PlayerConfig;
+import org.milkteamc.autotreechop.spigot.AutoTreeChop;
+import org.milkteamc.autotreechop.spigot.Config;
+import org.milkteamc.autotreechop.spigot.PlayerConfig;
 
 import java.util.UUID;
 
-import static org.milkteamc.autotreechop.AutoTreeChop.*;
+import static org.milkteamc.autotreechop.spigot.AutoTreeChop.*;
 
 public class Command implements CommandExecutor {
 

@@ -1,4 +1,4 @@
-package org.milkteamc.autotreechop;
+package org.milkteamc.autotreechop.spigot;
 
 import org.bukkit.Material;
 import org.bukkit.configuration.file.FileConfiguration;
