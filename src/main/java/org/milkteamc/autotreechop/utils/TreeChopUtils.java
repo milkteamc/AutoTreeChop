@@ -59,9 +59,15 @@ public class TreeChopUtils {
         if (!breakEvent.isCancelled()) {
             // Break the block and update player stats
             block.breakNaturally();
+
+            if (config.getPlayBreakSound()) {
+                // Play wood breaking sound at the block's location
+                block.getWorld().playSound(block.getLocation(), org.bukkit.Sound.BLOCK_WOOD_BREAK, 1.0f, 1.0f);
+            }
+
             playerConfig.incrementDailyBlocksBroken();
             if (config.isToolDamage()) {
-                damageTool(player, config.getToolDamageDecrease());
+                damageTool(player, config.getToolDamageDecrease(), config);
             }
 
             // Process adjacent blocks
@@ -123,13 +129,13 @@ public class TreeChopUtils {
     }
 
     // Method to reduce the durability value of tools with Unbreaking support
-    private static void damageTool(Player player, int amount) {
+    private static void damageTool(Player player, int amount, Config config) {
         ItemStack tool = player.getInventory().getItemInMainHand();
         if (tool.getType().getMaxDurability() > 0) {
             int unbreakingLevel = getUnbreakingLevel(tool);
 
             for (int i = 0; i < amount; i++) {
-                if (shouldApplyDurabilityLoss(unbreakingLevel)) {
+                if (shouldApplyDurabilityLoss(unbreakingLevel, config)) {
                     int newDurability = tool.getDurability() + 1;
                     if (newDurability > tool.getType().getMaxDurability()) {
                         player.getInventory().setItemInMainHand(null); // Remove the item if it breaks
@@ -151,9 +157,13 @@ public class TreeChopUtils {
     }
 
     // Calculate if durability should be reduced based on Unbreaking level
-    private static boolean shouldApplyDurabilityLoss(int unbreakingLevel) {
+    private static boolean shouldApplyDurabilityLoss(int unbreakingLevel, Config config) {
         if (unbreakingLevel <= 0) {
             return true; // No Unbreaking enchantment
+        }
+
+        if (!config.getRespectUnbreaking()) {
+            return true; // If disable in config.yml
         }
 
         // Minecraft mechanic: 100/(level+1)% chance to reduce durability

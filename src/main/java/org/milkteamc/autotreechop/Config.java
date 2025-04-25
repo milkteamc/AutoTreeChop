@@ -39,6 +39,8 @@ public class Config {
     private int toolDamageDecrease;
     private boolean mustUseTool;
     private boolean defaultTreeChop;
+    private boolean respectUnbreaking;
+    private boolean playBreakSound;
     private Set<Material> logTypes;
 
 
@@ -104,6 +106,8 @@ public class Config {
         toolDamageDecrease = config.getInt("toolDamageDecrease");
         mustUseTool = config.getBoolean("mustUseTool");
         defaultTreeChop = config.getBoolean("defaultTreeChop");
+        respectUnbreaking = config.getBoolean("respectUnbreaking");
+        playBreakSound = config.getBoolean("playBreakSound");
 
         // Load log types
         List<String> logTypeStrings = config.getStringList("log-types");
@@ -152,6 +156,8 @@ public class Config {
         defaultConfig.set("toolDamageDecrease", 1);
         defaultConfig.set("mustUseTool", false);
         defaultConfig.set("defaultTreeChop", false);
+        defaultConfig.set("respectUnbreaking", true);
+        defaultConfig.set("playBreakSound", true);
         defaultConfig.set("log-types", Arrays.asList("OAK_LOG", "SPRUCE_LOG", "BIRCH_LOG", "JUNGLE_LOG", "ACACIA_LOG", "DARK_OAK_LOG", "MANGROVE_LOG", "CHERRY_LOG"));
         return defaultConfig;
     }
@@ -256,6 +262,14 @@ public class Config {
 
     public boolean getDefaultTreeChop() {
         return defaultTreeChop;
+    }
+
+    public boolean getRespectUnbreaking() {
+        return respectUnbreaking;
+    }
+
+    public boolean getPlayBreakSound() {
+        return playBreakSound;
     }
 
     public Set<Material> getLogTypes() {

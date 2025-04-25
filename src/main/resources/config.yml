@@ -54,6 +54,10 @@ chopTreeAsync: true
 mustUseTool: false
 # Set the default AutoTreeChop state for new players.
 defaultTreeChop: false
+# Should plugin check for unbreaking enchantment?
+respectUnbreaking: true
+# Play a block break sound when ATC breaking every block
+playBreakSound: true
 
 # Protection plugins setting
 # If you are using Residence, you can set which Flag players have access to AutoTreeChop in residence.
