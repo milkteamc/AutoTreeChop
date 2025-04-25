@@ -5,6 +5,7 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.BlockData;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.inventory.ItemStack;
@@ -17,11 +18,14 @@ import org.milkteamc.autotreechop.hooks.LandsHook;
 import org.milkteamc.autotreechop.hooks.ResidenceHook;
 import org.milkteamc.autotreechop.hooks.WorldGuardHook;
 
+import java.util.Random;
 import java.util.Set;
 
 import static org.milkteamc.autotreechop.AutoTreeChop.sendMessage;
 
 public class TreeChopUtils {
+
+    private static final Random random = new Random();
 
     public static void chopTree(Block block, Player player, boolean ConnectedBlocks, Location location, Material material, BlockData blockData, AutoTreeChop plugin, Set<Location> processingLocations, Set<Location> checkedLocations, Config config, PlayerConfig playerConfig, boolean worldGuardEnabled, boolean residenceEnabled, boolean griefPreventionEnabled, boolean landsEnabled, LandsHook landsHook, ResidenceHook residenceHook, GriefPreventionHook griefPreventionHook, WorldGuardHook worldGuardHook) {
         // Permission checks
@@ -118,17 +122,42 @@ public class TreeChopUtils {
         }
     }
 
-    // Method to reduce the durability value of tools
+    // Method to reduce the durability value of tools with Unbreaking support
     private static void damageTool(Player player, int amount) {
         ItemStack tool = player.getInventory().getItemInMainHand();
         if (tool.getType().getMaxDurability() > 0) {
-            int newDurability = tool.getDurability() + amount;
-            if (newDurability > tool.getType().getMaxDurability()) {
-                player.getInventory().setItemInMainHand(null); // Remove the item if it breaks
-            } else {
-                tool.setDurability((short) newDurability);
+            int unbreakingLevel = getUnbreakingLevel(tool);
+
+            for (int i = 0; i < amount; i++) {
+                if (shouldApplyDurabilityLoss(unbreakingLevel)) {
+                    int newDurability = tool.getDurability() + 1;
+                    if (newDurability > tool.getType().getMaxDurability()) {
+                        player.getInventory().setItemInMainHand(null); // Remove the item if it breaks
+                        break; // Stop processing further damage
+                    } else {
+                        tool.setDurability((short) newDurability);
+                    }
+                }
             }
         }
+    }
+
+    // Get the level of Unbreaking enchantment (0 if none)
+    private static int getUnbreakingLevel(ItemStack item) {
+        if (item != null && item.hasItemMeta() && item.getItemMeta().hasEnchants()) {
+            return item.getEnchantmentLevel(Enchantment.DURABILITY);
+        }
+        return 0;
+    }
+
+    // Calculate if durability should be reduced based on Unbreaking level
+    private static boolean shouldApplyDurabilityLoss(int unbreakingLevel) {
+        if (unbreakingLevel <= 0) {
+            return true; // No Unbreaking enchantment
+        }
+
+        // Minecraft mechanic: 100/(level+1)% chance to reduce durability
+        return random.nextInt(100) < (100.0 / (unbreakingLevel + 1));
     }
 
     // Check if player have Lands permission in this area
