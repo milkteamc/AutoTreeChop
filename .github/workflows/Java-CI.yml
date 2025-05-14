@@ -17,12 +17,16 @@ jobs:
           distribution: "temurin"
           java-version: "17"
           cache: 'gradle'
-          
+
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
       - name: Build Jar file
         run: ./gradlew clean build shadowJar
+
+      - name: Get short sha
+        id: sha
+        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
       - name: Create Pre-release
         id: create-release
@@ -31,9 +35,8 @@ jobs:
           generate_release_notes: true
           prerelease: true
           
-          tag_name: "pre-release-${{ github.sha }}"
-          name: "Pre-release ${{ github.run_number }}"
+          tag_name: "beta-${{ steps.sha.outputs.sha_short }}"
+          name: "AutoTreeChop Nightly-${{ steps.sha.outputs.sha_short }}"
           files: |
-            build/libs/*-all.jar # Upload the shadow JAR.  Adjust the path if needed.
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            build/libs/*[!original].jar
+          token: ${{ secrets.GITHUB_TOKEN }}
