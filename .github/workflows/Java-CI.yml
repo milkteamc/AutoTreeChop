@@ -17,7 +17,7 @@ jobs:
           distribution: "temurin"
           java-version: "17"
           cache: 'gradle'
-          
+
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
@@ -31,8 +31,8 @@ jobs:
           generate_release_notes: true
           prerelease: true
           
-          tag_name: "pre-release-${{ github.sha }}"
-          name: "Pre-release ${{ github.run_number }}"
+          tag_name: "beta-${{ github.sha }}"
+          name: "AutoTreeChop-beta-${{ github.sha }}"
           files: |
             build/libs/*-all.jar # Upload the shadow JAR.  Adjust the path if needed.
         env:
