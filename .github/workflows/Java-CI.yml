@@ -24,6 +24,10 @@ jobs:
       - name: Build Jar file
         run: ./gradlew clean build shadowJar
 
+      - name: Get short sha
+        id: sha
+        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
       - name: Create Pre-release
         id: create-release
         uses: softprops/action-gh-release@v1
@@ -31,8 +35,8 @@ jobs:
           generate_release_notes: true
           prerelease: true
           
-          tag_name: "beta-${{ github.sha }}"
-          name: "AutoTreeChop-beta-${{ github.sha }}"
+          tag_name: "beta-${{ steps.sha.outputs.sha_short }}"
+          name: "AutoTreeChop Nightly-${{ steps.sha.outputs.sha_short }}"
           files: |
-            build/libs/*.jar
+            build/libs/*[!original].jar
           token: ${{ secrets.GITHUB_TOKEN }}
