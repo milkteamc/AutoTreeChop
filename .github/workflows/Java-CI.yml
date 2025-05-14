@@ -1,0 +1,39 @@
+name: "Pre-release"
+
+on:
+  push:
+    branches:
+      - "*"
+
+jobs:
+  pre-release:
+    name: "Build and Pre-release"
+    runs-on: "ubuntu-latest"
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-java@v3
+        with:
+          distribution: "temurin"
+          java-version: "17"
+          cache: 'gradle'
+          
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Build Jar file
+        run: ./gradlew clean build shadowJar
+
+      - name: Create Pre-release
+        id: create-release
+        uses: softprops/action-gh-release@v1
+        with:
+          generate_release_notes: true
+          prerelease: true
+          
+          tag_name: "pre-release-${{ github.sha }}"
+          name: "Pre-release ${{ github.run_number }}"
+          files: |
+            build/libs/*-all.jar # Upload the shadow JAR.  Adjust the path if needed.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
