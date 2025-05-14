@@ -35,4 +35,4 @@ jobs:
           name: "AutoTreeChop-beta-${{ github.sha }}"
           files: |
             build/libs/*.jar
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
