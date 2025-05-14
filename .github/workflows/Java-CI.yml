@@ -34,6 +34,5 @@ jobs:
           tag_name: "beta-${{ github.sha }}"
           name: "AutoTreeChop-beta-${{ github.sha }}"
           files: |
-            build/libs/*-all.jar # Upload the shadow JAR.  Adjust the path if needed.
-        env:
+            build/libs/*.jar
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
