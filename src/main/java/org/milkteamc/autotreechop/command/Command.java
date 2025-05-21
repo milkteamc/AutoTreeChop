@@ -34,6 +34,7 @@ public class Command implements CommandExecutor {
             if (sender.hasPermission("autotreechop.reload")) {
                 config.load(); // Reload the config
                 sender.sendMessage("Config reloaded successfully.");
+                sender.sendMessage("Some features might need a fully restart to change properly!");
             } else {
                 sendMessage(sender, NO_PERMISSION_MESSAGE);
             }

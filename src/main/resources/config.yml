@@ -48,7 +48,7 @@ visual-effect: true
 toolDamage: true
 # How much durability should be decrease when player brock one block.
 toolDamageDecrease: 1
-# Enable this for better performance, but this may cause issue sometime.
+# Enable this for better performance, but this may cause some issues on non-Paper servers.
 chopTreeAsync: true
 # Enable this if you want players must hold tools to use AutoTreeChop
 mustUseTool: false
@@ -58,6 +58,10 @@ defaultTreeChop: false
 respectUnbreaking: true
 # Play a block break sound when ATC breaking every block
 playBreakSound: true
+# This controls whether players can toggle AutoTreeChop by sneaking (pressing shift)
+enable-sneak-toggle: false
+# Should plugin show a message when player is sneaking?
+sneak-message: false
 
 # Protection plugins setting
 # If you are using Residence, you can set which Flag players have access to AutoTreeChop in residence.

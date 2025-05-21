@@ -42,6 +42,8 @@ public class Config {
     private boolean respectUnbreaking;
     private boolean playBreakSound;
     private Set<Material> logTypes;
+    private boolean senakToggle;
+    private boolean sneakMessage;
 
 
     public Config(AutoTreeChop plugin) {
@@ -108,6 +110,8 @@ public class Config {
         defaultTreeChop = config.getBoolean("defaultTreeChop");
         respectUnbreaking = config.getBoolean("respectUnbreaking");
         playBreakSound = config.getBoolean("playBreakSound");
+        senakToggle = config.getBoolean("enable-sneak-toggle");
+        sneakMessage = config.getBoolean("sneak-message");
 
         // Load log types
         List<String> logTypeStrings = config.getStringList("log-types");
@@ -158,6 +162,8 @@ public class Config {
         defaultConfig.set("defaultTreeChop", false);
         defaultConfig.set("respectUnbreaking", true);
         defaultConfig.set("playBreakSound", true);
+        defaultConfig.set("enable-sneak-toggle", false);
+        defaultConfig.set("sneak-message", false);
         defaultConfig.set("log-types", Arrays.asList("OAK_LOG", "SPRUCE_LOG", "BIRCH_LOG", "JUNGLE_LOG", "ACACIA_LOG", "DARK_OAK_LOG", "MANGROVE_LOG", "CHERRY_LOG"));
         return defaultConfig;
     }
@@ -270,6 +276,14 @@ public class Config {
 
     public boolean getPlayBreakSound() {
         return playBreakSound;
+    }
+
+    public boolean getSneakToggle() {
+        return senakToggle;
+    }
+
+    public boolean getSneakMessage() {
+        return sneakMessage;
     }
 
     public Set<Material> getLogTypes() {

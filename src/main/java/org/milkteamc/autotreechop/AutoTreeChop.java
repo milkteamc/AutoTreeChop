@@ -19,6 +19,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.player.PlayerToggleSneakEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.milkteamc.autotreechop.hooks.GriefPreventionHook;
 import org.milkteamc.autotreechop.hooks.LandsHook;
@@ -67,6 +68,10 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             .withDefault("<prefix_negative>You are still in cooldown! Try again after {cooldown_time} seconds.</prefix_negative>").build();
     public static final Message CONSOLE_NAME = new MessageBuilder("consoleName")
             .withDefault("console").build();
+    public static final Message SNEAK_ENABLED_MESSAGE = new MessageBuilder("sneakEnabled")
+            .withDefault("<prefix>Auto tree chopping enabled by sneaking.</prefix>").build();
+    public static final Message SNEAK_DISABLED_MESSAGE = new MessageBuilder("sneakDisabled")
+            .withDefault("<prefix_negative>Auto tree chopping disabled by stopping sneak.</prefix_negative>").build();
 
     private static final String SPIGOT_RESOURCE_ID = "113071";
     private static final List<String> SUPPORTED_VERSIONS = Arrays.asList(
@@ -96,6 +101,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     private LandsHook landsHook = null;
 
     private CooldownManager cooldownManager;
+    private boolean enableSneakToggle = true; // Configuration option for the sneak toggle feature
 
     public static void sendMessage(CommandSender sender, ComponentLike message) {
         BukkitTinyTranslations.sendMessageIfNotEmpty(sender, message);
@@ -164,6 +170,9 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         initializeHooks(); // Initialize protection plugin hooks
 
         cooldownManager = new CooldownManager(this);
+
+        // Load the enableSneakToggle option from config
+        enableSneakToggle = config.getSneakToggle();
     }
 
 
@@ -295,6 +304,38 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             checkedLocations.clear();
             playerConfig.incrementDailyUses();
             cooldownManager.setCooldown(player, playerUUID, config); // Pass config values
+        }
+    }
+
+    /**
+     * Event handler for player sneak toggle
+     * When a player toggles sneak, enable or disable AutoTreeChop
+     */
+    @EventHandler
+    public void onPlayerToggleSneak(PlayerToggleSneakEvent event) {
+        // Skip if the sneak toggle feature is disabled in config
+        if (!enableSneakToggle) {
+            return;
+        }
+
+        Player player = event.getPlayer();
+        UUID playerUUID = player.getUniqueId();
+
+        // Check if player has permission to use the plugin
+        if (!player.hasPermission("autotreechop.use")) {
+            return;
+        }
+
+        PlayerConfig playerConfig = getPlayerConfig(playerUUID);
+
+        if (event.isSneaking()) {
+            // Player started sneaking - enable auto tree chop
+            playerConfig.setAutoTreeChopEnabled(true);
+            if (config.getSneakMessage()) { sendMessage(player, SNEAK_ENABLED_MESSAGE); }
+        } else {
+            // Player stopped sneaking - disable auto tree chop
+            playerConfig.setAutoTreeChopEnabled(false);
+            if (config.getSneakMessage()) { sendMessage(player, SNEAK_DISABLED_MESSAGE); }
         }
     }
 
