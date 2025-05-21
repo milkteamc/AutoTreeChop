@@ -248,7 +248,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         metrics.shutdown();
     }
 
-    @EventHandler(priority = EventPriority.NORMAL)
+    @EventHandler(priority = EventPriority.HIGH)
     public void onBlockBreak(BlockBreakEvent event) {
         Player player = event.getPlayer();
         UUID playerUUID = player.getUniqueId();
