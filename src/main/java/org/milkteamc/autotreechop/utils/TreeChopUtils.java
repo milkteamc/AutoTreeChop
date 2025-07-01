@@ -17,6 +17,9 @@ import org.milkteamc.autotreechop.hooks.GriefPreventionHook;
 import org.milkteamc.autotreechop.hooks.LandsHook;
 import org.milkteamc.autotreechop.hooks.ResidenceHook;
 import org.milkteamc.autotreechop.hooks.WorldGuardHook;
+import org.milkteamc.autotreechop.hooks.McMMOHook;
+import org.milkteamc.autotreechop.hooks.CoreProtectHook;
+import org.milkteamc.autotreechop.hooks.Drop2InventoryHook;
 
 import java.util.Random;
 import java.util.Set;
@@ -27,7 +30,7 @@ public class TreeChopUtils {
 
     private static final Random random = new Random();
 
-    public static void chopTree(Block block, Player player, boolean ConnectedBlocks, Location location, Material material, BlockData blockData, AutoTreeChop plugin, Set<Location> processingLocations, Set<Location> checkedLocations, Config config, PlayerConfig playerConfig, boolean worldGuardEnabled, boolean residenceEnabled, boolean griefPreventionEnabled, boolean landsEnabled, LandsHook landsHook, ResidenceHook residenceHook, GriefPreventionHook griefPreventionHook, WorldGuardHook worldGuardHook) {
+    public static void chopTree(Block block, Player player, boolean ConnectedBlocks, Location location, Material material, BlockData blockData, AutoTreeChop plugin, Set<Location> processingLocations, Set<Location> checkedLocations, Config config, PlayerConfig playerConfig, boolean worldGuardEnabled, boolean residenceEnabled, boolean griefPreventionEnabled, boolean landsEnabled, LandsHook landsHook, ResidenceHook residenceHook, GriefPreventionHook griefPreventionHook, WorldGuardHook worldGuardHook, boolean mcMMOEnabled, McMMOHook mcMMOHook, boolean coreProtectEnabled, CoreProtectHook coreProtectHook, boolean drop2InventoryEnabled, Drop2InventoryHook drop2InventoryHook) {
         // Permission checks
         if (!resCheck(player, location, residenceEnabled, residenceHook) || !landsCheck(player, location, landsEnabled, landsHook) ||
                 !gfCheck(player, location, griefPreventionEnabled, griefPreventionHook) || !wgCheck(player, location, worldGuardEnabled, worldGuardHook)) {
@@ -40,6 +43,10 @@ public class TreeChopUtils {
         }
 
         checkedLocations.add(block.getLocation());
+
+        if (mcMMOEnabled && !mcMMOHook.isNatural(block)) {
+            return;
+        }
 
         if (!isLog(block.getType(), config)) {
             return;
@@ -57,8 +64,18 @@ public class TreeChopUtils {
         Bukkit.getPluginManager().callEvent(breakEvent);
 
         if (!breakEvent.isCancelled()) {
+            // Log removal with CoreProtect before the block is broken
+            if (coreProtectEnabled) {
+                coreProtectHook.logRemoval(player, block);
+            }
             // Break the block and update player stats
-            block.breakNaturally();
+            boolean handled = false;
+            if (drop2InventoryEnabled) {
+                handled = drop2InventoryHook.processBlock(player, block);
+            }
+            if (!handled) {
+                block.breakNaturally();
+            }
 
             if (config.getPlayBreakSound()) {
                 // Play wood breaking sound at the block's location
@@ -99,15 +116,15 @@ public class TreeChopUtils {
                             // Schedule next block processing
                             if (AutoTreeChop.isFolia()) {
                                 plugin.getServer().getRegionScheduler().run(plugin, relativeBlock.getLocation(),
-                                        (task2) -> chopTree(relativeBlock, player, ConnectedBlocks, location, material, blockData, plugin, processingLocations, checkedLocations, config, playerConfig, worldGuardEnabled, residenceEnabled, griefPreventionEnabled, landsEnabled, landsHook, residenceHook, griefPreventionHook, worldGuardHook));
+                                        (task2) -> chopTree(relativeBlock, player, ConnectedBlocks, location, material, blockData, plugin, processingLocations, checkedLocations, config, playerConfig, worldGuardEnabled, residenceEnabled, griefPreventionEnabled, landsEnabled, landsHook, residenceHook, griefPreventionHook, worldGuardHook, mcMMOEnabled, mcMMOHook, coreProtectEnabled, coreProtectHook, drop2InventoryEnabled, drop2InventoryHook));
                             } else {
                                 if (config.isChopTreeAsync()) {
                                     Bukkit.getScheduler().runTaskAsynchronously(plugin, () ->
                                             Bukkit.getScheduler().runTask(plugin, () ->
-                                                    chopTree(relativeBlock, player, ConnectedBlocks, location, material, blockData, plugin, processingLocations, checkedLocations, config, playerConfig, worldGuardEnabled, residenceEnabled, griefPreventionEnabled, landsEnabled, landsHook, residenceHook, griefPreventionHook, worldGuardHook)));
+                                                    chopTree(relativeBlock, player, ConnectedBlocks, location, material, blockData, plugin, processingLocations, checkedLocations, config, playerConfig, worldGuardEnabled, residenceEnabled, griefPreventionEnabled, landsEnabled, landsHook, residenceHook, griefPreventionHook, worldGuardHook, mcMMOEnabled, mcMMOHook, coreProtectEnabled, coreProtectHook, drop2InventoryEnabled, drop2InventoryHook)));
                                 } else {
                                     Bukkit.getScheduler().runTask(plugin, () ->
-                                            chopTree(relativeBlock, player, ConnectedBlocks, location, material, blockData, plugin, processingLocations, checkedLocations, config, playerConfig, worldGuardEnabled, residenceEnabled, griefPreventionEnabled, landsEnabled, landsHook, residenceHook, griefPreventionHook, worldGuardHook));
+                                                    chopTree(relativeBlock, player, ConnectedBlocks, location, material, blockData, plugin, processingLocations, checkedLocations, config, playerConfig, worldGuardEnabled, residenceEnabled, griefPreventionEnabled, landsEnabled, landsHook, residenceHook, griefPreventionHook, worldGuardHook, mcMMOEnabled, mcMMOHook, coreProtectEnabled, coreProtectHook, drop2InventoryEnabled, drop2InventoryHook));
                                 }
                             }
                         }
