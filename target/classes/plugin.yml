@@ -1,0 +1,32 @@
+name: AutoTreeChop
+version: '1.6.3-SNAPSHOT'
+main: org.milkteamc.autotreechop.AutoTreeChop
+api-version: 1.17
+author: Maoyue
+description: A auto tree chopping plugin for milkteamc
+ softdepend: [ PlaceholderAPI, Residence, Lands, WorldGuard, mcMMO, CoreProtect, Drop2InventoryPlus, Drop2Inventory ]
+folia-supported: true
+
+commands:
+  autotreechop:
+    description: Toggle auto tree chop.
+    usage: /autotreechop
+    permission: autotreechop.use
+  atc:
+    description: Toggle auto tree chop.
+    usage: /atc
+    permission: autotreechop.use
+
+permissions:
+  autotreechop.use:
+    description: Allows players to use the auto tree chop command.
+    default: true
+  autotreechop.vip:
+    description: VIP permission can ignore all limit.
+    default: op
+  autotreechop.updatechecker:
+    description: Send Update notify to player.
+    default: op
+  autotreechop.other:
+    description: Allows players to switch other's AutoTreeChop status.
+    default: op
