@@ -168,7 +168,7 @@ public class TreeChopUtils {
     // Get the level of Unbreaking enchantment (0 if none)
     private static int getUnbreakingLevel(ItemStack item) {
         if (item != null && item.hasItemMeta() && item.getItemMeta().hasEnchants()) {
-            return item.getEnchantmentLevel(Enchantment.DURABILITY);
+            return item.getEnchantmentLevel(Enchantment.UNBREAKING);
         }
         return 0;
     }

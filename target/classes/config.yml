@@ -1,0 +1,88 @@
+# AutoTreeChop by Maoyue
+# Discord support server: https://discord.gg/uQ4UXANnP2
+# Modrinth Page: https://modrinth.com/plugin/autotreechop
+# Source code: https://github.com/milkteamc/AutoTreeChop
+# See original config file at: https://github.com/milkteamc/AutoTreeChop/blob/master/src/main/resources/config.yml
+
+# The plugin locale (<language>-<country>-<variant>)
+# en, de, zh, es, fr, ja, zh-TW, en-US, de-DE, de-AU, ...
+# See all available language in lang folder.
+# Open a PR at our GitHub to let plugin support more language!
+locale: en
+
+# If set to true, the plugin will automatically translate to the locale of the player (if there are translations present)
+use-player-locale: true
+
+# Tree Chopping setting
+# The number of times non-VIP players can chop down trees per day,
+# you can give everyone "autotreechop.vip" permission to disable it.
+max-uses-per-day: 50
+# Tree blocks that non-VIP players can chop down every day,
+# you can give everyone "autotreechop.vip" permission to disable it.
+max-blocks-per-day: 500
+# Cooldown time (second), use 0 to disable
+cooldownTime: 5
+
+# VIP setting
+# If disable, VIP have unlimited usage
+limitVipUsage: true
+# Will only work when you enable limitVipUsage
+vip-uses-per-day: 100
+vip-blocks-per-day: 1000
+# Cooldown time for VIP users (second), use 0 to disable
+vipCooldownTime: 2
+
+# MySQL setting
+# If "useMysql: false", plugin will use SQLite
+useMysql: false
+hostname: example.com
+port: 3306
+database: example
+username: root
+password: abc1234
+
+# Misc
+# Use visual effect
+visual-effect: true
+# damage tool when chopping tree
+toolDamage: true
+# How much durability should be decrease when player brock one block.
+toolDamageDecrease: 1
+# Enable this for better performance, but this may cause some issues on non-Paper servers.
+chopTreeAsync: true
+# Enable this if you want players must hold tools to use AutoTreeChop
+mustUseTool: false
+# Set the default AutoTreeChop state for new players.
+defaultTreeChop: false
+# Should plugin check for unbreaking enchantment?
+respectUnbreaking: true
+# Play a block break sound when ATC breaking every block
+playBreakSound: true
+# This controls whether players can toggle AutoTreeChop by sneaking (pressing shift)
+enable-sneak-toggle: false
+# Should plugin show a message when player is sneaking?
+sneak-message: false
+
+# Protection plugins setting
+# If you are using Residence, you can set which Flag players have access to AutoTreeChop in residence.
+residenceFlag: build
+# If you are using GriefPrevention, you can set which Flag players have access to AutoTreeChop in GriefPrevention.
+griefPreventionFlag: Build
+# Stop chopping if the blocks are not connected (not part of the same tree)
+stopChoppingIfNotConnected: false
+# Stop chopping if the blocks are of different types
+stopChoppingIfDifferentTypes: false
+
+# Define which materials are log
+# Fun fact: If you add "DIAMOND_ORE", this plugin can become an auto mining plugin, lol
+log-types:
+  - OAK_LOG
+  - BIRCH_LOG
+  - SPRUCE_LOG
+  - JUNGLE_LOG
+  - ACACIA_LOG
+  - DARK_OAK_LOG
+  - MANGROVE_LOG
+  - CHERRY_LOG
+  - PALE_OAK_LOG
+
