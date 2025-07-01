@@ -23,8 +23,11 @@ import org.bukkit.event.player.PlayerToggleSneakEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.milkteamc.autotreechop.hooks.GriefPreventionHook;
 import org.milkteamc.autotreechop.hooks.LandsHook;
+import org.milkteamc.autotreechop.hooks.McMMOHook;
+import org.milkteamc.autotreechop.hooks.CoreProtectHook;
 import org.milkteamc.autotreechop.hooks.ResidenceHook;
 import org.milkteamc.autotreechop.hooks.WorldGuardHook;
+import org.milkteamc.autotreechop.hooks.Drop2InventoryHook;
 import org.milkteamc.autotreechop.utils.CooldownManager;
 import org.milkteamc.autotreechop.utils.EffectUtils;
 import org.milkteamc.autotreechop.utils.PermissionUtils;
@@ -95,10 +98,16 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     private boolean residenceEnabled = false;
     private boolean griefPreventionEnabled = false;
     private boolean landsEnabled = false;
+    private boolean mcMMOEnabled = false;
+    private boolean coreProtectEnabled = false;
+    private boolean drop2InventoryEnabled = false;
     private WorldGuardHook worldGuardHook = null;
     private ResidenceHook residenceHook = null;
     private GriefPreventionHook griefPreventionHook = null;
     private LandsHook landsHook = null;
+    private McMMOHook mcMMOHook = null;
+    private CoreProtectHook coreProtectHook = null;
+    private Drop2InventoryHook drop2InventoryHook = null;
 
     private CooldownManager cooldownManager;
     private boolean enableSneakToggle = true; // Configuration option for the sneak toggle feature
@@ -216,6 +225,46 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         } else {
             landsEnabled = false;
         }
+        // mcMMO hook initialization
+        if (Bukkit.getPluginManager().getPlugin("mcMMO") != null) {
+            try {
+                mcMMOHook = new McMMOHook();
+                mcMMOEnabled = true;
+                getLogger().info("mcMMO support enabled");
+            } catch (Exception e) {
+                getLogger().warning("mcMMO can't be hook, please report this to our GitHub: https://github.com/milkteamc/AutoTreeChop/issues");
+                mcMMOEnabled = false;
+            }
+        } else {
+            mcMMOEnabled = false;
+        }
+        // CoreProtect hook initialization
+        if (Bukkit.getPluginManager().getPlugin("CoreProtect") != null) {
+            try {
+                coreProtectHook = new CoreProtectHook();
+                coreProtectEnabled = true;
+                getLogger().info("CoreProtect support enabled");
+            } catch (Exception e) {
+                getLogger().warning("CoreProtect can't be hook, please report this to our GitHub: https://github.com/milkteamc/AutoTreeChop/issues");
+                coreProtectEnabled = false;
+            }
+        } else {
+            coreProtectEnabled = false;
+        }
+        // Drop2Inventory-Plus hook initialization
+        if (Bukkit.getPluginManager().getPlugin("Drop2Inventory") != null ||
+                Bukkit.getPluginManager().getPlugin("Drop2InventoryPlus") != null) {
+            try {
+                drop2InventoryHook = new Drop2InventoryHook();
+                drop2InventoryEnabled = true;
+                getLogger().info("Drop2Inventory support enabled");
+            } catch (Exception e) {
+                getLogger().warning("Drop2Inventory can't be hook, please report this to our GitHub: https://github.com/milkteamc/AutoTreeChop/issues");
+                drop2InventoryEnabled = false;
+            }
+        } else {
+            drop2InventoryEnabled = false;
+        }
         // Initialize WorldGuard support
         if (Bukkit.getPluginManager().getPlugin("WorldGuard") != null) {
             try {
@@ -269,6 +318,11 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             return;
         }
 
+        if (mcMMOEnabled && !mcMMOHook.isNatural(block)) {
+            // Let normal block break occur but don't trigger tree chopping
+            return;
+        }
+
         if (cooldownManager.isInCooldown(playerUUID)) {
             sendMessage(player, STILL_IN_COOLDOWN_MESSAGE
                     .insertNumber("cooldown_time", cooldownManager.getRemainingCooldown(playerUUID))
@@ -300,7 +354,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
             event.setCancelled(true);
             checkedLocations.clear();
-            TreeChopUtils.chopTree(block, player, config.isStopChoppingIfNotConnected(), location, material, blockData, this, processingLocations, checkedLocations, config, playerConfig, worldGuardEnabled, residenceEnabled, griefPreventionEnabled, landsEnabled, landsHook, residenceHook, griefPreventionHook, worldGuardHook); // Pass config values
+            TreeChopUtils.chopTree(block, player, config.isStopChoppingIfNotConnected(), location, material, blockData, this, processingLocations, checkedLocations, config, playerConfig, worldGuardEnabled, residenceEnabled, griefPreventionEnabled, landsEnabled, landsHook, residenceHook, griefPreventionHook, worldGuardHook, mcMMOEnabled, mcMMOHook, coreProtectEnabled, coreProtectHook, drop2InventoryEnabled, drop2InventoryHook); // Pass config values
             checkedLocations.clear();
             playerConfig.incrementDailyUses();
             cooldownManager.setCooldown(player, playerUUID, config); // Pass config values

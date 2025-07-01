@@ -5,7 +5,7 @@
 A auto tree chopping plugin for milkteamc.  
 Discord: https://discord.gg/uQ4UXANnP2  
 Modrinth page: https://modrinth.com/plugin/autotreechop  
-Dev build: https://github.com/milkteamc/AutoTreeChop/releases/  
+Dev build: https://github.com/milkteamc/AutoTreeChop/releases/
 ![bstats](https://bstats.org/signatures/bukkit/AutoTreeChop.svg)
 * * *
 
@@ -43,3 +43,18 @@ dependencies {
 ```
 
 [AutoTreeChopAPI.java](https://github.com/milkteamc/AutoTreeChop/blob/master/src/main/java/org/milkteamc/autotreechop/AutoTreeChopAPI.java)
+
+## Building with Maven
+
+Run `mvn package` to build the plugin using Maven.
+
+## Fork Changes
+
+This fork adds optional integrations and build improvements:
+
+- A new `pom.xml` allows the plugin to be built with Maven alongside the existing Gradle build.
+- `McMMO` support ensures only naturally generated logs are chopped so player-built structures remain safe.
+- `CoreProtect` logging records block removals so administrators can roll back changes if necessary.
+- All integration logic lives in new classes under the `hooks` package to reduce changes to original files.
+- Optional `Drop2Inventory-Plus` support sends chopped drops directly to player inventories.
+
