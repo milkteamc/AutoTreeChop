@@ -53,8 +53,8 @@ Run `mvn package` to build the plugin using Maven.
 This fork adds optional integrations and build improvements:
 
 - A new `pom.xml` allows the plugin to be built with Maven alongside the existing Gradle build.
-- `McMMO` support ensures only naturally generated logs are chopped so player-built structures remain safe.
-- `CoreProtect` logging records block removals so administrators can roll back changes if necessary.
+- `McMMO` support ensures only naturally generated logs are chopped so player-built structures remain safe when CoreProtect isn't available.
+- `CoreProtect` is used to both log block removals and detect player placed blocks, allowing administrators to roll back changes if necessary.
 - All integration logic lives in new classes under the `hooks` package to reduce changes to original files.
 - Optional `Drop2Inventory-Plus` support sends chopped drops directly to player inventories.
 

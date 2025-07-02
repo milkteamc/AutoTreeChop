@@ -44,7 +44,11 @@ public class TreeChopUtils {
 
         checkedLocations.add(block.getLocation());
 
-        if (mcMMOEnabled && !mcMMOHook.isNatural(block)) {
+        if (coreProtectEnabled) {
+            if (coreProtectHook.isPlayerPlaced(block)) {
+                return;
+            }
+        } else if (mcMMOEnabled && !mcMMOHook.isNatural(block)) {
             return;
         }
 

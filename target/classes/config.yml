@@ -59,7 +59,7 @@ respectUnbreaking: true
 # Play a block break sound when ATC breaking every block
 playBreakSound: true
 # This controls whether players can toggle AutoTreeChop by sneaking (pressing shift)
-enable-sneak-toggle: false
+enable-sneak-toggle: true
 # Should plugin show a message when player is sneaking?
 sneak-message: false
 
