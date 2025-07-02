@@ -16,6 +16,7 @@ org\milkteamc\autotreechop\Metrics.class
 org\milkteamc\autotreechop\AutoTreeChop.class
 org\milkteamc\autotreechop\AutoTreeChopExpansion.class
 org\milkteamc\autotreechop\command\TabCompleter.class
+org\milkteamc\autotreechop\SaplingManager.class
 org\milkteamc\autotreechop\Metrics$SingleLineChart.class
 org\milkteamc\autotreechop\Metrics$SimplePie.class
 org\milkteamc\autotreechop\Metrics$AdvancedPie.class

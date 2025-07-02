@@ -85,8 +85,7 @@ log-types:
   - MANGROVE_LOG
   - CHERRY_LOG
   - PALE_OAK_LOG
-  - WARPED_STEM
+    #Added by SleazLee
   - MUSHROOM_STEM
   - BROWN_MUSHROOM_BLOCK
   - RED_MUSHROOM_BLOCK
-
