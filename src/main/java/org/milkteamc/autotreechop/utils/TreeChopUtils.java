@@ -52,9 +52,6 @@ public class TreeChopUtils {
             return;
         }
 
-        if (config.getMustUseTool() && !isTool(player)) {
-            return;
-        }
 
         // Add to processing set to prevent recursion
         processingLocations.add(block.getLocation());

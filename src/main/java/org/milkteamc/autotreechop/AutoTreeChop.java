@@ -73,9 +73,9 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     public static final Message CONSOLE_NAME = new MessageBuilder("consoleName")
             .withDefault("console").build();
     public static final Message SNEAK_ENABLED_MESSAGE = new MessageBuilder("sneakEnabled")
-            .withDefault("<prefix>Auto tree chopping enabled by sneaking.</prefix>").build();
+            .withDefault("<prefix>Auto tree chopping enabled after stop sneaking.</prefix>").build();
     public static final Message SNEAK_DISABLED_MESSAGE = new MessageBuilder("sneakDisabled")
-            .withDefault("<prefix_negative>Auto tree chopping disabled by stopping sneak.</prefix_negative>").build();
+            .withDefault("<prefix_negative>Auto tree chopping disabled while sneaking.</prefix_negative>").build();
 
     private static final String SPIGOT_RESOURCE_ID = "113071";
     private static final List<String> SUPPORTED_VERSIONS = Arrays.asList(
@@ -338,6 +338,10 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         Location location = block.getLocation();
         BlockData blockData = block.getBlockData();
 
+        if (config.getMustUseTool() && !TreeChopUtils.isTool(player)) {
+            return;
+        }
+
         if (playerConfig.isAutoTreeChopEnabled() && TreeChopUtils.isLog(material, config)) {
             if (!PermissionUtils.hasVipBlock(player, playerConfig, config)) {
                 if (playerConfig.getDailyBlocksBroken() >= config.getMaxBlocksPerDay()) {
@@ -386,13 +390,13 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         PlayerConfig playerConfig = getPlayerConfig(playerUUID);
 
         if (event.isSneaking()) {
-            // Player started sneaking - enable auto tree chop
-            playerConfig.setAutoTreeChopEnabled(true);
-            if (config.getSneakMessage()) { sendMessage(player, SNEAK_ENABLED_MESSAGE); }
-        } else {
-            // Player stopped sneaking - disable auto tree chop
+            // Player started sneaking - disable auto tree chop
             playerConfig.setAutoTreeChopEnabled(false);
             if (config.getSneakMessage()) { sendMessage(player, SNEAK_DISABLED_MESSAGE); }
+        } else {
+            // Player stopped sneaking - enable auto tree chop
+            playerConfig.setAutoTreeChopEnabled(true);
+            if (config.getSneakMessage()) { sendMessage(player, SNEAK_ENABLED_MESSAGE); }
         }
     }
 
