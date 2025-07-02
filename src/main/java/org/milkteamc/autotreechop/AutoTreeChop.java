@@ -32,6 +32,7 @@ import org.milkteamc.autotreechop.utils.CooldownManager;
 import org.milkteamc.autotreechop.utils.EffectUtils;
 import org.milkteamc.autotreechop.utils.PermissionUtils;
 import org.milkteamc.autotreechop.utils.TreeChopUtils;
+import org.milkteamc.autotreechop.SaplingManager;
 
 import java.io.File;
 import java.util.*;
@@ -110,6 +111,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     private Drop2InventoryHook drop2InventoryHook = null;
 
     private CooldownManager cooldownManager;
+    private SaplingManager saplingManager;
     private boolean enableSneakToggle = true; // Configuration option for the sneak toggle feature
 
     public static void sendMessage(CommandSender sender, ComponentLike message) {
@@ -127,8 +129,9 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
     @Override
     public void onEnable() {
-        // Initialize Config
+        // Initialize Config and sapling data
         config = new Config(this);
+        saplingManager = new SaplingManager(this);
 
         // Bukkit version checker
         // Put your version check *after* loading the config, in case you add version-specific settings.
@@ -417,5 +420,9 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     // Add a getter for the Config instance
     public Config getPluginConfig() {
         return config;
+    }
+
+    public SaplingManager getSaplingManager() {
+        return saplingManager;
     }
 }

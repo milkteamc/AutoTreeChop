@@ -70,6 +70,7 @@ public class TreeChopUtils {
             }
             // Break the block and update player stats
             boolean handled = false;
+            Material originalType = block.getType();
             if (drop2InventoryEnabled) {
                 handled = drop2InventoryHook.processBlock(player, block);
             }
@@ -86,6 +87,8 @@ public class TreeChopUtils {
             if (config.isToolDamage()) {
                 damageTool(player, config.getToolDamageDecrease(), config);
             }
+
+            plugin.getSaplingManager().plantSapling(originalType, block);
 
             // Process adjacent blocks
             Runnable task = () -> {

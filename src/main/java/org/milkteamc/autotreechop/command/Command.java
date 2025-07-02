@@ -33,6 +33,7 @@ public class Command implements CommandExecutor {
         if (args.length > 0 && args[0].equalsIgnoreCase("reload")) {
             if (sender.hasPermission("autotreechop.reload")) {
                 config.load(); // Reload the config
+                plugin.getSaplingManager().load();
                 sender.sendMessage("Config reloaded successfully.");
                 sender.sendMessage("Some features might need a fully restart to change properly!");
             } else {
