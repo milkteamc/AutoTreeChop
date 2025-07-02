@@ -25,7 +25,7 @@ cooldownTime: 5
 
 # VIP setting
 # If disable, VIP have unlimited usage
-limitVipUsage: true
+limitVipUsage: false
 # Will only work when you enable limitVipUsage
 vip-uses-per-day: 100
 vip-blocks-per-day: 1000
@@ -47,13 +47,13 @@ visual-effect: true
 # damage tool when chopping tree
 toolDamage: true
 # How much durability should be decrease when player brock one block.
-toolDamageDecrease: 1
+toolDamageDecrease: 2
 # Enable this for better performance, but this may cause some issues on non-Paper servers.
 chopTreeAsync: true
 # Enable this if you want players must hold tools to use AutoTreeChop
-mustUseTool: false
+mustUseTool: true
 # Set the default AutoTreeChop state for new players.
-defaultTreeChop: false
+defaultTreeChop: true
 # Should plugin check for unbreaking enchantment?
 respectUnbreaking: true
 # Play a block break sound when ATC breaking every block
@@ -85,4 +85,8 @@ log-types:
   - MANGROVE_LOG
   - CHERRY_LOG
   - PALE_OAK_LOG
+  - WARPED_STEM
+  - MUSHROOM_STEM
+  - BROWN_MUSHROOM_BLOCK
+  - RED_MUSHROOM_BLOCK
 
