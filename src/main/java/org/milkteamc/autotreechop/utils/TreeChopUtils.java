@@ -30,7 +30,7 @@ public class TreeChopUtils {
 
     private static final Random random = new Random();
 
-    public static void chopTree(Block block, Player player, boolean ConnectedBlocks, Location location, Material material, BlockData blockData, AutoTreeChop plugin, Set<Location> processingLocations, Set<Location> checkedLocations, Config config, PlayerConfig playerConfig, boolean worldGuardEnabled, boolean residenceEnabled, boolean griefPreventionEnabled, boolean landsEnabled, LandsHook landsHook, ResidenceHook residenceHook, GriefPreventionHook griefPreventionHook, WorldGuardHook worldGuardHook, boolean mcMMOEnabled, McMMOHook mcMMOHook, boolean coreProtectEnabled, CoreProtectHook coreProtectHook, boolean drop2InventoryEnabled, Drop2InventoryHook drop2InventoryHook) {
+    public static void chopTree(Block block, Player player, ItemStack tool, boolean ConnectedBlocks, Location location, Material material, BlockData blockData, AutoTreeChop plugin, Set<Location> processingLocations, Set<Location> checkedLocations, Config config, PlayerConfig playerConfig, boolean worldGuardEnabled, boolean residenceEnabled, boolean griefPreventionEnabled, boolean landsEnabled, LandsHook landsHook, ResidenceHook residenceHook, GriefPreventionHook griefPreventionHook, WorldGuardHook worldGuardHook, boolean mcMMOEnabled, McMMOHook mcMMOHook, boolean coreProtectEnabled, CoreProtectHook coreProtectHook, boolean drop2InventoryEnabled, Drop2InventoryHook drop2InventoryHook) {
         // Permission checks
         if (!resCheck(player, location, residenceEnabled, residenceHook) || !landsCheck(player, location, landsEnabled, landsHook) ||
                 !gfCheck(player, location, griefPreventionEnabled, griefPreventionHook) || !wgCheck(player, location, worldGuardEnabled, worldGuardHook)) {
@@ -86,7 +86,7 @@ public class TreeChopUtils {
 
             playerConfig.incrementDailyBlocksBroken();
             if (config.isToolDamage()) {
-                damageTool(player, config.getToolDamageDecrease(), config);
+                damageTool(player, tool, config.getToolDamageDecrease(), config);
             }
 
             plugin.getSaplingManager().plantSapling(originalType, block);
@@ -120,15 +120,15 @@ public class TreeChopUtils {
                             // Schedule next block processing
                             if (AutoTreeChop.isFolia()) {
                                 plugin.getServer().getRegionScheduler().run(plugin, relativeBlock.getLocation(),
-                                        (task2) -> chopTree(relativeBlock, player, ConnectedBlocks, location, material, blockData, plugin, processingLocations, checkedLocations, config, playerConfig, worldGuardEnabled, residenceEnabled, griefPreventionEnabled, landsEnabled, landsHook, residenceHook, griefPreventionHook, worldGuardHook, mcMMOEnabled, mcMMOHook, coreProtectEnabled, coreProtectHook, drop2InventoryEnabled, drop2InventoryHook));
+                                        (task2) -> chopTree(relativeBlock, player, tool, ConnectedBlocks, location, material, blockData, plugin, processingLocations, checkedLocations, config, playerConfig, worldGuardEnabled, residenceEnabled, griefPreventionEnabled, landsEnabled, landsHook, residenceHook, griefPreventionHook, worldGuardHook, mcMMOEnabled, mcMMOHook, coreProtectEnabled, coreProtectHook, drop2InventoryEnabled, drop2InventoryHook));
                             } else {
                                 if (config.isChopTreeAsync()) {
                                     Bukkit.getScheduler().runTaskAsynchronously(plugin, () ->
                                             Bukkit.getScheduler().runTask(plugin, () ->
-                                                    chopTree(relativeBlock, player, ConnectedBlocks, location, material, blockData, plugin, processingLocations, checkedLocations, config, playerConfig, worldGuardEnabled, residenceEnabled, griefPreventionEnabled, landsEnabled, landsHook, residenceHook, griefPreventionHook, worldGuardHook, mcMMOEnabled, mcMMOHook, coreProtectEnabled, coreProtectHook, drop2InventoryEnabled, drop2InventoryHook)));
+                                                    chopTree(relativeBlock, player, tool, ConnectedBlocks, location, material, blockData, plugin, processingLocations, checkedLocations, config, playerConfig, worldGuardEnabled, residenceEnabled, griefPreventionEnabled, landsEnabled, landsHook, residenceHook, griefPreventionHook, worldGuardHook, mcMMOEnabled, mcMMOHook, coreProtectEnabled, coreProtectHook, drop2InventoryEnabled, drop2InventoryHook)));
                                 } else {
                                     Bukkit.getScheduler().runTask(plugin, () ->
-                                                    chopTree(relativeBlock, player, ConnectedBlocks, location, material, blockData, plugin, processingLocations, checkedLocations, config, playerConfig, worldGuardEnabled, residenceEnabled, griefPreventionEnabled, landsEnabled, landsHook, residenceHook, griefPreventionHook, worldGuardHook, mcMMOEnabled, mcMMOHook, coreProtectEnabled, coreProtectHook, drop2InventoryEnabled, drop2InventoryHook));
+                                                    chopTree(relativeBlock, player, tool, ConnectedBlocks, location, material, blockData, plugin, processingLocations, checkedLocations, config, playerConfig, worldGuardEnabled, residenceEnabled, griefPreventionEnabled, landsEnabled, landsHook, residenceHook, griefPreventionHook, worldGuardHook, mcMMOEnabled, mcMMOHook, coreProtectEnabled, coreProtectHook, drop2InventoryEnabled, drop2InventoryHook));
                                 }
                             }
                         }
@@ -150,8 +150,10 @@ public class TreeChopUtils {
     }
 
     // Method to reduce the durability value of tools with Unbreaking support
-    private static void damageTool(Player player, int amount, Config config) {
-        ItemStack tool = player.getInventory().getItemInMainHand();
+    private static void damageTool(Player player, ItemStack tool, int amount, Config config) {
+        if (tool == null) {
+            return;
+        }
         if (tool.getType().getMaxDurability() > 0) {
             int unbreakingLevel = getUnbreakingLevel(tool);
 
@@ -159,7 +161,7 @@ public class TreeChopUtils {
                 if (shouldApplyDurabilityLoss(unbreakingLevel, config)) {
                     int newDurability = tool.getDurability() + 1;
                     if (newDurability > tool.getType().getMaxDurability()) {
-                        player.getInventory().setItemInMainHand(null); // Remove the item if it breaks
+                        player.getInventory().removeItem(tool); // Remove the item if it breaks
                         break; // Stop processing further damage
                     } else {
                         tool.setDurability((short) newDurability);

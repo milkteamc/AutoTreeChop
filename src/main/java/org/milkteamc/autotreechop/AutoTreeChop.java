@@ -15,6 +15,7 @@ import org.bukkit.block.data.BlockData;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -361,7 +362,8 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
             event.setCancelled(true);
             checkedLocations.clear();
-            TreeChopUtils.chopTree(block, player, config.isStopChoppingIfNotConnected(), location, material, blockData, this, processingLocations, checkedLocations, config, playerConfig, worldGuardEnabled, residenceEnabled, griefPreventionEnabled, landsEnabled, landsHook, residenceHook, griefPreventionHook, worldGuardHook, mcMMOEnabled, mcMMOHook, coreProtectEnabled, coreProtectHook, drop2InventoryEnabled, drop2InventoryHook); // Pass config values
+            ItemStack tool = player.getInventory().getItemInMainHand();
+            TreeChopUtils.chopTree(block, player, tool, config.isStopChoppingIfNotConnected(), location, material, blockData, this, processingLocations, checkedLocations, config, playerConfig, worldGuardEnabled, residenceEnabled, griefPreventionEnabled, landsEnabled, landsHook, residenceHook, griefPreventionHook, worldGuardHook, mcMMOEnabled, mcMMOHook, coreProtectEnabled, coreProtectHook, drop2InventoryEnabled, drop2InventoryHook); // Pass config values
             checkedLocations.clear();
             playerConfig.incrementDailyUses();
             cooldownManager.setCooldown(player, playerUUID, config); // Pass config values
