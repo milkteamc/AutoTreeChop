@@ -111,11 +111,31 @@ tasks.runServer {
     minecraftVersion("1.21.4")
 }
 
+def gitHash = 'unknown'
+try {
+    def proc = 'git rev-parse --short HEAD'.execute()
+    proc.waitFor()
+    if (proc.exitValue() == 0) {
+        gitHash = proc.text.trim()
+    }
+} catch (Exception ignored) {}
+
 modrinth {
     token = System.getenv("MODRINTH_TOKEN")
     projectId = "autotreechop"
     versionType = "alpha"
-    uploadFile = jar
+
+    versionNumber = version as Property<String>
+    versionName = "${version}-${gitHash}"
+    changelog = """
+🚨 **This is a SNAPSHOT version, ONLY use it in test server!**  
+Report any issues to our [GitHub](https://github.com/milkteamc/AutoTreeChop/issues)
+""".stripIndent().trim()
+
+    uploadFile = project.layout.buildDirectory.dir("libs").get().asFileTree.matching {
+        include("*.jar")
+    }.find { !it.name.contains("original") }
+
     gameVersions = [
             "1.17", "1.17.1",
             "1.18", "1.18.1", "1.18.2",
