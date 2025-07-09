@@ -125,14 +125,14 @@ modrinth {
     projectId = "autotreechop"
     versionType = "alpha"
 
-    versionNumber = version as Property<String>
+    versionNumber = version
     versionName = "${version}-${gitHash}"
     changelog = """
 🚨 **This is a SNAPSHOT version, ONLY use it in test server!**  
 Report any issues to our [GitHub](https://github.com/milkteamc/AutoTreeChop/issues)
 """.stripIndent().trim()
 
-    uploadFile = tasks.shadowJar.flatMap { it.archiveFile }
+    uploadFile = tasks.shadowJar.archiveFile
 
     gameVersions = [
             "1.17", "1.17.1",
