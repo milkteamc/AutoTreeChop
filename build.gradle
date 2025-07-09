@@ -132,9 +132,7 @@ modrinth {
 Report any issues to our [GitHub](https://github.com/milkteamc/AutoTreeChop/issues)
 """.stripIndent().trim()
 
-    uploadFile = project.layout.buildDirectory.dir("libs").get().asFileTree.matching {
-        include("*.jar")
-    }.find { !it.name.contains("original") }
+    uploadFile = tasks.shadowJar.flatMap { it.archiveFile }
 
     gameVersions = [
             "1.17", "1.17.1",
