@@ -136,10 +136,10 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
         // Register command and tab completer
         org.milkteamc.autotreechop.command.Command command = new org.milkteamc.autotreechop.command.Command(this);
-        getCommand("autotreechop").setExecutor(command);
-        getCommand("atc").setExecutor(command);
-        getCommand("autotreechop").setTabCompleter(new org.milkteamc.autotreechop.command.TabCompleter());
-        getCommand("atc").setTabCompleter(new org.milkteamc.autotreechop.command.TabCompleter());
+        Objects.requireNonNull(getCommand("autotreechop")).setExecutor(command);
+        Objects.requireNonNull(getCommand("atc")).setExecutor(command);
+        Objects.requireNonNull(getCommand("autotreechop")).setTabCompleter(new org.milkteamc.autotreechop.command.TabCompleter());
+        Objects.requireNonNull(getCommand("atc")).setTabCompleter(new org.milkteamc.autotreechop.command.TabCompleter());
 
         translations = BukkitTinyTranslations.application(this);
         translations.setMessageStorage(new PropertiesMessageStorage(new File(getDataFolder(), "/lang/")));
