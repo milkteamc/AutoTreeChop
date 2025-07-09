@@ -112,7 +112,7 @@ tasks.runServer {
 }
 
 modrinth {
-    token = System.getenv("${{ secrets.MODRINTH_TOKEN }}")
+    token = System.getenv("MODRINTH_TOKEN")
     projectId = "autotreechop"
     versionType = "alpha"
     uploadFile = jar

@@ -3,7 +3,10 @@ name: "Pre-release"
 on:
   push:
     branches:
-      - "*master"
+      - "*"
+
+env:
+  MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
 
 jobs:
   pre-release:
