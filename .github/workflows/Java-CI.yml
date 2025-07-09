@@ -3,7 +3,7 @@ name: "Pre-release"
 on:
   push:
     branches:
-      - "*"
+      - "*master"
 
 jobs:
   pre-release:
@@ -23,20 +23,5 @@ jobs:
 
       - name: Build Jar file
         run: ./gradlew clean build shadowJar
-
-      - name: Get short sha
-        id: sha
-        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-
-      - name: Create Pre-release
-        id: create-release
-        uses: softprops/action-gh-release@v1
-        with:
-          generate_release_notes: true
-          prerelease: true
-          
-          tag_name: "beta-${{ steps.sha.outputs.sha_short }}"
-          name: "AutoTreeChop Nightly-${{ steps.sha.outputs.sha_short }}"
-          files: |
-            build/libs/*[!original].jar
-          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload to Modrinth
+        run: ./gradlew modrinth

@@ -2,7 +2,8 @@ plugins {
     id 'java'
     id 'maven-publish'
     id 'com.gradleup.shadow' version '8.3.6'
-    id 'xyz.jpenilla.run-paper' version "2.3.1"
+    id 'xyz.jpenilla.run-paper' version '2.3.1'
+    id 'com.modrinth.minotaur' version '2.+'
 }
 
 group = 'org.milkteamc'
@@ -108,6 +109,21 @@ tasks.jar {
 
 tasks.runServer {
     minecraftVersion("1.21.4")
+}
+
+modrinth {
+    token = System.getenv("MODRINTH_TOKEN")
+    projectId = "autotreechop"
+    versionType = "alpha"
+    uploadFile = jar
+    gameVersions = [
+            "1.17", "1.17.1",
+            "1.18", "1.18.1", "1.18.2",
+            "1.19", "1.19.1", "1.19.2", "1.19.3", "1.19.4",
+            "1.20", "1.20.1", "1.20.2", "1.20.3", "1.20.4", "1.20.5", "1.20.6",
+            "1.21", "1.21.1", "1.21.2", "1.21.3", "1.21.4", "1.21.5", "1.21.6", "1.21.7"
+    ]
+    loaders = ["paper", "purpur", "folia", "spigot", "bukkit"]
 }
 
 runPaper.folia.registerTask()
