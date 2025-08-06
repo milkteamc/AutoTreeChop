@@ -1,6 +1,7 @@
 package org.milkteamc.autotreechop;
 
 import org.bukkit.Material;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 
@@ -45,6 +46,12 @@ public class Config {
     private boolean sneakToggle;
     private boolean commandToggle;
     private boolean sneakMessage;
+    private boolean autoReplantEnabled;
+    private long replantDelayTicks;
+    private boolean requireSaplingInInventory;
+    private boolean replantVisualEffect;
+    private Map<Material, Material> logSaplingMapping;
+    private Set<Material> validSoilTypes;
 
 
     public Config(AutoTreeChop plugin) {
@@ -114,6 +121,28 @@ public class Config {
         sneakToggle = config.getBoolean("enable-sneak-toggle");
         commandToggle = config.getBoolean("enable-command-toggle");
         sneakMessage = config.getBoolean("sneak-message");
+        autoReplantEnabled = config.getBoolean("enable-auto-replant");
+        replantDelayTicks = config.getLong("replant-delay-ticks");
+        requireSaplingInInventory = config.getBoolean("require-sapling-in-inventory");
+        replantVisualEffect = config.getBoolean("replant-visual-effect");
+        List<String> soilTypeStrings = config.getStringList("valid-soil-types");
+
+        validSoilTypes = soilTypeStrings.stream()
+                .map(Material::getMaterial)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        logSaplingMapping = new HashMap<>();
+        ConfigurationSection mappingSection = config.getConfigurationSection("log-sapling-mapping");
+        if (mappingSection != null) {
+            for (String logTypeStr : mappingSection.getKeys(false)) {
+                Material logType = Material.getMaterial(logTypeStr);
+                Material saplingType = Material.getMaterial(mappingSection.getString(logTypeStr));
+                if (logType != null && saplingType != null) {
+                    logSaplingMapping.put(logType, saplingType);
+                }
+            }
+        }
 
         // Load log types
         List<String> logTypeStrings = config.getStringList("log-types");
@@ -168,6 +197,23 @@ public class Config {
         defaultConfig.set("enable-command-toggle", true);
         defaultConfig.set("sneak-message", false);
         defaultConfig.set("log-types", Arrays.asList("OAK_LOG", "SPRUCE_LOG", "BIRCH_LOG", "JUNGLE_LOG", "ACACIA_LOG", "DARK_OAK_LOG", "MANGROVE_LOG", "CHERRY_LOG"));
+        defaultConfig.set("enable-auto-replant", true);
+        defaultConfig.set("replant-delay-ticks", 20L);
+        defaultConfig.set("require-sapling-in-inventory", false);
+        defaultConfig.set("replant-visual-effect", true);
+        defaultConfig.set("valid-soil-types", Arrays.asList(
+                "DIRT", "GRASS_BLOCK", "PODZOL", "COARSE_DIRT", "ROOTED_DIRT"
+        ));
+        ConfigurationSection logSaplingSection = defaultConfig.createSection("log-sapling-mapping");
+        logSaplingSection.set("OAK_LOG", "OAK_SAPLING");
+        logSaplingSection.set("BIRCH_LOG", "BIRCH_SAPLING");
+        logSaplingSection.set("SPRUCE_LOG", "SPRUCE_SAPLING");
+        logSaplingSection.set("JUNGLE_LOG", "JUNGLE_SAPLING");
+        logSaplingSection.set("ACACIA_LOG", "ACACIA_SAPLING");
+        logSaplingSection.set("DARK_OAK_LOG", "DARK_OAK_SAPLING");
+        logSaplingSection.set("MANGROVE_LOG", "MANGROVE_PROPAGULE");
+        logSaplingSection.set("CHERRY_LOG", "CHERRY_SAPLING");
+        logSaplingSection.set("PALE_OAK_LOG", "PALE_OAK_SAPLING");
         return defaultConfig;
     }
 
@@ -295,5 +341,38 @@ public class Config {
 
     public Set<Material> getLogTypes() {
         return logTypes;
+    }
+
+    public boolean isAutoReplantEnabled() {
+        return autoReplantEnabled;
+    }
+
+    public long getReplantDelayTicks() {
+        return replantDelayTicks;
+    }
+
+    public boolean getRequireSaplingInInventory() {
+        return requireSaplingInInventory;
+    }
+
+    public boolean getReplantVisualEffect() {
+        return replantVisualEffect;
+    }
+
+    public Set<Material> getValidSoilTypes() {
+        return validSoilTypes;
+    }
+
+    public Map<Material, Material> getLogSaplingMapping() {
+        return logSaplingMapping;
+    }
+
+    /**
+     * Gets the appropriate sapling type for a given log type
+     * @param logType The log material type
+     * @return The corresponding sapling material, or null if no mapping exists
+     */
+    public Material getSaplingForLog(Material logType) {
+        return logSaplingMapping.get(logType);
     }
 }

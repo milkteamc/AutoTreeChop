@@ -21,6 +21,9 @@ permissions:
   autotreechop.use:
     description: Allows players to use the auto tree chop command.
     default: true
+  autotreechop.replant:
+    description: Allows auto-replanting of saplings
+    default: true
   autotreechop.vip:
     description: VIP permission can ignore all limit.
     default: op

@@ -89,3 +89,37 @@ log-types:
   - CHERRY_LOG
   - PALE_OAK_LOG
 
+# Replanting setting
+# Enable automatic sapling replanting after tree chopping
+enable-auto-replant: true
+
+# Delay before planting sapling (in ticks, 20 ticks = 1 second)
+replant-delay-ticks: 20
+
+# If true, players must have saplings in inventory to replant
+# If false, saplings are automatically provided
+require-sapling-in-inventory: false
+
+# Show visual effects when replanting saplings
+replant-visual-effect: true
+
+# Map log types to their corresponding sapling types
+# This defines both which logs can be replanted and which saplings are valid
+log-sapling-mapping:
+  OAK_LOG: OAK_SAPLING
+  BIRCH_LOG: BIRCH_SAPLING
+  SPRUCE_LOG: SPRUCE_SAPLING
+  JUNGLE_LOG: JUNGLE_SAPLING
+  ACACIA_LOG: ACACIA_SAPLING
+  DARK_OAK_LOG: DARK_OAK_SAPLING
+  MANGROVE_LOG: MANGROVE_PROPAGULE
+  CHERRY_LOG: CHERRY_SAPLING
+  PALE_OAK_LOG: PALE_OAK_SAPLING
+
+# Define valid soil types where saplings can be planted
+valid-soil-types:
+  - DIRT
+  - GRASS_BLOCK
+  - PODZOL
+  - COARSE_DIRT
+  - ROOTED_DIRT

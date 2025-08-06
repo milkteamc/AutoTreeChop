@@ -20,4 +20,16 @@ public class EffectUtils {
     public static void showChopEffect(Player player, Block block) {
         player.getWorld().spawnParticle(Particle.VILLAGER_HAPPY, block.getLocation().add(0.5, 0.5, 0.5), 50, 0.5, 0.5, 0.5, 0);
     }
+
+    // Shows a green particle effect with growth particles indicating a sapling has been replanted
+    public static void showReplantEffect(Player player, Block block) {
+        // Show green particles with a slight upward motion to indicate growth/planting
+        player.getWorld().spawnParticle(Particle.VILLAGER_HAPPY, block.getLocation().add(0.5, 0.5, 0.5), 20, 0.3, 0.3, 0.3, 0);
+
+        // Add some bone meal-like particles for extra visual feedback
+        player.getWorld().spawnParticle(Particle.COMPOSTER, block.getLocation().add(0.5, 0.2, 0.5), 15, 0.2, 0.1, 0.2, 0.05);
+
+        // Optional: Add some green dust particles to simulate plant growth
+        player.getWorld().spawnParticle(Particle.REDSTONE, block.getLocation().add(0.5, 0.3, 0.5), 10, 0.2, 0.2, 0.2, 0, new Particle.DustOptions(Color.GREEN, 0.8f));
+    }
 }

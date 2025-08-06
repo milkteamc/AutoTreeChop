@@ -61,6 +61,24 @@ public class TreeChopUtils {
             // Break the block and update player stats
             block.breakNaturally();
 
+            // Schedule sapling replanting (ADD THIS SECTION)
+            if (TreeReplantUtils.isReplantEnabledForPlayer(player, config)) {
+                TreeReplantUtils.scheduleReplant(
+                        player,
+                        block,
+                        plugin,
+                        config,
+                        worldGuardEnabled,
+                        residenceEnabled,
+                        griefPreventionEnabled,
+                        landsEnabled,
+                        landsHook,
+                        residenceHook,
+                        griefPreventionHook,
+                        worldGuardHook
+                );
+            }
+
             if (config.getPlayBreakSound()) {
                 // Play wood breaking sound at the block's location
                 block.getWorld().playSound(block.getLocation(), org.bukkit.Sound.BLOCK_WOOD_BREAK, 1.0f, 1.0f);
@@ -203,7 +221,7 @@ public class TreeChopUtils {
 
     // Check if player have Residence permission in this area
     // It will return true if player have permission, and vice versa.
-    private static boolean resCheck(Player player, Location location, boolean residenceEnabled, ResidenceHook residenceHook) {
+    static boolean resCheck(Player player, Location location, boolean residenceEnabled, ResidenceHook residenceHook) {
         return !residenceEnabled || residenceHook.checkBuild(player, location);
     }
 
