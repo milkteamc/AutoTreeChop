@@ -9,6 +9,7 @@ import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.Damageable;
 import org.jetbrains.annotations.NotNull;
 import org.milkteamc.autotreechop.AutoTreeChop;
 import org.milkteamc.autotreechop.Config;
@@ -128,20 +129,23 @@ public class TreeChopUtils {
         }
     }
 
-    // Method to reduce the durability value of tools with Unbreaking support
     private static void damageTool(Player player, int amount, Config config) {
         ItemStack tool = player.getInventory().getItemInMainHand();
-        if (tool.getType().getMaxDurability() > 0) {
+
+        if (tool.getType().getMaxDurability() > 0 && tool.getItemMeta() instanceof Damageable damageableMeta) {
             int unbreakingLevel = getUnbreakingLevel(tool);
 
             for (int i = 0; i < amount; i++) {
                 if (shouldApplyDurabilityLoss(unbreakingLevel, config)) {
-                    int newDurability = tool.getDurability() + 1;
-                    if (newDurability > tool.getType().getMaxDurability()) {
+                    int currentDamage = damageableMeta.getDamage();
+                    int newDamage = currentDamage + 1;
+
+                    if (newDamage >= tool.getType().getMaxDurability()) {
                         player.getInventory().setItemInMainHand(null); // Remove the item if it breaks
-                        break; // Stop processing further damage
+                        break;
                     } else {
-                        tool.setDurability((short) newDurability);
+                        damageableMeta.setDamage(newDamage);
+                        tool.setItemMeta(damageableMeta);
                     }
                 }
             }

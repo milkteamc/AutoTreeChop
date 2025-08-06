@@ -35,9 +35,6 @@ import java.util.*;
 
 public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecutor {
 
-    // We make a prefix just to be safe if sm removes our style overrides. Then each plugin message begins with prefix
-    // and if none set it will look ugly. We don't need to add decoration (like "[AutoTreeChop] >"), it's done via styling
-    public static final Message PREFIX = Message.message("prefix", "AutoTreeChop");
     public static final Message noResidencePermissions = new MessageBuilder("noResidencePermissions")
             .withDefault("<prefix_negative>You don't have permission to use AutoTreeChop here.</prefix_negative>").build();
     public static final Message ENABLED_MESSAGE = new MessageBuilder("enabled")

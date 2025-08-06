@@ -2,6 +2,7 @@ package org.milkteamc.autotreechop.hooks;
 
 import me.angeschossen.lands.api.LandsIntegration;
 import me.angeschossen.lands.api.land.LandWorld;
+import me.angeschossen.lands.api.player.LandPlayer;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
@@ -19,6 +20,7 @@ public class LandsHook {
         }
 
         LandWorld world = landsApi.getWorld(location.getWorld());
+        LandPlayer landPlayer = landsApi.getLandPlayer(player.getUniqueId());
         if (world == null) {
             return true; // Lands is not enabled in this world
         }
@@ -27,6 +29,6 @@ public class LandsHook {
             return true;
         }
 
-        return world.hasFlag(player, location, null, me.angeschossen.lands.api.flags.Flags.BLOCK_BREAK, false);
+        return world.hasRoleFlag(landPlayer, location, me.angeschossen.lands.api.flags.type.Flags.BLOCK_BREAK, null, false);
     }
 } 
