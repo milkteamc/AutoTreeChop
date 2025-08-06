@@ -115,6 +115,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
     @Override
     public void onEnable() {
+        saveDefaultConfig();
         // Initialize Config
         config = new Config(this);
 
