@@ -11,6 +11,7 @@ import static org.bukkit.Bukkit.getLogger;
 
 public class PlayerConfig {
 
+    private final AutoTreeChop plugin;
     private final UUID playerUUID;
     private final Connection connection;
     private boolean autoTreeChopEnabled;
@@ -18,8 +19,9 @@ public class PlayerConfig {
     private int dailyBlocksBroken;
     private LocalDate lastUseDate;
 
-    public PlayerConfig(UUID playerUUID, boolean useMysql, String hostname, String database, int port, String username, String password, boolean defaultTreeChop) {
+    public PlayerConfig(AutoTreeChop plugin, UUID playerUUID, boolean useMysql, String hostname, String database, int port, String username, String password, boolean defaultTreeChop) {
         this.playerUUID = playerUUID;
+        this.plugin = plugin;
         this.connection = establishConnection(useMysql, hostname, port, database, username, password);
         createTable();
         loadConfig(defaultTreeChop);
@@ -37,7 +39,7 @@ public class PlayerConfig {
                 HikariDataSource dataSource = new HikariDataSource(config);
                 return dataSource.getConnection();
             } catch (Exception e) {
-                getLogger().warning("Error establishing MySQL connection: " + e.getMessage());
+                plugin.getLogger().warning("Error establishing MySQL connection: " + e.getMessage());
                 return null;
             }
         } else {
@@ -49,7 +51,7 @@ public class PlayerConfig {
                 HikariDataSource dataSource = new HikariDataSource(config);
                 return dataSource.getConnection();
             } catch (Exception e) {
-                getLogger().warning("Error establishing SQLite connection: " + e.getMessage());
+                plugin.getLogger().warning("Error establishing SQLite connection: " + e.getMessage());
                 return null;
             }
         }
@@ -65,7 +67,7 @@ public class PlayerConfig {
                         "lastUseDate VARCHAR(10));")) {
             statement.executeUpdate();
         } catch (SQLException e) {
-            getLogger().warning("Error creating database table: " + e.getMessage());
+            plugin.getLogger().warning("Error creating database table: " + e.getMessage());
         }
     }
 
@@ -94,11 +96,11 @@ public class PlayerConfig {
                     insertStatement.setString(5, lastUseDate.toString());
                     insertStatement.executeUpdate();
                 } catch (SQLException e) {
-                    getLogger().warning("Error inserting player data into database: " + e.getMessage());
+                    plugin.getLogger().warning("Error inserting player data into database: " + e.getMessage());
                 }
             }
         } catch (SQLException e) {
-            getLogger().warning("Error loading player data from database: " + e.getMessage());
+            plugin.getLogger().warning("Error loading player data from database: " + e.getMessage());
         }
     }
 
@@ -138,7 +140,7 @@ public class PlayerConfig {
                     ")";
             statement.executeUpdate(createTableQuery);
         } catch (SQLException e) {
-            getLogger().warning("Error initializing database tables: " + e.getMessage());
+            plugin.getLogger().warning("Error initializing database tables: " + e.getMessage());
         }
     }
 
@@ -167,7 +169,7 @@ public class PlayerConfig {
             statement.setString(5, playerUUID.toString());
             statement.executeUpdate();
         } catch (SQLException e) {
-            getLogger().warning("Error updating player data in database: " + e.getMessage());
+            plugin.getLogger().warning("Error updating player data in database: " + e.getMessage());
         }
     }
 }

@@ -78,12 +78,11 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             "1.18.2", "1.18.1", "1.18",
             "1.17.1", "1.17"
     );
-
+    private final Set<Location> checkedLocations = new HashSet<>();
+    private final Set<Location> processingLocations = new HashSet<>();
     private Config config; // Instance of your Config class
     private AutoTreeChopAPI autoTreeChopAPI;
     private Map<UUID, PlayerConfig> playerConfigs;
-    private final Set<Location> checkedLocations = new HashSet<>();
-    private final Set<Location> processingLocations = new HashSet<>();
     private String bukkitVersion = this.getServer().getBukkitVersion();
     private Metrics metrics;
     private MessageTranslator translations;
@@ -327,17 +326,21 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
         if (event.isSneaking()) {
             playerConfig.setAutoTreeChopEnabled(true);
-            if (config.getSneakMessage()) { sendMessage(player, SNEAK_ENABLED_MESSAGE); }
+            if (config.getSneakMessage()) {
+                sendMessage(player, SNEAK_ENABLED_MESSAGE);
+            }
         } else {
             playerConfig.setAutoTreeChopEnabled(false);
-            if (config.getSneakMessage()) { sendMessage(player, SNEAK_DISABLED_MESSAGE); }
+            if (config.getSneakMessage()) {
+                sendMessage(player, SNEAK_DISABLED_MESSAGE);
+            }
         }
     }
 
     public PlayerConfig getPlayerConfig(UUID playerUUID) {
         PlayerConfig playerConfig = playerConfigs.get(playerUUID);
         if (playerConfig == null) {
-            playerConfig = new PlayerConfig(playerUUID, config.isUseMysql(), config.getHostname(), config.getDatabase(), config.getPort(), config.getUsername(), config.getPassword(), config.getDefaultTreeChop());
+            playerConfig = new PlayerConfig(this, playerUUID, config.isUseMysql(), config.getHostname(), config.getDatabase(), config.getPort(), config.getUsername(), config.getPassword(), config.getDefaultTreeChop());
             playerConfigs.put(playerUUID, playerConfig);
         }
         return playerConfig;
