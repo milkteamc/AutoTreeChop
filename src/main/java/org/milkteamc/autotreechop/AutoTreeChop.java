@@ -20,6 +20,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.player.PlayerToggleSneakEvent;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.milkteamc.autotreechop.hooks.GriefPreventionHook;
 import org.milkteamc.autotreechop.hooks.LandsHook;
@@ -259,6 +260,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         UUID playerUUID = player.getUniqueId();
         PlayerConfig playerConfig = getPlayerConfig(playerUUID);
         Block block = event.getBlock();
+        ItemStack tool = player.getInventory().getItemInMainHand();
 
         // Skip if this block is already being processed
         if (processingLocations.contains(block.getLocation())) {
@@ -296,7 +298,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
             event.setCancelled(true);
             checkedLocations.clear();
-            TreeChopUtils.chopTree(block, player, config.isStopChoppingIfNotConnected(), location, material, blockData, this, processingLocations, checkedLocations, config, playerConfig, worldGuardEnabled, residenceEnabled, griefPreventionEnabled, landsEnabled, landsHook, residenceHook, griefPreventionHook, worldGuardHook); // Pass config values
+            TreeChopUtils.chopTree(block, player, config.isStopChoppingIfNotConnected(), tool, location, material, blockData, this, processingLocations, checkedLocations, config, playerConfig, worldGuardEnabled, residenceEnabled, griefPreventionEnabled, landsEnabled, landsHook, residenceHook, griefPreventionHook, worldGuardHook); // Pass config values
             checkedLocations.clear();
             playerConfig.incrementDailyUses();
             cooldownManager.setCooldown(player, playerUUID, config); // Pass config values

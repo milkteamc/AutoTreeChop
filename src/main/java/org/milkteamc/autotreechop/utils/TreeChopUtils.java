@@ -28,7 +28,7 @@ public class TreeChopUtils {
 
     private static final Random random = new Random();
 
-    public static void chopTree(Block block, Player player, boolean ConnectedBlocks, Location location, Material material, BlockData blockData, AutoTreeChop plugin, Set<Location> processingLocations, Set<Location> checkedLocations, Config config, PlayerConfig playerConfig, boolean worldGuardEnabled, boolean residenceEnabled, boolean griefPreventionEnabled, boolean landsEnabled, LandsHook landsHook, ResidenceHook residenceHook, GriefPreventionHook griefPreventionHook, WorldGuardHook worldGuardHook) {
+    public static void chopTree(Block block, Player player, boolean ConnectedBlocks, ItemStack tool, Location location, Material material, BlockData blockData, AutoTreeChop plugin, Set<Location> processingLocations, Set<Location> checkedLocations, Config config, PlayerConfig playerConfig, boolean worldGuardEnabled, boolean residenceEnabled, boolean griefPreventionEnabled, boolean landsEnabled, LandsHook landsHook, ResidenceHook residenceHook, GriefPreventionHook griefPreventionHook, WorldGuardHook worldGuardHook) {
         // Permission checks
         if (!resCheck(player, location, residenceEnabled, residenceHook) || !landsCheck(player, location, landsEnabled, landsHook) ||
                 !gfCheck(player, location, griefPreventionEnabled, griefPreventionHook) || !wgCheck(player, location, worldGuardEnabled, worldGuardHook)) {
@@ -68,7 +68,7 @@ public class TreeChopUtils {
 
             playerConfig.incrementDailyBlocksBroken();
             if (config.isToolDamage()) {
-                damageTool(player, config.getToolDamageDecrease(), config);
+                damageTool(tool, player, config.getToolDamageDecrease(), config);
             }
 
             // Process adjacent blocks
@@ -100,15 +100,15 @@ public class TreeChopUtils {
                             // Schedule next block processing
                             if (AutoTreeChop.isFolia()) {
                                 plugin.getServer().getRegionScheduler().run(plugin, relativeBlock.getLocation(),
-                                        (task2) -> chopTree(relativeBlock, player, ConnectedBlocks, location, material, blockData, plugin, processingLocations, checkedLocations, config, playerConfig, worldGuardEnabled, residenceEnabled, griefPreventionEnabled, landsEnabled, landsHook, residenceHook, griefPreventionHook, worldGuardHook));
+                                        (task2) -> chopTree(relativeBlock, player, ConnectedBlocks, tool, location, material, blockData, plugin, processingLocations, checkedLocations, config, playerConfig, worldGuardEnabled, residenceEnabled, griefPreventionEnabled, landsEnabled, landsHook, residenceHook, griefPreventionHook, worldGuardHook));
                             } else {
                                 if (config.isChopTreeAsync()) {
                                     Bukkit.getScheduler().runTaskAsynchronously(plugin, () ->
                                             Bukkit.getScheduler().runTask(plugin, () ->
-                                                    chopTree(relativeBlock, player, ConnectedBlocks, location, material, blockData, plugin, processingLocations, checkedLocations, config, playerConfig, worldGuardEnabled, residenceEnabled, griefPreventionEnabled, landsEnabled, landsHook, residenceHook, griefPreventionHook, worldGuardHook)));
+                                                    chopTree(relativeBlock, player, ConnectedBlocks, tool, location, material, blockData, plugin, processingLocations, checkedLocations, config, playerConfig, worldGuardEnabled, residenceEnabled, griefPreventionEnabled, landsEnabled, landsHook, residenceHook, griefPreventionHook, worldGuardHook)));
                                 } else {
                                     Bukkit.getScheduler().runTask(plugin, () ->
-                                            chopTree(relativeBlock, player, ConnectedBlocks, location, material, blockData, plugin, processingLocations, checkedLocations, config, playerConfig, worldGuardEnabled, residenceEnabled, griefPreventionEnabled, landsEnabled, landsHook, residenceHook, griefPreventionHook, worldGuardHook));
+                                            chopTree(relativeBlock, player, ConnectedBlocks, tool, location, material, blockData, plugin, processingLocations, checkedLocations, config, playerConfig, worldGuardEnabled, residenceEnabled, griefPreventionEnabled, landsEnabled, landsHook, residenceHook, griefPreventionHook, worldGuardHook));
                                 }
                             }
                         }
@@ -129,8 +129,7 @@ public class TreeChopUtils {
         }
     }
 
-    private static void damageTool(Player player, int amount, Config config) {
-        ItemStack tool = player.getInventory().getItemInMainHand();
+    private static void damageTool(ItemStack tool, Player player, int amount, Config config) {
 
         if (tool.getType().getMaxDurability() > 0 && tool.getItemMeta() instanceof Damageable damageableMeta) {
             int unbreakingLevel = getUnbreakingLevel(tool);
@@ -141,7 +140,7 @@ public class TreeChopUtils {
                     int newDamage = currentDamage + 1;
 
                     if (newDamage >= tool.getType().getMaxDurability()) {
-                        player.getInventory().setItemInMainHand(null); // Remove the item if it breaks
+                        player.getInventory().removeItem(tool); // Remove the item if it breaks
                         break;
                     } else {
                         damageableMeta.setDamage(newDamage);
