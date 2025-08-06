@@ -5,7 +5,6 @@
 A auto tree chopping plugin for milkteamc.  
 Discord: https://discord.gg/uQ4UXANnP2  
 Modrinth page: https://modrinth.com/plugin/autotreechop  
-Dev build: https://github.com/milkteamc/AutoTreeChop/releases/  
 ![bstats](https://bstats.org/signatures/bukkit/AutoTreeChop.svg)
 * * *
 
