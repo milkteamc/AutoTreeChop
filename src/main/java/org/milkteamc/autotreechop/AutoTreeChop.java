@@ -358,7 +358,6 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         return autoTreeChopAPI;
     }
 
-    // Add a getter for the Config instance
     public Config getPluginConfig() {
         return config;
     }

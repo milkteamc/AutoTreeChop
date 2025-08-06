@@ -58,6 +58,8 @@ defaultTreeChop: false
 respectUnbreaking: true
 # Play a block break sound when ATC breaking every block
 playBreakSound: true
+# This controls whether players can toggle AutoTreeChop by running "/atc" command
+enable-command-toggle: true
 # This controls whether players can toggle AutoTreeChop by sneaking (pressing shift)
 enable-sneak-toggle: false
 # Should plugin show a message when player is sneaking?
@@ -73,7 +75,8 @@ stopChoppingIfNotConnected: false
 # Stop chopping if the blocks are of different types
 stopChoppingIfDifferentTypes: false
 
-# Define which materials are log
+# Define which materials can be chop
+# You can add every leaves type or something else as you like
 # Fun fact: If you add "DIAMOND_ORE", this plugin can become an auto mining plugin, lol
 log-types:
   - OAK_LOG

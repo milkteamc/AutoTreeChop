@@ -43,6 +43,7 @@ public class Config {
     private boolean playBreakSound;
     private Set<Material> logTypes;
     private boolean sneakToggle;
+    private boolean commandToggle;
     private boolean sneakMessage;
 
 
@@ -111,6 +112,7 @@ public class Config {
         respectUnbreaking = config.getBoolean("respectUnbreaking");
         playBreakSound = config.getBoolean("playBreakSound");
         sneakToggle = config.getBoolean("enable-sneak-toggle");
+        commandToggle = config.getBoolean("enable-command-toggle");
         sneakMessage = config.getBoolean("sneak-message");
 
         // Load log types
@@ -120,7 +122,7 @@ public class Config {
                 .filter(Objects::nonNull)  // Filter out null materials (invalid names)
                 .collect(Collectors.toSet());
 
-        //Locale handling\
+        // Locale handling
         Object localeObj = config.get("locale");
         if (localeObj instanceof String) {
             this.locale = Locale.forLanguageTag((String) localeObj);
@@ -163,6 +165,7 @@ public class Config {
         defaultConfig.set("respectUnbreaking", true);
         defaultConfig.set("playBreakSound", true);
         defaultConfig.set("enable-sneak-toggle", false);
+        defaultConfig.set("enable-command-toggle", true);
         defaultConfig.set("sneak-message", false);
         defaultConfig.set("log-types", Arrays.asList("OAK_LOG", "SPRUCE_LOG", "BIRCH_LOG", "JUNGLE_LOG", "ACACIA_LOG", "DARK_OAK_LOG", "MANGROVE_LOG", "CHERRY_LOG"));
         return defaultConfig;
@@ -280,6 +283,10 @@ public class Config {
 
     public boolean getSneakToggle() {
         return sneakToggle;
+    }
+
+    public boolean getCommandToggle() {
+        return commandToggle;
     }
 
     public boolean getSneakMessage() {

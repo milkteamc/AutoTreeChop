@@ -92,6 +92,11 @@ public class Command implements CommandExecutor {
             return true;
         }
 
+        if (!config.getCommandToggle()) {
+            sendMessage(player, NO_PERMISSION_MESSAGE);
+            return true;
+        }
+
         toggleAutoTreeChop(player, player.getUniqueId());
         return true;
     }
