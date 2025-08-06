@@ -21,7 +21,7 @@ public class TreeReplantUtils {
      * Schedules a sapling replant at the given location after a delay
      * Called from TreeChopUtils after a log block is broken
      */
-    public static void scheduleReplant(Player player, Block brokenLogBlock, AutoTreeChop plugin, Config config,
+    public static void scheduleReplant(Player player, Block brokenLogBlock, Material originalLogType, AutoTreeChop plugin, Config config,
                                        boolean worldGuardEnabled, boolean residenceEnabled,
                                        boolean griefPreventionEnabled, boolean landsEnabled,
                                        LandsHook landsHook, ResidenceHook residenceHook,
@@ -33,9 +33,15 @@ public class TreeReplantUtils {
         }
 
         // Get the appropriate sapling type for this log
-        Material saplingType = config.getSaplingForLog(brokenLogBlock.getType());
+        Material saplingType = config.getSaplingForLog(originalLogType);
         if (saplingType == null) {
             return; // No sapling mapping found
+        }
+
+        // Only replant if this is likely the base of the tree (has soil directly below)
+        Block below = brokenLogBlock.getRelative(BlockFace.DOWN);
+        if (!isValidSoil(below.getType(), config)) {
+            return; // Not a base log, skip replanting
         }
 
         // Find a suitable location to plant the sapling
@@ -64,6 +70,7 @@ public class TreeReplantUtils {
 
         // Schedule the task based on configuration and server type
         long delayTicks = config.getReplantDelayTicks();
+
         if (AutoTreeChop.isFolia()) {
             plugin.getServer().getRegionScheduler().runDelayed(plugin, plantLocation,
                     (task) -> replantTask.run(), delayTicks);

@@ -58,14 +58,17 @@ public class TreeChopUtils {
         Bukkit.getPluginManager().callEvent(breakEvent);
 
         if (!breakEvent.isCancelled()) {
+
+            Material originalLogType = block.getType();
+
             // Break the block and update player stats
             block.breakNaturally();
 
-            // Schedule sapling replanting (ADD THIS SECTION)
             if (TreeReplantUtils.isReplantEnabledForPlayer(player, config)) {
                 TreeReplantUtils.scheduleReplant(
                         player,
                         block,
+                        originalLogType,
                         plugin,
                         config,
                         worldGuardEnabled,
