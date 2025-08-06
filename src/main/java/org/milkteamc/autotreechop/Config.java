@@ -42,7 +42,7 @@ public class Config {
     private boolean respectUnbreaking;
     private boolean playBreakSound;
     private Set<Material> logTypes;
-    private boolean senakToggle;
+    private boolean sneakToggle;
     private boolean sneakMessage;
 
 
@@ -110,7 +110,7 @@ public class Config {
         defaultTreeChop = config.getBoolean("defaultTreeChop");
         respectUnbreaking = config.getBoolean("respectUnbreaking");
         playBreakSound = config.getBoolean("playBreakSound");
-        senakToggle = config.getBoolean("enable-sneak-toggle");
+        sneakToggle = config.getBoolean("enable-sneak-toggle");
         sneakMessage = config.getBoolean("sneak-message");
 
         // Load log types
@@ -279,7 +279,7 @@ public class Config {
     }
 
     public boolean getSneakToggle() {
-        return senakToggle;
+        return sneakToggle;
     }
 
     public boolean getSneakMessage() {

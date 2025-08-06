@@ -329,11 +329,9 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         PlayerConfig playerConfig = getPlayerConfig(playerUUID);
 
         if (event.isSneaking()) {
-            // Player started sneaking - enable auto tree chop
             playerConfig.setAutoTreeChopEnabled(true);
             if (config.getSneakMessage()) { sendMessage(player, SNEAK_ENABLED_MESSAGE); }
         } else {
-            // Player stopped sneaking - disable auto tree chop
             playerConfig.setAutoTreeChopEnabled(false);
             if (config.getSneakMessage()) { sendMessage(player, SNEAK_DISABLED_MESSAGE); }
         }
