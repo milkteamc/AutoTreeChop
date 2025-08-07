@@ -89,6 +89,35 @@ log-types:
   - CHERRY_LOG
   - PALE_OAK_LOG
 
+# Leaf removal setting
+enable-leaf-removal: true
+# Delay after tree chopping, 20ticks = 1 second
+leaf-removal-delay-ticks: 40
+# Blocks around the original log to search for leaves
+leaf-removal-radius: 8
+# Whether removed leaves should drop items
+leaf-removal-drop-items: false
+# Show particle effects when removing leaves
+leaf-removal-visual-effects: true
+# Process leaf removal asynchronously
+leaf-removal-async: true
+# How many leaves to process at once (performance)
+leaf-removal-batch-size: 20
+# Whether leaf removal counts towards daily block limit
+leaf-removal-counts-towards-limit: false
+
+# Define which materials count as leaves for removal
+leaf-types:
+  - OAK_LEAVES
+  - BIRCH_LEAVES
+  - SPRUCE_LEAVES
+  - JUNGLE_LEAVES
+  - ACACIA_LEAVES
+  - DARK_OAK_LEAVES
+  - MANGROVE_LEAVES
+  - CHERRY_LEAVES
+  - PALE_OAK_LEAVES
+
 # Replanting setting
 # Enable automatic sapling replanting after tree chopping
 enable-auto-replant: true

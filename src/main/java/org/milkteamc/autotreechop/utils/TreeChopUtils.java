@@ -64,6 +64,13 @@ public class TreeChopUtils {
             // Break the block and update player stats
             block.breakNaturally();
 
+            LeafRemovalUtils.trackRemovedLog(block.getLocation(), player.getUniqueId().toString());
+
+            // Use this for debugging instead:
+            LeafRemovalUtils.processLeafRemoval(block, player, plugin, config, playerConfig,
+                    worldGuardEnabled, residenceEnabled, griefPreventionEnabled, landsEnabled,
+                    landsHook, residenceHook, griefPreventionHook, worldGuardHook);
+
             if (TreeReplantUtils.isReplantEnabledForPlayer(player, config)) {
                 TreeReplantUtils.scheduleReplant(
                         player,

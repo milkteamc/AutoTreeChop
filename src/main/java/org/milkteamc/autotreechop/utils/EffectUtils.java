@@ -32,4 +32,14 @@ public class EffectUtils {
         // Optional: Add some green dust particles to simulate plant growth
         player.getWorld().spawnParticle(Particle.REDSTONE, block.getLocation().add(0.5, 0.3, 0.5), 10, 0.2, 0.2, 0.2, 0, new Particle.DustOptions(Color.GREEN, 0.8f));
     }
+
+    public static void showLeafRemovalEffect(Player player, Block block) {
+        // Show brown/orange particles to represent decaying leaves
+        player.getWorld().spawnParticle(Particle.REDSTONE, block.getLocation().add(0.5, 0.5, 0.5),
+                15, 0.3, 0.3, 0.3, 0, new Particle.DustOptions(Color.fromRGB(139, 69, 19), 0.8f));
+
+        // Add some falling leaf-like particles
+        player.getWorld().spawnParticle(Particle.BLOCK_CRACK, block.getLocation().add(0.5, 0.8, 0.5),
+                10, 0.2, 0.1, 0.2, 0.1, block.getBlockData());
+    }
 }

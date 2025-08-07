@@ -24,6 +24,9 @@ permissions:
   autotreechop.replant:
     description: Allows auto-replanting of saplings
     default: true
+  autotreechop.leaves:
+    description: Allows use of automatic leaf removal
+    default: true
   autotreechop.vip:
     description: VIP permission can ignore all limit.
     default: op

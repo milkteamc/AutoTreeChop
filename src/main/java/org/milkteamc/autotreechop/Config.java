@@ -52,6 +52,15 @@ public class Config {
     private boolean replantVisualEffect;
     private Map<Material, Material> logSaplingMapping;
     private Set<Material> validSoilTypes;
+    private boolean leafRemovalEnabled;
+    private long leafRemovalDelayTicks;
+    private int leafRemovalRadius;
+    private boolean leafRemovalDropItems;
+    private boolean leafRemovalVisualEffects;
+    private boolean leafRemovalAsync;
+    private int leafRemovalBatchSize;
+    private boolean leafRemovalCountsTowardsLimit;
+    private Set<Material> leafTypes;
 
 
     public Config(AutoTreeChop plugin) {
@@ -125,6 +134,21 @@ public class Config {
         replantDelayTicks = config.getLong("replant-delay-ticks");
         requireSaplingInInventory = config.getBoolean("require-sapling-in-inventory");
         replantVisualEffect = config.getBoolean("replant-visual-effect");
+        leafRemovalEnabled = config.getBoolean("enable-leaf-removal");
+        leafRemovalDelayTicks = config.getLong("leaf-removal-delay-ticks");
+        leafRemovalRadius = config.getInt("leaf-removal-radius");
+        leafRemovalDropItems = config.getBoolean("leaf-removal-drop-items");
+        leafRemovalVisualEffects = config.getBoolean("leaf-removal-visual-effects");
+        leafRemovalAsync = config.getBoolean("leaf-removal-async");
+        leafRemovalBatchSize = config.getInt("leaf-removal-batch-size");
+        leafRemovalCountsTowardsLimit = config.getBoolean("leaf-removal-counts-towards-limit");
+        // Load leaf types
+        List<String> leafTypeStrings = config.getStringList("leaf-types");
+        leafTypes = leafTypeStrings.stream()
+                .map(Material::getMaterial)
+                .filter(Objects::nonNull)  // Filter out null materials (invalid names)
+                .collect(Collectors.toSet());
+
         List<String> soilTypeStrings = config.getStringList("valid-soil-types");
 
         validSoilTypes = soilTypeStrings.stream()
@@ -214,6 +238,17 @@ public class Config {
         logSaplingSection.set("MANGROVE_LOG", "MANGROVE_PROPAGULE");
         logSaplingSection.set("CHERRY_LOG", "CHERRY_SAPLING");
         logSaplingSection.set("PALE_OAK_LOG", "PALE_OAK_SAPLING");
+
+        defaultConfig.set("enable-leaf-removal", true);
+        defaultConfig.set("leaf-removal-delay-ticks", 40L);
+        defaultConfig.set("leaf-removal-radius", 8);
+        defaultConfig.set("leaf-removal-drop-items", false);
+        defaultConfig.set("leaf-removal-visual-effects", true);
+        defaultConfig.set("leaf-removal-async", true);
+        defaultConfig.set("leaf-removal-batch-size", 20);
+        defaultConfig.set("leaf-removal-counts-towards-limit", false);
+        defaultConfig.set("leaf-types", Arrays.asList("OAK_LEAVES", "SPRUCE_LEAVES", "BIRCH_LEAVES", "JUNGLE_LEAVES",
+                "ACACIA_LEAVES", "DARK_OAK_LEAVES", "MANGROVE_LEAVES", "CHERRY_LEAVES", "PALE_OAK_LEAVES"));
         return defaultConfig;
     }
 
@@ -374,5 +409,41 @@ public class Config {
      */
     public Material getSaplingForLog(Material logType) {
         return logSaplingMapping.get(logType);
+    }
+
+    public boolean isLeafRemovalEnabled() {
+        return leafRemovalEnabled;
+    }
+
+    public long getLeafRemovalDelayTicks() {
+        return leafRemovalDelayTicks;
+    }
+
+    public int getLeafRemovalRadius() {
+        return leafRemovalRadius;
+    }
+
+    public boolean getLeafRemovalDropItems() {
+        return leafRemovalDropItems;
+    }
+
+    public boolean getLeafRemovalVisualEffects() {
+        return leafRemovalVisualEffects;
+    }
+
+    public boolean isLeafRemovalAsync() {
+        return leafRemovalAsync;
+    }
+
+    public int getLeafRemovalBatchSize() {
+        return leafRemovalBatchSize;
+    }
+
+    public boolean getLeafRemovalCountsTowardsLimit() {
+        return leafRemovalCountsTowardsLimit;
+    }
+
+    public Set<Material> getLeafTypes() {
+        return leafTypes;
     }
 }
