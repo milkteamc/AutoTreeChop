@@ -66,7 +66,6 @@ public class TreeChopUtils {
 
             LeafRemovalUtils.trackRemovedLog(block.getLocation(), player.getUniqueId().toString());
 
-            // Use this for debugging instead:
             LeafRemovalUtils.processLeafRemoval(block, player, plugin, config, playerConfig,
                     worldGuardEnabled, residenceEnabled, griefPreventionEnabled, landsEnabled,
                     landsHook, residenceHook, griefPreventionHook, worldGuardHook);

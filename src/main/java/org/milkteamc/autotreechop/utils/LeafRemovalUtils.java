@@ -292,26 +292,98 @@ public class LeafRemovalUtils {
     }
 
     private static boolean isOrphanedLeaf(Block leafBlock, Config config, Set<Location> removedLogs) {
-        Location leafLoc = leafBlock.getLocation();
-        int checkRadius = 4; // Reduced from 6 to 4 for less strict checking
+        String mode = config.getLeafRemovalMode().toLowerCase();
 
-        // Check if there are any REMAINING log blocks within the leaf decay distance
+        switch (mode) {
+            case "aggressive":
+                // Remove ALL leaves within radius - most thorough
+                return true;
+
+            case "radius":
+                // Remove leaves that don't have logs within 4 blocks (simple distance check)
+                return !hasNearbyActiveLog(leafBlock.getLocation(), config, removedLogs, 4);
+
+            case "smart":
+            default:
+                // Smart detection with pathfinding (current approach)
+                Location leafLoc = leafBlock.getLocation();
+
+                // Strategy 1: Check for nearby logs that weren't removed
+                if (!hasNearbyActiveLog(leafLoc, config, removedLogs, 6)) {
+                    return true; // No active logs nearby - definitely orphaned
+                }
+
+                // Strategy 2: Advanced - check if leaf is connected to remaining logs via other leaves
+                if (!isConnectedToActiveLog(leafBlock, config, removedLogs, new HashSet<>(), 0)) {
+                    return true; // Not connected to any remaining logs
+                }
+
+                return false; // Connected to remaining logs - keep it
+        }
+    }
+
+    // Updated helper method with configurable radius:
+    private static boolean hasNearbyActiveLog(Location leafLoc, Config config, Set<Location> removedLogs, int checkRadius) {
         for (int x = -checkRadius; x <= checkRadius; x++) {
             for (int y = -checkRadius; y <= checkRadius; y++) {
                 for (int z = -checkRadius; z <= checkRadius; z++) {
+                    if (x == 0 && y == 0 && z == 0) continue; // Skip the leaf itself
+
                     Location checkLoc = leafLoc.clone().add(x, y, z);
                     Block checkBlock = checkLoc.getBlock();
 
                     // If there's a log here AND it wasn't removed in this session
                     if (TreeChopUtils.isLog(checkBlock.getType(), config) &&
                             !removedLogs.contains(checkLoc)) {
-                        return false; // Not orphaned - there's still a log nearby
+                        return true; // Found an active log nearby
                     }
                 }
             }
         }
 
-        return true; // No remaining logs nearby - this leaf is orphaned
+        return false; // No active logs found
+    }
+
+    private static boolean isConnectedToActiveLog(Block startBlock, Config config, Set<Location> removedLogs, Set<Location> visited, int depth) {
+        // Prevent infinite recursion and limit search depth for performance
+        if (depth > 8 || visited.size() > 100) {
+            return false;
+        }
+
+        Location startLoc = startBlock.getLocation();
+
+        // Already visited this location
+        if (visited.contains(startLoc)) {
+            return false;
+        }
+        visited.add(startLoc);
+
+        // Check immediate surroundings (6 directions + diagonals)
+        for (int x = -1; x <= 1; x++) {
+            for (int y = -1; y <= 1; y++) {
+                for (int z = -1; z <= 1; z++) {
+                    if (x == 0 && y == 0 && z == 0) continue;
+
+                    Location checkLoc = startLoc.clone().add(x, y, z);
+                    Block checkBlock = checkLoc.getBlock();
+                    Material checkType = checkBlock.getType();
+
+                    // Found an active log - connected!
+                    if (TreeChopUtils.isLog(checkType, config) && !removedLogs.contains(checkLoc)) {
+                        return true;
+                    }
+
+                    // Found another leaf - continue searching through it
+                    if (isLeafBlock(checkType, config) && !visited.contains(checkLoc)) {
+                        if (isConnectedToActiveLog(checkBlock, config, removedLogs, visited, depth + 1)) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+
+        return false; // No connection to active logs found
     }
 
     public static boolean isLeafBlock(Material material, Config config) {

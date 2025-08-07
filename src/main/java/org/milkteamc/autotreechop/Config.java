@@ -60,6 +60,7 @@ public class Config {
     private boolean leafRemovalAsync;
     private int leafRemovalBatchSize;
     private boolean leafRemovalCountsTowardsLimit;
+    private String leafRemovalMode;
     private Set<Material> leafTypes;
 
 
@@ -142,6 +143,7 @@ public class Config {
         leafRemovalAsync = config.getBoolean("leaf-removal-async");
         leafRemovalBatchSize = config.getInt("leaf-removal-batch-size");
         leafRemovalCountsTowardsLimit = config.getBoolean("leaf-removal-counts-towards-limit");
+        leafRemovalMode = config.getString("leaf-removal-mode", "smart");
         // Load leaf types
         List<String> leafTypeStrings = config.getStringList("leaf-types");
         leafTypes = leafTypeStrings.stream()
@@ -249,6 +251,7 @@ public class Config {
         defaultConfig.set("leaf-removal-counts-towards-limit", false);
         defaultConfig.set("leaf-types", Arrays.asList("OAK_LEAVES", "SPRUCE_LEAVES", "BIRCH_LEAVES", "JUNGLE_LEAVES",
                 "ACACIA_LEAVES", "DARK_OAK_LEAVES", "MANGROVE_LEAVES", "CHERRY_LEAVES", "PALE_OAK_LEAVES"));
+        defaultConfig.set("leaf-removal-mode", "smart");
         return defaultConfig;
     }
 
@@ -445,5 +448,9 @@ public class Config {
 
     public Set<Material> getLeafTypes() {
         return leafTypes;
+    }
+
+    public String getLeafRemovalMode() {
+        return leafRemovalMode;
     }
 }
