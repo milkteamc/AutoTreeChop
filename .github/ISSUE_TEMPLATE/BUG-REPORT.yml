@@ -18,11 +18,19 @@ body:
     attributes:
       label: "Reproduction steps"
       description: Please enter an explicit description of your issue
-      value: |
-        1. Go to '...'
-        2. Click on '....'
-        3. Scroll down to '....'
+      placeholder: |
+        1. ....
+        2. ....
+        3. ....
         4. See error
+      render: bash
+    validations:
+      required: true
+  - type: textarea
+    id: config
+    attributes:
+      label: "Your Config"
+      description: Please copy and paste your `plugins/AutoTreeChop/config.yml` file
       render: bash
     validations:
       required: true
@@ -69,4 +77,4 @@ body:
         etc.
       render: bash
     validations:
-      required: true
+      required: false
