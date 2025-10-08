@@ -73,7 +73,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
     private static final String SPIGOT_RESOURCE_ID = "113071";
     private static final List<String> SUPPORTED_VERSIONS = Arrays.asList(
-            "1.21.8", "1.21.7", "1.21.6", "1.21.5", "1.21.4", "1.21.3", "1.21.2", "1.21.1", "1.21",
+            "1.21.10", "1.21.9", "1.21.8", "1.21.7", "1.21.6", "1.21.5", "1.21.4", "1.21.3", "1.21.2", "1.21.1", "1.21",
             "1.20.6", "1.20.5", "1.20.4", "1.20.3", "1.20.2", "1.20.1", "1.20",
             "1.19.4", "1.19.3", "1.19.2", "1.19.1", "1.19",
             "1.18.2", "1.18.1", "1.18",
@@ -301,8 +301,6 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             checkedLocations.clear();
             TreeChopUtils.chopTree(block, player, config.isStopChoppingIfNotConnected(), tool, location, material, blockData, this, processingLocations, checkedLocations, config, playerConfig, worldGuardEnabled, residenceEnabled, griefPreventionEnabled, landsEnabled, landsHook, residenceHook, griefPreventionHook, worldGuardHook); // Pass config values
             checkedLocations.clear();
-            playerConfig.incrementDailyUses();
-            cooldownManager.setCooldown(player, playerUUID, config); // Pass config values
         }
     }
 
@@ -359,6 +357,10 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
     public AutoTreeChopAPI getAutoTreeChopAPI() {
         return autoTreeChopAPI;
+    }
+
+    public CooldownManager getCooldownManager() {
+        return cooldownManager;
     }
 
     public Config getPluginConfig() {

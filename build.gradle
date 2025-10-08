@@ -1,15 +1,16 @@
 plugins {
     id 'java'
     id 'maven-publish'
-    id 'com.gradleup.shadow' version '8.3.8'
+    id 'com.gradleup.shadow' version '9.0.0'
     id 'xyz.jpenilla.run-paper' version '2.3.1'
     id 'com.modrinth.minotaur' version '2.+'
 }
 
 group = 'org.milkteamc'
-version = '1.7.0'
+version = '1.7.1-SNAPSHOT'
 
 repositories {
+    mavenLocal()
     mavenCentral()
     maven {
         name = "spigotmc-repo"
@@ -35,7 +36,7 @@ repositories {
         url = 'https://repo.xenondevs.xyz/releases'
     }
     maven {
-        url = "https://repo.jeff-media.com/public/"
+        url = "https://maven.paulem.net/releases"
     }
     maven {
         url = "https://maven.enginehub.org/repo/"
@@ -108,7 +109,7 @@ tasks.jar {
 }
 
 tasks.runServer {
-    minecraftVersion("1.21.8")
+    minecraftVersion("1.21.10")
 }
 
 def gitHash = 'unknown'
@@ -139,7 +140,7 @@ Report any issues to our [GitHub](https://github.com/milkteamc/AutoTreeChop/issu
             "1.18", "1.18.1", "1.18.2",
             "1.19", "1.19.1", "1.19.2", "1.19.3", "1.19.4",
             "1.20", "1.20.1", "1.20.2", "1.20.3", "1.20.4", "1.20.5", "1.20.6",
-            "1.21", "1.21.1", "1.21.2", "1.21.3", "1.21.4", "1.21.5", "1.21.6", "1.21.7", "1.21.8"
+            "1.21", "1.21.1", "1.21.2", "1.21.3", "1.21.4", "1.21.5", "1.21.6", "1.21.7", "1.21.8", "1.21.9", "1.21.10"
     ]
     loaders = ["paper", "purpur", "folia", "spigot", "bukkit"]
 }

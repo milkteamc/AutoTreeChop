@@ -25,7 +25,7 @@ cooldownTime: 5
 
 # VIP setting
 # If disable, VIP have unlimited usage
-limitVipUsage: true
+limitVipUsage: false
 # Will only work when you enable limitVipUsage
 vip-uses-per-day: 100
 vip-blocks-per-day: 1000
@@ -64,6 +64,15 @@ enable-command-toggle: true
 enable-sneak-toggle: false
 # Should plugin show a message when player is sneaking?
 sneak-message: false
+# How many blocks to break per tick
+chop-batch-size: 50
+# Maximum tree size allowed (blocks)
+max-tree-size: 500
+# Maximum blocks to check during tree discovery
+max-discovery-blocks: 1000
+# Call BlockBreakEvent for each block
+# true = Better plugin compatibility
+call-block-break-event: true
 
 # Protection plugins setting
 # If you are using Residence, you can set which Flag players have access to AutoTreeChop in residence.
@@ -95,7 +104,7 @@ enable-leaf-removal: true
 # and aggressive (guaranteed clean but may remove leaves from other trees)
 leaf-removal-mode: smart
 # Delay after tree chopping, 20ticks = 1 second
-leaf-removal-delay-ticks: 40
+leaf-removal-delay-ticks: 10
 # Blocks around the original log to search for leaves
 leaf-removal-radius: 8
 # Whether removed leaves should drop items
@@ -124,7 +133,7 @@ leaf-types:
 # Enable automatic sapling replanting after tree chopping
 enable-auto-replant: true
 # Delay before planting sapling (in ticks, 20 ticks = 1 second)
-replant-delay-ticks: 20
+replant-delay-ticks: 10
 # If true, players must have saplings in inventory to replant
 # If false, saplings are automatically provided
 require-sapling-in-inventory: false
