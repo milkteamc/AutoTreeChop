@@ -17,85 +17,78 @@ import org.milkteamc.autotreechop.hooks.WorldGuardHook;
 
 public class TreeReplantUtils {
 
-    /**
-     * Schedules a sapling replant at the given location after a delay
-     * Called from TreeChopUtils after a log block is broken
-     */
-    public static void scheduleReplant(Player player, Block brokenLogBlock, Material originalLogType, AutoTreeChop plugin, Config config,
+    public static void scheduleReplant(Player player, Block brokenLogBlock, Material originalLogType,
+                                       AutoTreeChop plugin, Config config,
                                        boolean worldGuardEnabled, boolean residenceEnabled,
                                        boolean griefPreventionEnabled, boolean landsEnabled,
                                        LandsHook landsHook, ResidenceHook residenceHook,
                                        GriefPreventionHook griefPreventionHook, WorldGuardHook worldGuardHook) {
 
-        // Check if auto-replant is enabled
         if (!config.isAutoReplantEnabled()) {
             return;
         }
 
-        // Get the appropriate sapling type for this log
         Material saplingType = config.getSaplingForLog(originalLogType);
         if (saplingType == null) {
-            return; // No sapling mapping found
+            return;
         }
 
-        // Only replant if this is likely the base of the tree (has soil directly below)
+        // Store the original location for later use
+        Location originalLocation = brokenLogBlock.getLocation().clone();
+
+
+        // Check what's below the original location
         Block below = brokenLogBlock.getRelative(BlockFace.DOWN);
-        if (!isValidSoil(below.getType(), config)) {
-            return; // Not a base log, skip replanting
-        }
 
-        // Find a suitable location to plant the sapling
-        Location plantLocation = findSuitablePlantLocation(brokenLogBlock.getLocation(), config);
-        if (plantLocation == null) {
-            return; // No suitable location found
-        }
-
-        // Schedule the replanting task
         Runnable replantTask = () -> {
-            // Double-check permissions at plant time (in case they changed)
+            // At replant time, re-evaluate the location since blocks have changed
+            Location plantLocation = findSuitablePlantLocation(originalLocation, config, plugin);
+
+            if (plantLocation == null) {
+                return;
+            }
+
+
+            // Double-check permissions at plant time
             if (!hasReplantPermission(player, plantLocation, worldGuardEnabled, residenceEnabled,
                     griefPreventionEnabled, landsEnabled, landsHook, residenceHook,
                     griefPreventionHook, worldGuardHook)) {
                 return;
             }
 
-            // Attempt to plant the sapling
-            boolean planted = plantSapling(player, plantLocation, saplingType, config);
+            boolean planted = plantSapling(player, plantLocation, saplingType, config, plugin);
 
-            if (planted && config.getReplantVisualEffect()) {
-                // Show visual effect for successful replanting
-                EffectUtils.showReplantEffect(player, plantLocation.getBlock());
+            if (planted) {
+                if (config.getReplantVisualEffect()) {
+                    EffectUtils.showReplantEffect(player, plantLocation.getBlock());
+                }
+            } else {
             }
         };
 
-        // Schedule the task based on configuration and server type
         long delayTicks = config.getReplantDelayTicks();
 
         if (AutoTreeChop.isFolia()) {
-            plugin.getServer().getRegionScheduler().runDelayed(plugin, plantLocation,
+            plugin.getServer().getRegionScheduler().runDelayed(plugin, originalLocation,
                     (task) -> replantTask.run(), delayTicks);
         } else {
             Bukkit.getScheduler().runTaskLater(plugin, replantTask, delayTicks);
         }
     }
 
-    /**
-     * Finds a suitable location to plant a sapling near the original log location
-     * Checks for valid soil and clear space above
-     */
-    private static Location findSuitablePlantLocation(Location originalLocation, Config config) {
+    private static Location findSuitablePlantLocation(Location originalLocation, Config config, AutoTreeChop plugin) {
         Block originalBlock = originalLocation.getBlock();
 
-        // First, check if we can plant at the original location
+
         Block belowOriginal = originalBlock.getRelative(BlockFace.DOWN);
+
         if (isValidSoil(belowOriginal.getType(), config) && isClearForSapling(originalBlock)) {
             return originalLocation;
         }
 
-        // Search in a 3x3 area around the original location
         for (int x = -1; x <= 1; x++) {
             for (int z = -1; z <= 1; z++) {
-                if (x == 0 && z == 0) continue; // Skip center (already checked)
+                if (x == 0 && z == 0) continue;
 
                 Block checkBlock = originalBlock.getRelative(x, 0, z);
                 Block belowCheck = checkBlock.getRelative(BlockFace.DOWN);
@@ -106,53 +99,150 @@ public class TreeReplantUtils {
             }
         }
 
-        return null; // No suitable location found
+        for (int x = -2; x <= 2; x++) {
+            for (int z = -2; z <= 2; z++) {
+                if (x == 0 && z == 0) continue;
+
+                // Start from original Y and search downward
+                for (int yOffset = 0; yOffset >= -3; yOffset--) {
+                    Block checkBlock = originalBlock.getRelative(x, yOffset, z);
+                    Block belowCheck = checkBlock.getRelative(BlockFace.DOWN);
+
+                    // Make sure we're not going into the ground
+                    if (belowCheck.getType().isSolid() &&
+                            isValidSoil(belowCheck.getType(), config) &&
+                            isClearForSapling(checkBlock)) {
+                        return checkBlock.getLocation();
+                    }
+                }
+            }
+        }
+
+        for (int yOffset = 0; yOffset >= -10; yOffset--) {
+            Block checkBlock = originalBlock.getRelative(0, yOffset, 0);
+            Block belowCheck = checkBlock.getRelative(BlockFace.DOWN);
+
+            if (belowCheck.getType().isSolid() &&
+                    isValidSoil(belowCheck.getType(), config) &&
+                    (checkBlock.getType() == Material.AIR || isClearForSapling(checkBlock))) {
+                return checkBlock.getLocation();
+            }
+        }
+
+        return null;
     }
 
-    /**
-     * Checks if a block type is valid soil for sapling planting
-     */
     private static boolean isValidSoil(Material material, Config config) {
-        return config.getValidSoilTypes().contains(material);
+        if (config.getValidSoilTypes().contains(material)) {
+            return true;
+        }
+
+        switch (material) {
+            case DIRT:
+            case GRASS_BLOCK:
+            case PODZOL:
+            case COARSE_DIRT:
+            case ROOTED_DIRT:
+            case MYCELIUM:
+            case FARMLAND:
+            case MOSS_BLOCK:
+            case MUD:
+            case MUDDY_MANGROVE_ROOTS:
+                return true;
+            default:
+                return false;
+        }
     }
 
-    /**
-     * Checks if a location is clear for sapling planting (air or replaceable blocks)
-     */
     private static boolean isClearForSapling(Block block) {
         Material type = block.getType();
-        return type == Material.AIR ||
-                type == Material.SHORT_GRASS ||
-                type == Material.TALL_GRASS ||
-                type == Material.FERN ||
-                type == Material.LARGE_FERN ||
-                type == Material.DEAD_BUSH;
+
+        // Air is always clear
+        if (type == Material.AIR) {
+            return true;
+        }
+
+        // Check if it's the log itself (happens during scheduled replant)
+        if (type.toString().endsWith("_LOG")) {
+            return true;
+        }
+
+        // Replaceable vegetation and small plants
+        switch (type) {
+            case SHORT_GRASS:
+            case TALL_GRASS:
+            case FERN:
+            case LARGE_FERN:
+            case DEAD_BUSH:
+            case DANDELION:
+            case POPPY:
+            case BLUE_ORCHID:
+            case ALLIUM:
+            case AZURE_BLUET:
+            case RED_TULIP:
+            case ORANGE_TULIP:
+            case WHITE_TULIP:
+            case PINK_TULIP:
+            case OXEYE_DAISY:
+            case CORNFLOWER:
+            case LILY_OF_THE_VALLEY:
+            case WITHER_ROSE:
+            case SUNFLOWER:
+            case LILAC:
+            case ROSE_BUSH:
+            case PEONY:
+            case WHEAT:
+            case CARROTS:
+            case POTATOES:
+            case BEETROOTS:
+            case SWEET_BERRY_BUSH:
+            case BROWN_MUSHROOM:
+            case RED_MUSHROOM:
+            case SUGAR_CANE:
+            case VINE:
+            case SNOW:
+                return true;
+            default:
+                // Check for any grass or flower variants
+                String name = type.toString();
+                return name.endsWith("_GRASS") ||
+                        name.contains("FLOWER") ||
+                        name.contains("SAPLING") ||
+                        name.contains("LEAVES");
+        }
     }
 
-    /**
-     * Attempts to plant a sapling at the specified location
-     * Handles inventory consumption if required
-     */
-    private static boolean plantSapling(Player player, Location location, Material saplingType, Config config) {
+    private static boolean plantSapling(Player player, Location location, Material saplingType,
+                                        Config config, AutoTreeChop plugin) {
         Block block = location.getBlock();
 
-        // Check if player needs to have sapling in inventory
+        Block below = block.getRelative(BlockFace.DOWN);
+
+        if (!isClearForSapling(block)) {
+            return false;
+        }
+
+        if (!isValidSoil(below.getType(), config)) {
+            return false;
+        }
+
+        // Check inventory requirement
         if (config.getRequireSaplingInInventory()) {
             if (!consumeSaplingFromInventory(player, saplingType)) {
-                // Player doesn't have the required sapling
                 return false;
             }
         }
 
         // Place the sapling
-        block.setType(saplingType);
-        return true;
+        try {
+            block.setType(saplingType);
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
     }
 
-    /**
-     * Consumes one sapling of the specified type from player's inventory
-     * Returns true if successful, false if player doesn't have the sapling
-     */
     private static boolean consumeSaplingFromInventory(Player player, Material saplingType) {
         PlayerInventory inventory = player.getInventory();
         ItemStack saplingStack = new ItemStack(saplingType, 1);
@@ -164,10 +254,6 @@ public class TreeReplantUtils {
         return false;
     }
 
-    /**
-     * Checks if the player has permission to replant at the given location
-     * Uses the same protection plugin checks as TreeChopUtils
-     */
     private static boolean hasReplantPermission(Player player, Location location,
                                                 boolean worldGuardEnabled, boolean residenceEnabled,
                                                 boolean griefPreventionEnabled, boolean landsEnabled,
@@ -175,20 +261,13 @@ public class TreeReplantUtils {
                                                 GriefPreventionHook griefPreventionHook,
                                                 WorldGuardHook worldGuardHook) {
 
-        // Use the same permission checks as TreeChopUtils
         return TreeChopUtils.resCheck(player, location, residenceEnabled, residenceHook) &&
                 TreeChopUtils.landsCheck(player, location, landsEnabled, landsHook) &&
                 TreeChopUtils.gfCheck(player, location, griefPreventionEnabled, griefPreventionHook) &&
                 TreeChopUtils.wgCheck(player, location, worldGuardEnabled, worldGuardHook);
     }
 
-    /**
-     * Checks if auto-replant is enabled for the given player
-     * Can be extended to add per-player replant settings
-     */
     public static boolean isReplantEnabledForPlayer(Player player, Config config) {
-        // Basic permission check - can be extended with per-player settings
-        return config.isAutoReplantEnabled() &&
-                player.hasPermission("autotreechop.replant");
+        return config.isAutoReplantEnabled() && player.hasPermission("autotreechop.replant");
     }
 }

@@ -64,7 +64,6 @@ public class TreeChopUtils {
                     landsEnabled, landsHook, residenceHook, griefPreventionHook, worldGuardHook);
 
             Runnable validationTask = () -> {
-                // Check if tree discovery was successful
                 if (treeBlocks.isEmpty()) {
                     processingLocations.remove(block.getLocation());
                     return;
@@ -76,7 +75,6 @@ public class TreeChopUtils {
                     return;
                 }
 
-                // Check player limits
                 if (!PermissionUtils.hasVipBlock(player, playerConfig, config)) {
                     if (playerConfig.getDailyBlocksBroken() + treeBlocks.size() > config.getMaxBlocksPerDay()) {
                         sendMessage(player, AutoTreeChop.HIT_MAX_BLOCK_MESSAGE);
@@ -85,14 +83,13 @@ public class TreeChopUtils {
                     }
                 }
 
-                // Check tool durability
                 if (config.isToolDamage() && !hasEnoughDurability(tool, treeBlocks.size(), config)) {
                     processingLocations.remove(block.getLocation());
                     return;
                 }
 
                 playerConfig.incrementDailyUses();
-                plugin.getCooldownManager().setCooldown(player, player.getUniqueId(), config);
+                // REMOVED: cooldown set here - moved to end of processing
 
                 processingLocations.addAll(treeBlocks);
 
@@ -102,7 +99,6 @@ public class TreeChopUtils {
                         griefPreventionHook, worldGuardHook, block);
             };
 
-            // Schedule validation on main thread
             if (AutoTreeChop.isFolia()) {
                 plugin.getServer().getRegionScheduler().run(plugin, location, task -> validationTask.run());
             } else {
@@ -110,7 +106,6 @@ public class TreeChopUtils {
             }
         };
 
-        // Execute discovery task
         if (config.isChopTreeAsync() && !AutoTreeChop.isFolia()) {
             Bukkit.getScheduler().runTaskAsynchronously(plugin, discoveryTask);
         } else {
@@ -118,9 +113,6 @@ public class TreeChopUtils {
         }
     }
 
-    /**
-     * Phase 1: Discover all blocks in the tree using flood-fill algorithm
-     */
     private static void discoverTree(Block startBlock, Set<Location> treeBlocks, Config config,
                                      boolean connectedBlocks, Player player, boolean worldGuardEnabled,
                                      boolean residenceEnabled, boolean griefPreventionEnabled,
@@ -230,11 +222,8 @@ public class TreeChopUtils {
             }
 
             Material originalLogType = block.getType();
-
-            // Store first occurrence of each log type for replanting
             logTypesForReplant.putIfAbsent(originalLogType, loc);
 
-            // Call BlockBreakEvent if configured
             if (config.isCallBlockBreakEvent()) {
                 BlockBreakEvent breakEvent = new BlockBreakEvent(block, player);
                 Bukkit.getPluginManager().callEvent(breakEvent);
@@ -244,34 +233,25 @@ public class TreeChopUtils {
                 }
             }
 
-            // Break the block
             block.breakNaturally();
-
-            // Track for leaf removal
             LeafRemovalUtils.trackRemovedLog(loc, player.getUniqueId().toString());
 
-            // Play sound
             if (config.getPlayBreakSound()) {
                 block.getWorld().playSound(loc, org.bukkit.Sound.BLOCK_WOOD_BREAK, 1.0f, 1.0f);
             }
 
-            // Increment counter
             playerConfig.incrementDailyBlocksBroken();
         }
 
-        // If this is the last batch, do cleanup
         if (isLastBatch) {
-            // Apply tool damage once for all blocks
             if (config.isToolDamage()) {
                 applyToolDamage(tool, player, totalBlocks, config);
             }
 
-            // Process leaf removal for the original block
             LeafRemovalUtils.processLeafRemoval(originalBlock, player, plugin, config, playerConfig,
                     worldGuardEnabled, residenceEnabled, griefPreventionEnabled, landsEnabled,
                     landsHook, residenceHook, griefPreventionHook, worldGuardHook);
 
-            // Process replanting for each unique log type
             if (TreeReplantUtils.isReplantEnabledForPlayer(player, config)) {
                 for (Map.Entry<Material, Location> entry : logTypesForReplant.entrySet()) {
                     Block blockToReplant = entry.getValue().getBlock();
@@ -293,10 +273,10 @@ public class TreeChopUtils {
                 }
             }
 
-            // Remove from processing
+            plugin.getCooldownManager().setCooldown(player, player.getUniqueId(), config);
+
             blockList.forEach(processingLocations::remove);
         } else {
-            // Schedule next batch
             Runnable nextBatchTask = () -> processNextBatch(blockList, endIndex, batchSize, player, tool,
                     plugin, config, playerConfig, processingLocations, worldGuardEnabled, residenceEnabled,
                     griefPreventionEnabled, landsEnabled, landsHook, residenceHook, griefPreventionHook,
