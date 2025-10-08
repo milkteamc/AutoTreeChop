@@ -25,7 +25,7 @@ cooldownTime: 5
 
 # VIP setting
 # If disable, VIP have unlimited usage
-limitVipUsage: true
+limitVipUsage: false
 # Will only work when you enable limitVipUsage
 vip-uses-per-day: 100
 vip-blocks-per-day: 1000
