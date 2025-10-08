@@ -64,6 +64,15 @@ enable-command-toggle: true
 enable-sneak-toggle: false
 # Should plugin show a message when player is sneaking?
 sneak-message: false
+# How many blocks to break per tick
+chop-batch-size: 50
+# Maximum tree size allowed (blocks)
+max-tree-size: 500
+# Maximum blocks to check during tree discovery
+max-discovery-blocks: 1000
+# Call BlockBreakEvent for each block
+# true = Better plugin compatibility
+call-block-break-event: true
 
 # Protection plugins setting
 # If you are using Residence, you can set which Flag players have access to AutoTreeChop in residence.

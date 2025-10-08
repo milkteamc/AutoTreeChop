@@ -63,6 +63,10 @@ public class Config {
     private String leafRemovalMode;
     private Set<Material> leafTypes;
 
+    private int chopBatchSize;
+    private int maxTreeSize;
+    private int maxDiscoveryBlocks;
+    private boolean callBlockBreakEvent;
 
     public Config(AutoTreeChop plugin) {
         this.plugin = plugin;
@@ -99,7 +103,6 @@ public class Config {
         } catch (IOException e) {
             plugin.getLogger().warning("An error occurred while saving config: " + e);
         }
-
 
         // Load values from config
         visualEffect = config.getBoolean("visual-effect");
@@ -144,15 +147,20 @@ public class Config {
         leafRemovalBatchSize = config.getInt("leaf-removal-batch-size");
         leafRemovalCountsTowardsLimit = config.getBoolean("leaf-removal-counts-towards-limit");
         leafRemovalMode = config.getString("leaf-removal-mode", "smart");
+
+        chopBatchSize = config.getInt("chop-batch-size", 50);
+        maxTreeSize = config.getInt("max-tree-size", 500);
+        maxDiscoveryBlocks = config.getInt("max-discovery-blocks", 1000);
+        callBlockBreakEvent = config.getBoolean("call-block-break-event", true);
+
         // Load leaf types
         List<String> leafTypeStrings = config.getStringList("leaf-types");
         leafTypes = leafTypeStrings.stream()
                 .map(Material::getMaterial)
-                .filter(Objects::nonNull)  // Filter out null materials (invalid names)
+                .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
         List<String> soilTypeStrings = config.getStringList("valid-soil-types");
-
         validSoilTypes = soilTypeStrings.stream()
                 .map(Material::getMaterial)
                 .filter(Objects::nonNull)
@@ -174,7 +182,7 @@ public class Config {
         List<String> logTypeStrings = config.getStringList("log-types");
         logTypes = logTypeStrings.stream()
                 .map(Material::getMaterial)
-                .filter(Objects::nonNull)  // Filter out null materials (invalid names)
+                .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
         // Locale handling
@@ -184,11 +192,10 @@ public class Config {
         } else if (localeObj instanceof Locale) {
             this.locale = (Locale) localeObj;
         } else {
-            this.locale = Locale.ENGLISH; // Default to English if invalid
-            plugin.getLogger().warning("Invalid locale setting in config.yml.  Using default: English");
+            this.locale = Locale.ENGLISH;
+            plugin.getLogger().warning("Invalid locale setting in config.yml. Using default: English");
         }
     }
-
 
     private FileConfiguration getDefaultConfig() {
         FileConfiguration defaultConfig = new YamlConfiguration();
@@ -208,7 +215,7 @@ public class Config {
         defaultConfig.set("database", "example");
         defaultConfig.set("username", "root");
         defaultConfig.set("password", "abc1234");
-        defaultConfig.set("locale", Locale.ENGLISH.toString()); // Store as string for consistency
+        defaultConfig.set("locale", Locale.ENGLISH.toString());
         defaultConfig.set("residenceFlag", "build");
         defaultConfig.set("griefPreventionFlag", "Build");
         defaultConfig.set("limitVipUsage", true);
@@ -252,9 +259,14 @@ public class Config {
         defaultConfig.set("leaf-types", Arrays.asList("OAK_LEAVES", "SPRUCE_LEAVES", "BIRCH_LEAVES", "JUNGLE_LEAVES",
                 "ACACIA_LEAVES", "DARK_OAK_LEAVES", "MANGROVE_LEAVES", "CHERRY_LEAVES", "PALE_OAK_LEAVES"));
         defaultConfig.set("leaf-removal-mode", "smart");
+
+        defaultConfig.set("chop-batch-size", 50);
+        defaultConfig.set("max-tree-size", 500);
+        defaultConfig.set("max-discovery-blocks", 1000);
+        defaultConfig.set("call-block-break-event", true);
+
         return defaultConfig;
     }
-
 
     // Getters for all config options
     public boolean isVisualEffect() {
@@ -405,11 +417,6 @@ public class Config {
         return logSaplingMapping;
     }
 
-    /**
-     * Gets the appropriate sapling type for a given log type
-     * @param logType The log material type
-     * @return The corresponding sapling material, or null if no mapping exists
-     */
     public Material getSaplingForLog(Material logType) {
         return logSaplingMapping.get(logType);
     }
@@ -452,5 +459,21 @@ public class Config {
 
     public String getLeafRemovalMode() {
         return leafRemovalMode;
+    }
+
+    public int getChopBatchSize() {
+        return chopBatchSize;
+    }
+
+    public int getMaxTreeSize() {
+        return maxTreeSize;
+    }
+
+    public int getMaxDiscoveryBlocks() {
+        return maxDiscoveryBlocks;
+    }
+
+    public boolean isCallBlockBreakEvent() {
+        return callBlockBreakEvent;
     }
 }
