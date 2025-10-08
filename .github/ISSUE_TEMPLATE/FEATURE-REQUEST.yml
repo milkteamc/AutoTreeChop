@@ -1,0 +1,68 @@
+name: "✨ Feature Request"
+description: Create a new ticket for a feature request.
+title: "[FEATURE] - <title>"
+labels: [
+  "enhancement"
+]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: "Feature Description"
+      description: Please provide a clear and concise description of the feature you'd like to see
+      placeholder: A clear and concise description of what you want to happen...
+    validations:
+      required: true
+  - type: textarea
+    id: motivation
+    attributes:
+      label: "Motivation & Use Case"
+      description: Please explain why this feature would be useful and what problem it solves
+      placeholder: |
+        - What problem does this solve?
+        - How would this improve the plugin?
+        - What use cases would this enable?
+    validations:
+      required: true
+  - type: textarea
+    id: proposed_solution
+    attributes:
+      label: "Proposed Solution"
+      description: Please describe how you envision this feature working
+      placeholder: |
+        Describe your ideal implementation:
+        - How should it work?
+        - What configuration options should be available?
+        - How should users interact with it?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: "Alternatives Considered"
+      description: Please describe any alternative solutions or workarounds you've considered
+      placeholder: |
+        - Alternative approach 1
+        - Alternative approach 2
+        - Current workarounds (if any)
+    validations:
+      required: false
+  - type: textarea
+    id: examples
+    attributes:
+      label: "Examples & Mockups"
+      description: Please provide examples, mockups, or references to similar features in other plugins.
+      value: |
+        - Example configuration:
+        - Example commands:
+        - Similar features in other plugins:
+        - Screenshots or mockups (paste images directly):
+    validations:
+      required: false
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: "Additional Context"
+      description: Add any other context, screenshots, or information about the feature request here. You can paste screenshots directly!
+    validations:
+      required: false
