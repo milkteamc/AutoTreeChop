@@ -344,6 +344,13 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         ItemStack tool = player.getInventory().getItemInMainHand();
         Location location = block.getLocation();
 
+        if (BlockDiscoveryUtils.isLeafBlock(block.getType(), config)) {
+            UUID uuid = player.getUniqueId();
+            if (SessionManager.getInstance().hasActiveLeafRemovalSession(uuid.toString())) {
+                return;
+            }
+        }
+
         if (SessionManager.getInstance().isLocationProcessing(playerUUID, location)) {
             return;
         }
