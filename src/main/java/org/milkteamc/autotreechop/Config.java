@@ -231,7 +231,7 @@ public class Config {
         defaultConfig.set("sneak-message", false);
         defaultConfig.set("log-types", Arrays.asList("OAK_LOG", "SPRUCE_LOG", "BIRCH_LOG", "JUNGLE_LOG", "ACACIA_LOG", "DARK_OAK_LOG", "MANGROVE_LOG", "CHERRY_LOG"));
         defaultConfig.set("enable-auto-replant", true);
-        defaultConfig.set("replant-delay-ticks", 20L);
+        defaultConfig.set("replant-delay-ticks", 1L);
         defaultConfig.set("require-sapling-in-inventory", false);
         defaultConfig.set("replant-visual-effect", true);
         defaultConfig.set("valid-soil-types", Arrays.asList(
@@ -249,7 +249,7 @@ public class Config {
         logSaplingSection.set("PALE_OAK_LOG", "PALE_OAK_SAPLING");
 
         defaultConfig.set("enable-leaf-removal", true);
-        defaultConfig.set("leaf-removal-delay-ticks", 40L);
+        defaultConfig.set("leaf-removal-delay-ticks", 1L);
         defaultConfig.set("leaf-removal-radius", 8);
         defaultConfig.set("leaf-removal-drop-items", false);
         defaultConfig.set("leaf-removal-visual-effects", true);

@@ -11,7 +11,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
-import org.bukkit.block.data.BlockData;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -25,15 +24,10 @@ import org.bukkit.event.player.PlayerToggleSneakEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.milkteamc.autotreechop.database.DatabaseManager;
-import org.milkteamc.autotreechop.hooks.GriefPreventionHook;
-import org.milkteamc.autotreechop.hooks.LandsHook;
-import org.milkteamc.autotreechop.hooks.ResidenceHook;
-import org.milkteamc.autotreechop.hooks.WorldGuardHook;
+import org.milkteamc.autotreechop.hooks.*;
 import org.milkteamc.autotreechop.tasks.PlayerDataSaveTask;
-import org.milkteamc.autotreechop.utils.CooldownManager;
-import org.milkteamc.autotreechop.utils.EffectUtils;
-import org.milkteamc.autotreechop.utils.PermissionUtils;
-import org.milkteamc.autotreechop.utils.TreeChopUtils;
+import org.milkteamc.autotreechop.utils.*;
+import org.milkteamc.autotreechop.utils.ProtectionCheckUtils.ProtectionHooks;
 
 import java.io.File;
 import java.util.*;
@@ -88,9 +82,6 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     private static final long SAVE_INTERVAL = 1200L; // 60s
     private static final int SAVE_THRESHOLD = 15;
 
-    private final Set<Location> checkedLocations = new HashSet<>();
-    private final Set<Location> processingLocations = new HashSet<>();
-
     private Config config;
     private AutoTreeChopAPI autoTreeChopAPI;
     private Map<UUID, PlayerConfig> playerConfigs = new ConcurrentHashMap<>();
@@ -112,6 +103,8 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
     private DatabaseManager databaseManager;
     private PlayerDataSaveTask saveTask;
+
+    private TreeChopUtils treeChopUtils;
 
     public static void sendMessage(CommandSender sender, ComponentLike message) {
         BukkitTinyTranslations.sendMessageIfNotEmpty(sender, message);
@@ -139,7 +132,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             }
         }
 
-        metrics = new Metrics(this, 20053); //bstats
+        metrics = new Metrics(this, 20053);
         getServer().getPluginManager().registerEvents(this, this);
 
         // Register command and tab completer
@@ -154,7 +147,7 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         translations.setStyleStorage(new PropertiesStyleStorage(new File(getDataFolder(), "/lang/styles.properties")));
         translations.addMessages(TinyTranslations.messageFieldsFromClass(AutoTreeChop.class));
 
-        loadLocale(); //Still needs to be called to *use* the locale.
+        loadLocale();
 
         if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
             new AutoTreeChopExpansion(this).register();
@@ -187,13 +180,13 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         saveTask.runTaskTimerAsynchronously(this, SAVE_INTERVAL, SAVE_INTERVAL);
 
         autoTreeChopAPI = new AutoTreeChopAPI(this);
-        playerConfigs = new HashMap<>();
-        initializeHooks(); // Initialize protection plugin hooks
+        playerConfigs = new ConcurrentHashMap<>();
+        initializeHooks();
 
         cooldownManager = new CooldownManager(this);
-
-        // Load the enableSneakToggle option from config
         enableSneakToggle = config.getSneakToggle();
+
+        this.treeChopUtils = new TreeChopUtils(this);
 
         getLogger().info("AutoTreeChop enabled!");
     }
@@ -280,19 +273,21 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             saveTask.cancel();
         }
 
-        int savedCount = 0;
         for (Map.Entry<UUID, PlayerConfig> entry : playerConfigs.entrySet()) {
             if (entry.getValue().isDirty()) {
                 databaseManager.savePlayerDataSync(entry.getValue().getData());
-                savedCount++;
             }
         }
 
-        getLogger().info("Saved " + savedCount + " player data records");
         playerConfigs.clear();
 
         if (databaseManager != null) {
             databaseManager.close();
+        }
+
+        SessionManager sessionManager = SessionManager.getInstance();
+        for (UUID uuid : new HashSet<>(playerConfigs.keySet())) {
+            sessionManager.clearAllPlayerSessions(uuid);
         }
 
         translations.close();
@@ -336,6 +331,8 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         }
 
         playerConfigs.remove(playerUUID);
+
+        SessionManager.getInstance().clearAllPlayerSessions(playerUUID);
     }
 
     @EventHandler(priority = EventPriority.HIGH)
@@ -345,9 +342,9 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         PlayerConfig playerConfig = getPlayerConfig(playerUUID);
         Block block = event.getBlock();
         ItemStack tool = player.getInventory().getItemInMainHand();
+        Location location = block.getLocation();
 
-        // Skip if this block is already being processed
-        if (processingLocations.contains(block.getLocation())) {
+        if (SessionManager.getInstance().isLocationProcessing(playerUUID, location)) {
             return;
         }
 
@@ -360,10 +357,8 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         }
 
         Material material = block.getType();
-        Location location = block.getLocation();
-        BlockData blockData = block.getBlockData();
 
-        if (playerConfig.isAutoTreeChopEnabled() && TreeChopUtils.isLog(material, config)) {
+        if (playerConfig.isAutoTreeChopEnabled() && BlockDiscoveryUtils.isLog(material, config)) {
             if (!PermissionUtils.hasVipBlock(player, playerConfig, config)) {
                 if (playerConfig.getDailyBlocksBroken() >= config.getMaxBlocksPerDay()) {
                     EffectUtils.sendMaxBlockLimitReachedMessage(player, block, HIT_MAX_BLOCK_MESSAGE);
@@ -381,9 +376,21 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
             }
 
             event.setCancelled(true);
-            checkedLocations.clear();
-            TreeChopUtils.chopTree(block, player, config.isStopChoppingIfNotConnected(), tool, location, material, blockData, this, processingLocations, checkedLocations, config, playerConfig, worldGuardEnabled, residenceEnabled, griefPreventionEnabled, landsEnabled, landsHook, residenceHook, griefPreventionHook, worldGuardHook);
-            checkedLocations.clear();
+
+            ProtectionHooks hooks = new ProtectionHooks(
+                    worldGuardEnabled, worldGuardHook,
+                    residenceEnabled, residenceHook,
+                    griefPreventionEnabled, griefPreventionHook,
+                    landsEnabled, landsHook
+            );
+
+            treeChopUtils.chopTree(
+                    block, player,
+                    config.isStopChoppingIfNotConnected(),
+                    tool, location,
+                    config, playerConfig,
+                    hooks
+            );
 
             if (saveTask != null) {
                 saveTask.checkThreshold();
@@ -391,22 +398,14 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         }
     }
 
-    /**
-     * Event handler for player sneak toggle
-     * When a player toggles sneak, enable or disable AutoTreeChop
-     */
     @EventHandler
     public void onPlayerToggleSneak(PlayerToggleSneakEvent event) {
-        if (!enableSneakToggle) {
-            return;
-        }
+        if (!enableSneakToggle) return;
 
         Player player = event.getPlayer();
         UUID playerUUID = player.getUniqueId();
 
-        if (!player.hasPermission("autotreechop.use")) {
-            return;
-        }
+        if (!player.hasPermission("autotreechop.use")) return;
 
         PlayerConfig playerConfig = getPlayerConfig(playerUUID);
 
@@ -479,5 +478,9 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
     public DatabaseManager getDatabaseManager() {
         return databaseManager;
+    }
+
+    public TreeChopUtils getTreeChopUtils() {
+        return treeChopUtils;
     }
 }

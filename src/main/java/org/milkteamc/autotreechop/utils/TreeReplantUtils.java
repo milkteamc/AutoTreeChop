@@ -261,10 +261,10 @@ public class TreeReplantUtils {
                                                 GriefPreventionHook griefPreventionHook,
                                                 WorldGuardHook worldGuardHook) {
 
-        return TreeChopUtils.resCheck(player, location, residenceEnabled, residenceHook) &&
-                TreeChopUtils.landsCheck(player, location, landsEnabled, landsHook) &&
-                TreeChopUtils.gfCheck(player, location, griefPreventionEnabled, griefPreventionHook) &&
-                TreeChopUtils.wgCheck(player, location, worldGuardEnabled, worldGuardHook);
+        return ProtectionCheckUtils.checkResidence(player, location, residenceEnabled, residenceHook) &&
+                ProtectionCheckUtils.checkLands(player, location, landsEnabled, landsHook) &&
+                ProtectionCheckUtils.checkGriefPrevention(player, location, griefPreventionEnabled, griefPreventionHook) &&
+                ProtectionCheckUtils.checkWorldGuard(player, location, worldGuardEnabled, worldGuardHook);
     }
 
     public static boolean isReplantEnabledForPlayer(Player player, Config config) {
