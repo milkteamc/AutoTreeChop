@@ -143,24 +143,32 @@ public class TreeChopUtils {
                         }
                     }
 
-                    block.breakNaturally();
-
-                    sessionManager.trackRemovedLogForPlayer(playerUUID.toString(), location);
-
                     if (config.getPlayBreakSound()) {
                         block.getWorld().playSound(location, org.bukkit.Sound.BLOCK_WOOD_BREAK, 1.0f, 1.0f);
                     }
+                    block.breakNaturally();
 
+                    sessionManager.trackRemovedLogForPlayer(playerUUID.toString(), location);
                     playerConfig.incrementDailyBlocksBroken();
                 },
-                // On complete
                 () -> {
                     if (config.isToolDamage()) {
                         applyToolDamage(tool, player, totalBlocks, config);
                     }
 
-                    LeafRemovalUtils leafUtils = new LeafRemovalUtils(plugin);
-                    leafUtils.processLeafRemoval(originalBlock, player, config, playerConfig, hooks);
+                    if (config.isLeafRemovalEnabled()) {
+                        long delay = config.getLeafRemovalDelayTicks();
+                        Runnable leafTask = () -> {
+                            LeafRemovalUtils leafUtils = new LeafRemovalUtils(plugin);
+                            leafUtils.processLeafRemoval(originalBlock, player, config, playerConfig, hooks);
+                        };
+
+                        if (delay > 0) {
+                            scheduler.runTaskLater(originalBlock.getLocation(), leafTask, delay);
+                        } else {
+                            leafTask.run();
+                        }
+                    }
 
                     if (TreeReplantUtils.isReplantEnabledForPlayer(player, config)) {
                         for (Map.Entry<Material, Location> entry : logTypesForReplant.entrySet()) {

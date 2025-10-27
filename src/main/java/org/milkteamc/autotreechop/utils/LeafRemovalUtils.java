@@ -54,7 +54,7 @@ public class LeafRemovalUtils {
         }
 
         // Schedule delayed leaf removal
-        long delayTicks = Math.max(config.getLeafRemovalDelayTicks(), 60L);
+        long delayTicks = config.getLeafRemovalDelayTicks();
 
         scheduler.scheduleDelayed(
                 originalLogBlock.getLocation(),
@@ -147,40 +147,35 @@ public class LeafRemovalUtils {
 
         Location leafLocation = leafBlock.getLocation();
 
-        // Duplicate check
         if (processingLeafLocations.contains(leafLocation)) {
             return false;
         }
 
-        // Permission check
         if (!ProtectionCheckUtils.canModifyBlock(player, leafLocation, hooks)) {
             return false;
         }
 
         processingLeafLocations.add(leafLocation);
 
-        // Fire BlockBreakEvent
-        BlockBreakEvent breakEvent = new BlockBreakEvent(leafBlock, player);
-        plugin.getServer().getPluginManager().callEvent(breakEvent);
-
-        if (breakEvent.isCancelled()) {
-            processingLeafLocations.remove(leafLocation);
-            return false;
+        if (config.isCallBlockBreakEvent()) {
+            BlockBreakEvent breakEvent = new BlockBreakEvent(leafBlock, player);
+            plugin.getServer().getPluginManager().callEvent(breakEvent);
+            if (breakEvent.isCancelled()) {
+                processingLeafLocations.remove(leafLocation);
+                return false;
+            }
         }
 
-        // Visual effects
         if (config.getLeafRemovalVisualEffects()) {
             EffectUtils.showLeafRemovalEffect(player, leafBlock);
         }
 
-        // Remove the leaf
         if (config.getLeafRemovalDropItems()) {
             leafBlock.breakNaturally();
         } else {
-            leafBlock.setType(Material.AIR);
+            leafBlock.setType(Material.AIR, false);
         }
 
-        // Update counter
         if (config.getLeafRemovalCountsTowardsLimit()) {
             playerConfig.incrementDailyBlocksBroken();
         }

@@ -214,33 +214,25 @@ public class TreeReplantUtils {
 
     private static boolean plantSapling(Player player, Location location, Material saplingType,
                                         Config config, AutoTreeChop plugin) {
-        Block block = location.getBlock();
 
+        Block block = location.getBlock();
         Block below = block.getRelative(BlockFace.DOWN);
 
-        if (!isClearForSapling(block)) {
+        if (!isClearForSapling(block) || !isValidSoil(below.getType(), config)) {
             return false;
         }
 
-        if (!isValidSoil(below.getType(), config)) {
+        if (config.getRequireSaplingInInventory() && !consumeSaplingFromInventory(player, saplingType)) {
             return false;
         }
 
-        // Check inventory requirement
-        if (config.getRequireSaplingInInventory()) {
-            if (!consumeSaplingFromInventory(player, saplingType)) {
-                return false;
-            }
+        block.setType(saplingType);
+
+        if (config.getReplantVisualEffect()) {
+            EffectUtils.showReplantEffect(player, block);
         }
 
-        // Place the sapling
-        try {
-            block.setType(saplingType);
-            return true;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return false;
-        }
+        return true;
     }
 
     private static boolean consumeSaplingFromInventory(Player player, Material saplingType) {
