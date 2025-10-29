@@ -8,32 +8,20 @@ import de.cubbossa.tinytranslations.libs.kyori.adventure.text.ComponentLike;
 import de.cubbossa.tinytranslations.storage.properties.PropertiesMessageStorage;
 import de.cubbossa.tinytranslations.storage.properties.PropertiesStyleStorage;
 import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.block.Block;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.EventPriority;
-import org.bukkit.event.Listener;
-import org.bukkit.event.block.BlockBreakEvent;
-import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.event.player.PlayerQuitEvent;
-import org.bukkit.event.player.PlayerToggleSneakEvent;
-import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.milkteamc.autotreechop.database.DatabaseManager;
+import org.milkteamc.autotreechop.events.*;
 import org.milkteamc.autotreechop.hooks.*;
 import org.milkteamc.autotreechop.tasks.PlayerDataSaveTask;
 import org.milkteamc.autotreechop.utils.*;
-import org.milkteamc.autotreechop.utils.ProtectionCheckUtils.ProtectionHooks;
 
 import java.io.File;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecutor {
+public class AutoTreeChop extends JavaPlugin implements CommandExecutor {
 
     public static final Message noResidencePermissions = new MessageBuilder("noResidencePermissions")
             .withDefault("<prefix_negative>You don't have permission to use AutoTreeChop here.</prefix_negative>").build();
@@ -99,7 +87,6 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
     private LandsHook landsHook = null;
 
     private CooldownManager cooldownManager;
-    private boolean enableSneakToggle = true;
 
     private DatabaseManager databaseManager;
     private PlayerDataSaveTask saveTask;
@@ -133,7 +120,9 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         }
 
         metrics = new Metrics(this, 20053);
-        getServer().getPluginManager().registerEvents(this, this);
+
+        // Register event listeners
+        registerEvents();
 
         // Register command and tab completer
         org.milkteamc.autotreechop.command.Command command = new org.milkteamc.autotreechop.command.Command(this);
@@ -184,11 +173,17 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         initializeHooks();
 
         cooldownManager = new CooldownManager(this);
-        enableSneakToggle = config.getSneakToggle();
 
         this.treeChopUtils = new TreeChopUtils(this);
 
         getLogger().info("AutoTreeChop enabled!");
+    }
+
+    private void registerEvents() {
+        getServer().getPluginManager().registerEvents(new PlayerJoinListener(this), this);
+        getServer().getPluginManager().registerEvents(new PlayerQuitListener(this), this);
+        getServer().getPluginManager().registerEvents(new BlockBreakListener(this), this);
+        getServer().getPluginManager().registerEvents(new PlayerSneakListener(this), this);
     }
 
     private void initializeHooks() {
@@ -296,139 +291,6 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
         getLogger().info("AutoTreeChop disabled!");
     }
 
-    @EventHandler
-    public void onPlayerJoin(PlayerJoinEvent event) {
-        Player player = event.getPlayer();
-        UUID playerUUID = player.getUniqueId();
-
-        databaseManager.loadPlayerDataAsync(playerUUID, config.getDefaultTreeChop())
-                .thenAccept(data -> {
-                    PlayerConfig playerConfig = new PlayerConfig(playerUUID, data);
-                    playerConfigs.put(playerUUID, playerConfig);
-                })
-                .exceptionally(ex -> {
-                    getLogger().warning("Failed to load data for player " + player.getName() + ": " + ex.getMessage());
-                    DatabaseManager.PlayerData defaultData = new DatabaseManager.PlayerData(
-                            playerUUID,
-                            config.getDefaultTreeChop(),
-                            0,
-                            0,
-                            java.time.LocalDate.now()
-                    );
-                    playerConfigs.put(playerUUID, new PlayerConfig(playerUUID, defaultData));
-                    return null;
-                });
-    }
-
-    @EventHandler
-    public void onPlayerQuit(PlayerQuitEvent event) {
-        Player player = event.getPlayer();
-        UUID playerUUID = player.getUniqueId();
-
-        PlayerConfig playerConfig = playerConfigs.get(playerUUID);
-        if (playerConfig != null && playerConfig.isDirty()) {
-            databaseManager.savePlayerDataSync(playerConfig.getData());
-        }
-
-        playerConfigs.remove(playerUUID);
-
-        SessionManager.getInstance().clearAllPlayerSessions(playerUUID);
-    }
-
-    @EventHandler(priority = EventPriority.HIGH)
-    public void onBlockBreak(BlockBreakEvent event) {
-        Player player = event.getPlayer();
-        UUID playerUUID = player.getUniqueId();
-        PlayerConfig playerConfig = getPlayerConfig(playerUUID);
-        Block block = event.getBlock();
-        ItemStack tool = player.getInventory().getItemInMainHand();
-        Location location = block.getLocation();
-
-        if (BlockDiscoveryUtils.isLeafBlock(block.getType(), config)) {
-            UUID uuid = player.getUniqueId();
-            if (SessionManager.getInstance().hasActiveLeafRemovalSession(uuid.toString())) {
-                return;
-            }
-        }
-
-        if (SessionManager.getInstance().isLocationProcessing(playerUUID, location)) {
-            return;
-        }
-
-        if (cooldownManager.isInCooldown(playerUUID)) {
-            sendMessage(player, STILL_IN_COOLDOWN_MESSAGE
-                    .insertNumber("cooldown_time", cooldownManager.getRemainingCooldown(playerUUID))
-            );
-            event.setCancelled(true);
-            return;
-        }
-
-        Material material = block.getType();
-
-        if (playerConfig.isAutoTreeChopEnabled() && BlockDiscoveryUtils.isLog(material, config)) {
-            if (!PermissionUtils.hasVipBlock(player, playerConfig, config)) {
-                if (playerConfig.getDailyBlocksBroken() >= config.getMaxBlocksPerDay()) {
-                    EffectUtils.sendMaxBlockLimitReachedMessage(player, block, HIT_MAX_BLOCK_MESSAGE);
-                    event.setCancelled(true);
-                    return;
-                }
-            }
-            if (!PermissionUtils.hasVipUses(player, playerConfig, config) && playerConfig.getDailyUses() >= config.getMaxUsesPerDay()) {
-                BukkitTinyTranslations.sendMessage(player, HIT_MAX_USAGE_MESSAGE);
-                return;
-            }
-
-            if (config.isVisualEffect()) {
-                EffectUtils.showChopEffect(player, block);
-            }
-
-            event.setCancelled(true);
-
-            ProtectionHooks hooks = new ProtectionHooks(
-                    worldGuardEnabled, worldGuardHook,
-                    residenceEnabled, residenceHook,
-                    griefPreventionEnabled, griefPreventionHook,
-                    landsEnabled, landsHook
-            );
-
-            treeChopUtils.chopTree(
-                    block, player,
-                    config.isStopChoppingIfNotConnected(),
-                    tool, location,
-                    config, playerConfig,
-                    hooks
-            );
-
-            if (saveTask != null) {
-                saveTask.checkThreshold();
-            }
-        }
-    }
-
-    @EventHandler
-    public void onPlayerToggleSneak(PlayerToggleSneakEvent event) {
-        if (!enableSneakToggle) return;
-
-        Player player = event.getPlayer();
-        UUID playerUUID = player.getUniqueId();
-
-        if (!player.hasPermission("autotreechop.use")) return;
-
-        PlayerConfig playerConfig = getPlayerConfig(playerUUID);
-
-        if (event.isSneaking()) {
-            playerConfig.setAutoTreeChopEnabled(true);
-            if (config.getSneakMessage()) {
-                sendMessage(player, SNEAK_ENABLED_MESSAGE);
-            }
-        } else {
-            playerConfig.setAutoTreeChopEnabled(false);
-            if (config.getSneakMessage()) {
-                sendMessage(player, SNEAK_DISABLED_MESSAGE);
-            }
-        }
-    }
-
     public PlayerConfig getPlayerConfig(UUID playerUUID) {
         PlayerConfig playerConfig = playerConfigs.get(playerUUID);
 
@@ -489,5 +351,37 @@ public class AutoTreeChop extends JavaPlugin implements Listener, CommandExecuto
 
     public TreeChopUtils getTreeChopUtils() {
         return treeChopUtils;
+    }
+
+    public boolean isWorldGuardEnabled() {
+        return worldGuardEnabled;
+    }
+
+    public boolean isResidenceEnabled() {
+        return residenceEnabled;
+    }
+
+    public boolean isGriefPreventionEnabled() {
+        return griefPreventionEnabled;
+    }
+
+    public boolean isLandsEnabled() {
+        return landsEnabled;
+    }
+
+    public WorldGuardHook getWorldGuardHook() {
+        return worldGuardHook;
+    }
+
+    public ResidenceHook getResidenceHook() {
+        return residenceHook;
+    }
+
+    public GriefPreventionHook getGriefPreventionHook() {
+        return griefPreventionHook;
+    }
+
+    public LandsHook getLandsHook() {
+        return landsHook;
     }
 }
