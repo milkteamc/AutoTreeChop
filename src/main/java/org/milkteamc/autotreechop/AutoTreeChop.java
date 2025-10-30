@@ -55,22 +55,12 @@ public class AutoTreeChop extends JavaPlugin implements CommandExecutor {
     public static final Message SNEAK_DISABLED_MESSAGE = new MessageBuilder("sneakDisabled")
             .withDefault("<prefix_negative>Auto tree chopping disabled by stopping sneak.</prefix_negative>").build();
 
-    private static final String SPIGOT_RESOURCE_ID = "113071";
-    private static final List<String> SUPPORTED_VERSIONS = Arrays.asList(
-            "1.21.10", "1.21.9", "1.21.8", "1.21.7", "1.21.6", "1.21.5", "1.21.4", "1.21.3", "1.21.2", "1.21.1", "1.21",
-            "1.20.6", "1.20.5", "1.20.4", "1.20.3", "1.20.2", "1.20.1", "1.20",
-            "1.19.4", "1.19.3", "1.19.2", "1.19.1", "1.19",
-            "1.18.2", "1.18.1", "1.18",
-            "1.17.1", "1.17"
-    );
-
     private static final long SAVE_INTERVAL = 1200L; // 60s
     private static final int SAVE_THRESHOLD = 15;
 
     private Config config;
     private AutoTreeChopAPI autoTreeChopAPI;
     private Map<UUID, PlayerConfig> playerConfigs = new ConcurrentHashMap<>();
-    private String bukkitVersion = this.getServer().getBukkitVersion();
     private Metrics metrics;
     private MessageTranslator translations;
 
@@ -107,14 +97,6 @@ public class AutoTreeChop extends JavaPlugin implements CommandExecutor {
     public void onEnable() {
         saveDefaultConfig();
         config = new Config(this);
-
-        if (bukkitVersion.length() > 14) {
-            bukkitVersion = bukkitVersion.substring(0, bukkitVersion.length() - 14);
-            if (!SUPPORTED_VERSIONS.contains(bukkitVersion)) {
-                getLogger().warning("Your Minecraft version didn't fully tested yet.");
-                getLogger().warning("IF you have any issues, feel free to report it at our GitHub: https://github.com/milkteamc/AutoTreeChop/issues");
-            }
-        }
 
         metrics = new Metrics(this, 20053);
 
