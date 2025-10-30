@@ -133,7 +133,7 @@ leaf-types:
 # Enable automatic sapling replanting after tree chopping
 enable-auto-replant: true
 # Delay before planting sapling (in ticks, 20 ticks = 1 second)
-replant-delay-ticks: 1
+replant-delay-ticks: 10
 # If true, players must have saplings in inventory to replant
 # If false, saplings are automatically provided
 require-sapling-in-inventory: false

@@ -24,9 +24,6 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.stream.Stream;
 
-/**
- * Modrinth update checker with notification features for Bukkit/Spigot plugins
- */
 public class ModrinthUpdateChecker implements Listener {
 
     private static final String API_URL = "https://api.modrinth.com/v2/project/{id}/version";
