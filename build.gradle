@@ -103,12 +103,22 @@ tasks.runServer {
     minecraftVersion("1.21.10")
 }
 
+runPaper.folia.registerTask()
+
 def gitHash = 'unknown'
+def gitMessage = 'No commit message available.'
+
 try {
-    def proc = 'git rev-parse --short HEAD'.execute()
-    proc.waitFor()
-    if (proc.exitValue() == 0) {
-        gitHash = proc.text.trim()
+    def hashProc = 'git rev-parse --short HEAD'.execute()
+    hashProc.waitFor()
+    if (hashProc.exitValue() == 0) {
+        gitHash = hashProc.text.trim()
+    }
+
+    def msgProc = 'git log -1 --pretty=%B'.execute()
+    msgProc.waitFor()
+    if (msgProc.exitValue() == 0) {
+        gitMessage = msgProc.text.trim()
     }
 } catch (Exception ignored) {}
 
@@ -117,11 +127,14 @@ modrinth {
     projectId = "autotreechop"
     versionType = "alpha"
 
-    versionNumber = version
+    versionNumber = "${version}-${gitHash}"
     versionName = "${version}-${gitHash}"
     changelog = """
 🚨 **This is a SNAPSHOT version, ONLY use it in test server!**  
 Report any issues to our [GitHub](https://github.com/milkteamc/AutoTreeChop/issues)
+
+**Latest Commit:**
+> ${gitMessage}
 """.stripIndent().trim()
 
     uploadFile = tasks.shadowJar.archiveFile
@@ -135,5 +148,3 @@ Report any issues to our [GitHub](https://github.com/milkteamc/AutoTreeChop/issu
     ]
     loaders = ["paper", "purpur", "folia", "spigot", "bukkit"]
 }
-
-runPaper.folia.registerTask()
