@@ -85,7 +85,7 @@ stopChoppingIfNotConnected: false
 stopChoppingIfDifferentTypes: false
 
 # Define which materials can be chop
-# You can add every leaves type or something else as you like
+# You can add something else as you like
 # Fun fact: If you add "DIAMOND_ORE", this plugin can become an auto mining plugin, lol
 log-types:
   - OAK_LOG
