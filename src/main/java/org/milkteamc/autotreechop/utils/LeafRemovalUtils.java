@@ -114,10 +114,7 @@ public class LeafRemovalUtils {
             leavesList.add(block.getLocation());
         }
 
-        int batchSize = BatchProcessor.getOptimalBatchSize(
-                leavesList.size(),
-                config.getLeafRemovalBatchSize()
-        );
+        int batchSize = config.getLeafRemovalBatchSize();
 
         batchProcessor.processBatchWithTermination(
                 leavesList,

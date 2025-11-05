@@ -115,7 +115,7 @@ public class TreeChopUtils {
                                  Block originalBlock) {
 
         List<Location> blockList = new ArrayList<>(treeBlocks);
-        int batchSize = BatchProcessor.getOptimalBatchSize(blockList.size(), config.getChopBatchSize());
+        int batchSize = config.getChopBatchSize();
         int totalBlocks = blockList.size();
         UUID playerUUID = player.getUniqueId();
 

@@ -142,17 +142,4 @@ public class BatchProcessor {
             scheduler.runTaskLater(nextLocation, nextBatch, 1L);
         }
     }
-
-    /**
-     * Get optimal batch size based on total items
-     * For very large operations, use smaller batches
-     */
-    public static int getOptimalBatchSize(int totalItems, int configuredBatchSize) {
-        if (totalItems > 1000) {
-            return Math.min(configuredBatchSize, 30);
-        } else if (totalItems > 500) {
-            return Math.min(configuredBatchSize, 40);
-        }
-        return configuredBatchSize;
-    }
 }
