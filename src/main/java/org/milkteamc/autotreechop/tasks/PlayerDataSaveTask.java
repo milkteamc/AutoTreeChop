@@ -1,6 +1,6 @@
 package org.milkteamc.autotreechop.tasks;
 
-import org.bukkit.scheduler.BukkitRunnable;
+import com.github.Anon8281.universalScheduler.UniversalRunnable;
 import org.milkteamc.autotreechop.AutoTreeChop;
 import org.milkteamc.autotreechop.PlayerConfig;
 import org.milkteamc.autotreechop.database.DatabaseManager;
@@ -9,7 +9,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-public class PlayerDataSaveTask extends BukkitRunnable {
+public class PlayerDataSaveTask extends UniversalRunnable {
 
     private final AutoTreeChop plugin;
     private final int saveThreshold;

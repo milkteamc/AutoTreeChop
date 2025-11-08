@@ -13,6 +13,7 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import com.github.Anon8281.universalScheduler.UniversalScheduler;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -209,7 +210,7 @@ public class ModrinthUpdateChecker implements Listener {
                                 lastResult = UpdateCheckResult.RUNNING_LATEST_VERSION;
                             }
 
-                            plugin.getServer().getScheduler().runTask(plugin, this::printCheckResultToConsole);
+                            UniversalScheduler.getScheduler(plugin).runTask(this::printCheckResultToConsole);
 
                         } catch (Exception e) {
                             lastResult = UpdateCheckResult.UNKNOWN;

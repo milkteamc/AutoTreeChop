@@ -43,6 +43,7 @@ dependencies {
     compileOnly "io.papermc.paper:paper-api:1.20.4-R0.1-SNAPSHOT"
     compileOnly 'me.clip:placeholderapi:2.11.6'
     implementation "de.cubbossa:TinyTranslations-bukkit:4.5.2"
+    implementation 'com.github.Anon8281:UniversalScheduler:0.1.7'
     compileOnly files("./libs/Residence5.1.4.3.jar")
     compileOnly "com.github.angeschossen:LandsAPI:7.17.2"
     compileOnly 'com.sk89q.worldguard:worldguard-bukkit:7.0.9'
@@ -88,6 +89,7 @@ tasks.shadowJar {
     relocate 'com.jeff_media.updatechecker', 'org.milkteamc.autotreechop.libs.updatechecker'
     relocate 'de.cubbossa.tinytranslations', 'org.milkteamc.autotreechop.libs.tinytranslations'
     relocate 'com.zaxxer.hikari', 'org.milkteamc.autotreechop.libs.hikari'
+    relocate 'com.github.Anon8281.universalScheduler', 'org.milkteamc.autotreechop.libs.universalScheduler'
 
     // Add the license file to the JAR
     from("LICENSE") {
