@@ -46,17 +46,18 @@ public class BlockBreakListener implements Listener {
             return;
         }
 
-        if (plugin.getCooldownManager().isInCooldown(playerUUID)) {
-            sendMessage(player, STILL_IN_COOLDOWN_MESSAGE
-                    .insertNumber("cooldown_time", plugin.getCooldownManager().getRemainingCooldown(playerUUID))
-            );
-            event.setCancelled(true);
-            return;
-        }
-
         Material material = block.getType();
 
         if (playerConfig.isAutoTreeChopEnabled() && BlockDiscoveryUtils.isLog(material, plugin.getPluginConfig())) {
+
+            if (plugin.getCooldownManager().isInCooldown(playerUUID)) {
+                sendMessage(player, STILL_IN_COOLDOWN_MESSAGE
+                        .insertNumber("cooldown_time", plugin.getCooldownManager().getRemainingCooldown(playerUUID))
+                );
+                event.setCancelled(true);
+                return;
+            }
+
             if (!PermissionUtils.hasVipBlock(player, playerConfig, plugin.getPluginConfig())) {
                 if (playerConfig.getDailyBlocksBroken() >= plugin.getPluginConfig().getMaxBlocksPerDay()) {
                     EffectUtils.sendMaxBlockLimitReachedMessage(player, block, HIT_MAX_BLOCK_MESSAGE);
@@ -64,6 +65,7 @@ public class BlockBreakListener implements Listener {
                     return;
                 }
             }
+
             if (!PermissionUtils.hasVipUses(player, playerConfig, plugin.getPluginConfig()) && playerConfig.getDailyUses() >= plugin.getPluginConfig().getMaxUsesPerDay()) {
                 sendMessage(player, HIT_MAX_USAGE_MESSAGE);
                 return;
