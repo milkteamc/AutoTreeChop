@@ -48,8 +48,6 @@ visual-effect: true
 toolDamage: true
 # How much durability should be decrease when player brock one block.
 toolDamageDecrease: 1
-# Enable this for better performance, but this may cause some issues on non-Paper servers.
-chopTreeAsync: true
 # Enable this if you want players must hold tools to use AutoTreeChop
 mustUseTool: false
 # Set the default AutoTreeChop state for new players.

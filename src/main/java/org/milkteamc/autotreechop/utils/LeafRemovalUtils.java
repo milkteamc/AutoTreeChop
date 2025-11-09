@@ -93,10 +93,10 @@ public class LeafRemovalUtils {
                     executeLeafRemoval(leavesToRemove, player, config, playerConfig,
                             hooks, sessionId, playerKey);
 
-            scheduler.runTask(originalLogBlock.getLocation(), executionTask);
+            scheduler.runTask(executionTask);
         };
 
-        scheduler.runTaskAsync(config, discoveryTask);
+        scheduler.runTaskAsync(discoveryTask);
     }
 
     private void executeLeafRemoval(Set<Block> leavesToRemove, Player player,

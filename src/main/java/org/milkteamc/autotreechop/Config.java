@@ -23,7 +23,6 @@ public class Config {
     private int vipCooldownTime;
     private boolean stopChoppingIfNotConnected;
     private boolean stopChoppingIfDifferentTypes;
-    private boolean chopTreeAsync;
     private String residenceFlag;
     private String griefPreventionFlag;
     private Locale locale;
@@ -111,7 +110,6 @@ public class Config {
         maxBlocksPerDay = config.getInt("max-blocks-per-day");
         stopChoppingIfNotConnected = config.getBoolean("stopChoppingIfNotConnected");
         stopChoppingIfDifferentTypes = config.getBoolean("stopChoppingIfDifferentTypes");
-        chopTreeAsync = config.getBoolean("chopTreeAsync");
         residenceFlag = config.getString("residenceFlag");
         griefPreventionFlag = config.getString("griefPreventionFlag");
         cooldownTime = config.getInt("cooldownTime");
@@ -207,7 +205,6 @@ public class Config {
         defaultConfig.set("vipCooldownTime", 2);
         defaultConfig.set("stopChoppingIfNotConnected", false);
         defaultConfig.set("stopChoppingIfDifferentTypes", false);
-        defaultConfig.set("chopTreeAsync", true);
         defaultConfig.set("use-player-locale", false);
         defaultConfig.set("useMysql", false);
         defaultConfig.set("hostname", "example.com");
@@ -299,10 +296,6 @@ public class Config {
 
     public boolean isStopChoppingIfDifferentTypes() {
         return stopChoppingIfDifferentTypes;
-    }
-
-    public boolean isChopTreeAsync() {
-        return chopTreeAsync;
     }
 
     public String getResidenceFlag() {

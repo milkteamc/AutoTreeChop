@@ -19,10 +19,10 @@ public class BatchProcessor {
     /**
      * Process a list of locations in batches
      *
-     * @param locations List of locations to process
+     * @param locations  List of locations to process
      * @param startIndex Starting index
-     * @param batchSize Number of items to process per batch
-     * @param processor Function to process each location (location, index) -> void
+     * @param batchSize  Number of items to process per batch
+     * @param processor  Function to process each location (location, index) -> void
      * @param onComplete Callback when all batches are complete
      */
     public void processBatch(
@@ -36,10 +36,10 @@ public class BatchProcessor {
     }
 
     /**
-     * @param locations List of locations to process
+     * @param locations  List of locations to process
      * @param startIndex Starting index
-     * @param batchSize Number of items to process per batch
-     * @param processor Function to process each location (location, index) -> void
+     * @param batchSize  Number of items to process per batch
+     * @param processor  Function to process each location (location, index) -> void
      * @param onComplete Callback when all batches are complete
      * @param delayTicks Delay between batches in ticks
      */
@@ -91,15 +91,15 @@ public class BatchProcessor {
             Runnable nextBatch = () -> processBatchInternal(
                     locations, endIndex, batchSize, processor, onComplete, delayTicks
             );
-            scheduler.runTaskLater(nextLocation, nextBatch, delayTicks);
+            scheduler.runTaskLater(nextBatch, delayTicks);
         }
     }
 
     /**
-     * @param locations List of locations to process
+     * @param locations  List of locations to process
      * @param startIndex Starting index
-     * @param batchSize Number of items to process per batch
-     * @param processor Function to process each location, returns false to stop
+     * @param batchSize  Number of items to process per batch
+     * @param processor  Function to process each location, returns false to stop
      * @param onComplete Callback when complete or stopped
      */
     public void processBatchWithTermination(
@@ -139,7 +139,7 @@ public class BatchProcessor {
             Runnable nextBatch = () -> processBatchWithTermination(
                     locations, finalI, batchSize, processor, onComplete
             );
-            scheduler.runTaskLater(nextLocation, nextBatch, 1L);
+            scheduler.runTaskLater(nextBatch, 1L);
         }
     }
 }

@@ -32,6 +32,92 @@ public class TreeChopUtils {
         this.sessionManager = SessionManager.getInstance();
     }
 
+    private static boolean hasEnoughDurability(ItemStack tool, int blockCount, Config config) {
+        if (tool == null || tool.getType().getMaxDurability() <= 0) {
+            return true;
+        }
+
+        if (!(tool.getItemMeta() instanceof Damageable damageableMeta)) {
+            return true;
+        }
+
+        int currentDamage = damageableMeta.getDamage();
+        int maxDurability = tool.getType().getMaxDurability();
+        int remainingDurability = maxDurability - currentDamage;
+
+        int unbreakingLevel = getUnbreakingLevel(tool);
+
+        int estimatedDamage;
+        if (config.getRespectUnbreaking() && unbreakingLevel > 0) {
+            estimatedDamage = blockCount / (unbreakingLevel + 1);
+        } else {
+            estimatedDamage = blockCount * config.getToolDamageDecrease();
+        }
+
+        return remainingDurability > estimatedDamage;
+    }
+
+    private static void applyToolDamage(ItemStack tool, Player player, int blocksBroken, Config config) {
+        if (tool == null || tool.getType().getMaxDurability() <= 0) {
+            return;
+        }
+
+        if (!(tool.getItemMeta() instanceof Damageable damageableMeta)) {
+            return;
+        }
+
+        int unbreakingLevel = getUnbreakingLevel(tool);
+        int damageToApply = 0;
+
+        for (int i = 0; i < blocksBroken * config.getToolDamageDecrease(); i++) {
+            if (shouldApplyDurabilityLoss(unbreakingLevel, config)) {
+                damageToApply++;
+            }
+        }
+
+        int currentDamage = damageableMeta.getDamage();
+        int newDamage = currentDamage + damageToApply;
+
+        if (newDamage >= tool.getType().getMaxDurability()) {
+            player.getInventory().removeItem(tool);
+        } else {
+            damageableMeta.setDamage(newDamage);
+            tool.setItemMeta(damageableMeta);
+        }
+    }
+
+    private static int getUnbreakingLevel(ItemStack item) {
+        if (item != null && item.hasItemMeta() && item.getItemMeta().hasEnchants()) {
+            return item.getEnchantmentLevel(Enchantment.DURABILITY);
+        }
+        return 0;
+    }
+
+    private static boolean shouldApplyDurabilityLoss(int unbreakingLevel, Config config) {
+        if (unbreakingLevel <= 0 || !config.getRespectUnbreaking()) {
+            return true;
+        }
+        return random.nextInt(100) < (100.0 / (unbreakingLevel + 1));
+    }
+
+    public static boolean isTool(Player player) {
+        ItemStack item = player.getInventory().getItemInMainHand();
+        if (item == null || item.getType() == Material.AIR) {
+            return false;
+        }
+
+        String materialName = item.getType().toString();
+
+        return materialName.endsWith("_AXE") ||
+                materialName.endsWith("_HOE") ||
+                materialName.endsWith("_PICKAXE") ||
+                materialName.endsWith("_SHOVEL") ||
+                materialName.endsWith("_SWORD") ||
+                item.getType() == Material.SHEARS ||
+                item.getType() == Material.FISHING_ROD ||
+                item.getType() == Material.FLINT_AND_STEEL;
+    }
+
     public void chopTree(Block block, Player player, boolean connectedBlocks, ItemStack tool,
                          Location location, Config config, PlayerConfig playerConfig,
                          ProtectionCheckUtils.ProtectionHooks hooks) {
@@ -62,12 +148,12 @@ public class TreeChopUtils {
                     validateAndExecuteChop(treeBlocks, block, player, tool, config,
                             playerConfig, hooks);
 
-            scheduler.runTask(location, validationTask);
+            scheduler.runTask(validationTask);
         };
 
         sessionManager.addTreeChopLocations(playerUUID, Collections.singleton(block.getLocation()));
 
-        scheduler.runTaskAsync(config, discoveryTask);
+        scheduler.runTaskAsync(discoveryTask);
     }
 
     private void validateAndExecuteChop(Set<Location> treeBlocks, Block originalBlock,
@@ -164,7 +250,7 @@ public class TreeChopUtils {
                         };
 
                         if (delay > 0) {
-                            scheduler.runTaskLater(originalBlock.getLocation(), leafTask, delay);
+                            scheduler.runTaskLater(leafTask, delay);
                         } else {
                             leafTask.run();
                         }
@@ -187,91 +273,5 @@ public class TreeChopUtils {
                     sessionManager.removeTreeChopLocations(playerUUID, blockList);
                 }
         );
-    }
-
-    private static boolean hasEnoughDurability(ItemStack tool, int blockCount, Config config) {
-        if (tool == null || tool.getType().getMaxDurability() <= 0) {
-            return true;
-        }
-
-        if (!(tool.getItemMeta() instanceof Damageable damageableMeta)) {
-            return true;
-        }
-
-        int currentDamage = damageableMeta.getDamage();
-        int maxDurability = tool.getType().getMaxDurability();
-        int remainingDurability = maxDurability - currentDamage;
-
-        int unbreakingLevel = getUnbreakingLevel(tool);
-
-        int estimatedDamage;
-        if (config.getRespectUnbreaking() && unbreakingLevel > 0) {
-            estimatedDamage = blockCount / (unbreakingLevel + 1);
-        } else {
-            estimatedDamage = blockCount * config.getToolDamageDecrease();
-        }
-
-        return remainingDurability > estimatedDamage;
-    }
-
-    private static void applyToolDamage(ItemStack tool, Player player, int blocksBroken, Config config) {
-        if (tool == null || tool.getType().getMaxDurability() <= 0) {
-            return;
-        }
-
-        if (!(tool.getItemMeta() instanceof Damageable damageableMeta)) {
-            return;
-        }
-
-        int unbreakingLevel = getUnbreakingLevel(tool);
-        int damageToApply = 0;
-
-        for (int i = 0; i < blocksBroken * config.getToolDamageDecrease(); i++) {
-            if (shouldApplyDurabilityLoss(unbreakingLevel, config)) {
-                damageToApply++;
-            }
-        }
-
-        int currentDamage = damageableMeta.getDamage();
-        int newDamage = currentDamage + damageToApply;
-
-        if (newDamage >= tool.getType().getMaxDurability()) {
-            player.getInventory().removeItem(tool);
-        } else {
-            damageableMeta.setDamage(newDamage);
-            tool.setItemMeta(damageableMeta);
-        }
-    }
-
-    private static int getUnbreakingLevel(ItemStack item) {
-        if (item != null && item.hasItemMeta() && item.getItemMeta().hasEnchants()) {
-            return item.getEnchantmentLevel(Enchantment.DURABILITY);
-        }
-        return 0;
-    }
-
-    private static boolean shouldApplyDurabilityLoss(int unbreakingLevel, Config config) {
-        if (unbreakingLevel <= 0 || !config.getRespectUnbreaking()) {
-            return true;
-        }
-        return random.nextInt(100) < (100.0 / (unbreakingLevel + 1));
-    }
-
-    public static boolean isTool(Player player) {
-        ItemStack item = player.getInventory().getItemInMainHand();
-        if (item == null || item.getType() == Material.AIR) {
-            return false;
-        }
-
-        String materialName = item.getType().toString();
-
-        return materialName.endsWith("_AXE") ||
-                materialName.endsWith("_HOE") ||
-                materialName.endsWith("_PICKAXE") ||
-                materialName.endsWith("_SHOVEL") ||
-                materialName.endsWith("_SWORD") ||
-                item.getType() == Material.SHEARS ||
-                item.getType() == Material.FISHING_ROD ||
-                item.getType() == Material.FLINT_AND_STEEL;
     }
 }
