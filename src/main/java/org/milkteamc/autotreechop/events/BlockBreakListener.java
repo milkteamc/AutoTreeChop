@@ -11,8 +11,11 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.inventory.ItemStack;
 import org.milkteamc.autotreechop.AutoTreeChop;
 import org.milkteamc.autotreechop.PlayerConfig;
-import org.milkteamc.autotreechop.utils.*;
+import org.milkteamc.autotreechop.utils.BlockDiscoveryUtils;
+import org.milkteamc.autotreechop.utils.EffectUtils;
+import org.milkteamc.autotreechop.utils.PermissionUtils;
 import org.milkteamc.autotreechop.utils.ProtectionCheckUtils.ProtectionHooks;
+import org.milkteamc.autotreechop.utils.SessionManager;
 
 import java.util.UUID;
 

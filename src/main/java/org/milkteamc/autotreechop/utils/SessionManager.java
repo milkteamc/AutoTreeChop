@@ -7,14 +7,13 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class SessionManager {
 
+    private static SessionManager instance;
     private final Map<UUID, Set<Location>> treeChopProcessingLocations = new ConcurrentHashMap<>();
-
     private final Map<String, Set<Location>> leafRemovalRemovedLogs = new ConcurrentHashMap<>();
     private final Set<String> activeLeafRemovalSessions = ConcurrentHashMap.newKeySet();
 
-    private static SessionManager instance;
-
-    private SessionManager() {}
+    private SessionManager() {
+    }
 
     public static SessionManager getInstance() {
         if (instance == null) {
@@ -76,6 +75,7 @@ public class SessionManager {
 
     /**
      * Start a new leaf removal session
+     *
      * @return session ID
      */
     public String startLeafRemovalSession(String playerKey) {

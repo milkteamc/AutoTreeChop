@@ -12,7 +12,9 @@ import org.milkteamc.autotreechop.database.DatabaseManager;
 import org.milkteamc.autotreechop.events.*;
 import org.milkteamc.autotreechop.hooks.*;
 import org.milkteamc.autotreechop.tasks.PlayerDataSaveTask;
-import org.milkteamc.autotreechop.utils.*;
+import org.milkteamc.autotreechop.utils.CooldownManager;
+import org.milkteamc.autotreechop.utils.SessionManager;
+import org.milkteamc.autotreechop.utils.TreeChopUtils;
 
 import java.io.File;
 import java.util.*;

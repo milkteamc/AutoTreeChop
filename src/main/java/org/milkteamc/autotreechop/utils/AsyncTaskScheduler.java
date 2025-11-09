@@ -1,8 +1,8 @@
 package org.milkteamc.autotreechop.utils;
 
+import com.github.Anon8281.universalScheduler.UniversalScheduler;
 import org.bukkit.Location;
 import org.milkteamc.autotreechop.AutoTreeChop;
-import com.github.Anon8281.universalScheduler.UniversalScheduler;
 
 public class AsyncTaskScheduler {
 
