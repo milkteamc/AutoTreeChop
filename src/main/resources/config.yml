@@ -102,9 +102,9 @@ enable-leaf-removal: true
 # and aggressive (guaranteed clean but may remove leaves from other trees)
 leaf-removal-mode: smart
 # Delay after tree chopping, 20ticks = 1 second
-leaf-removal-delay-ticks: 1
+leaf-removal-delay-ticks: 10
 # Blocks around the original log to search for leaves
-leaf-removal-radius: 8
+leaf-removal-radius: 10
 # Whether removed leaves should drop items
 leaf-removal-drop-items: false
 # Show particle effects when removing leaves
