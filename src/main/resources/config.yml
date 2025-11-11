@@ -102,7 +102,7 @@ enable-leaf-removal: true
 # and aggressive (guaranteed clean but may remove leaves from other trees)
 leaf-removal-mode: smart
 # Delay after tree chopping, 20ticks = 1 second
-leaf-removal-delay-ticks: 10
+leaf-removal-delay-ticks: 5
 # Blocks around the original log to search for leaves
 leaf-removal-radius: 10
 # Whether removed leaves should drop items
@@ -131,7 +131,7 @@ leaf-types:
 # Enable automatic sapling replanting after tree chopping
 enable-auto-replant: true
 # Delay before planting sapling (in ticks, 20 ticks = 1 second)
-replant-delay-ticks: 10
+replant-delay-ticks: 15
 # If true, players must have saplings in inventory to replant
 # If false, saplings are automatically provided
 require-sapling-in-inventory: false
