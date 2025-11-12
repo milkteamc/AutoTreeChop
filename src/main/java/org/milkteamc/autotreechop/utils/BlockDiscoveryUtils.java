@@ -177,7 +177,7 @@ public class BlockDiscoveryUtils {
     private static boolean isOrphanedLeaf(Block leafBlock, Config config, Set<Location> removedLogs) {
         Location leafLoc = leafBlock.getLocation();
 
-        if (!hasNearbyActiveLog(leafLoc, config, removedLogs, 6)) {
+        if (!hasNearbyActiveLog(leafLoc, config, removedLogs, 2)) {
             return true;
         }
 
