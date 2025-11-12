@@ -95,6 +95,8 @@ log-types:
   - MANGROVE_LOG
   - CHERRY_LOG
   - PALE_OAK_LOG
+  - WARPED_STEM
+  - CRIMSON_STEM
 
 # Leaf removal setting
 enable-leaf-removal: true
@@ -126,6 +128,8 @@ leaf-types:
   - MANGROVE_LEAVES
   - CHERRY_LEAVES
   - PALE_OAK_LEAVES
+  - WARPED_WART_BLOCK
+  - NETHER_WART_BLOCK
 
 # Replanting setting
 # Enable automatic sapling replanting after tree chopping
@@ -149,6 +153,8 @@ log-sapling-mapping:
   MANGROVE_LOG: MANGROVE_PROPAGULE
   CHERRY_LOG: CHERRY_SAPLING
   PALE_OAK_LOG: PALE_OAK_SAPLING
+  WARPED_STEM: WARPED_FUNGUS
+  CRIMSON_STEM: CRIMSON_FUNGUS
 # Define valid soil types where saplings can be planted
 valid-soil-types:
   - DIRT
