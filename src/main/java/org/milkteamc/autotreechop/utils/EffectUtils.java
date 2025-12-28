@@ -1,17 +1,17 @@
 package org.milkteamc.autotreechop.utils;
 
-import de.cubbossa.tinytranslations.Message;
 import org.bukkit.Color;
 import org.bukkit.Particle;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 
+import static org.milkteamc.autotreechop.AutoTreeChop.HIT_MAX_BLOCK_MESSAGE;
 import static org.milkteamc.autotreechop.AutoTreeChop.sendMessage;
 
 public class EffectUtils {
 
     // Sends a message to the player and shows a red particle effect indicating the block limit has been reached
-    public static void sendMaxBlockLimitReachedMessage(Player player, Block block, Message HIT_MAX_BLOCK_MESSAGE) {
+    public static void sendMaxBlockLimitReachedMessage(Player player, Block block) {
         sendMessage(player, HIT_MAX_BLOCK_MESSAGE);
         player.getWorld().spawnParticle(Particle.REDSTONE, block.getLocation().add(0.5, 0.5, 0.5), 50, 0.5, 0.5, 0.5, 0, new Particle.DustOptions(Color.RED, 1));
     }

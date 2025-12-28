@@ -20,9 +20,6 @@ repositories {
         url = 'https://repo.extendedclip.com/content/repositories/placeholderapi/'
     }
     maven {
-        url = "https://nexus.leonardbausenwein.de/repository/maven-public/"
-    }
-    maven {
         url = "https://maven.playpro.com/"
     }
     maven {
@@ -42,7 +39,8 @@ repositories {
 dependencies {
     compileOnly "io.papermc.paper:paper-api:1.20.4-R0.1-SNAPSHOT"
     compileOnly 'me.clip:placeholderapi:2.11.7'
-    implementation "de.cubbossa:TinyTranslations-bukkit:4.5.2"
+    implementation "net.kyori:adventure-platform-bukkit:4.3.4"
+    implementation "net.kyori:adventure-text-minimessage:4.17.0"
     implementation 'com.github.Anon8281:UniversalScheduler:0.1.7'
     compileOnly files("./libs/Residence5.1.4.3.jar")
     compileOnly "com.github.angeschossen:LandsAPI:7.17.2"
@@ -87,11 +85,10 @@ tasks.shadowJar {
     minimize()
 
     relocate 'com.jeff_media.updatechecker', 'org.milkteamc.autotreechop.libs.updatechecker'
-    relocate 'de.cubbossa.tinytranslations', 'org.milkteamc.autotreechop.libs.tinytranslations'
+    relocate 'net.kyori', 'org.milkteamc.autotreechop.libs.kyori'
     relocate 'com.zaxxer.hikari', 'org.milkteamc.autotreechop.libs.hikari'
     relocate 'com.github.Anon8281.universalScheduler', 'org.milkteamc.autotreechop.libs.universalScheduler'
 
-    // Add the license file to the JAR
     from("LICENSE") {
         into 'META-INF'
     }
