@@ -1,8 +1,8 @@
-# AutoTreeChop by Maoyue
+# AutoTreeChop by MilkTeaMC team
 # Discord support server: https://discord.gg/uQ4UXANnP2
 # Modrinth Page: https://modrinth.com/plugin/autotreechop
 # Source code: https://github.com/milkteamc/AutoTreeChop
-# See original config file at: https://github.com/milkteamc/AutoTreeChop/blob/master/src/main/resources/config.yml
+# Default config file: https://github.com/milkteamc/AutoTreeChop/blob/master/src/main/resources/config.yml
 
 # The plugin locale (<language>-<country>-<variant>)
 # en, de, zh, es, fr, ja, zh-TW, en-US, de-DE, de-AU, ...
