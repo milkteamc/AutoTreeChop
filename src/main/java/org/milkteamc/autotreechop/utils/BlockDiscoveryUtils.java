@@ -2,147 +2,195 @@ package org.milkteamc.autotreechop.utils;
 
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.block.Block;
-import org.bukkit.entity.Player;
+import org.bukkit.World;
 import org.milkteamc.autotreechop.Config;
 
 import java.util.*;
 
+/**
+ * Refactored BlockDiscoveryUtils - All methods work with BlockSnapshot
+ * Safe to call from async threads
+ */
 public class BlockDiscoveryUtils {
 
+    /**
+     * Discover tree blocks from snapshot (ASYNC-SAFE)
+     *
+     * @param snapshot Block snapshot captured synchronously
+     * @param startLocation Starting location
+     * @param config Plugin configuration
+     * @param connectedOnly Whether to only follow connected blocks
+     * @param maxBlocks Maximum blocks to discover
+     * @return Set of locations that are part of the tree
+     */
     public static Set<Location> discoverTreeBFS(
-            Block startBlock,
+            BlockSnapshot snapshot,
+            Location startLocation,
             Config config,
             boolean connectedOnly,
-            Player player,
-            ProtectionCheckUtils.ProtectionHooks hooks) {
+            int maxBlocks) {
 
         Set<Location> treeBlocks = new HashSet<>();
-        Queue<Block> queue = new LinkedList<>();
-        Set<Location> visited = new HashSet<>();
+        Queue<BlockSnapshot.LocationKey> queue = new LinkedList<>();
+        Set<BlockSnapshot.LocationKey> visited = new HashSet<>();
 
-        Material originalType = startBlock.getType();
-        int maxBlocks = config.getMaxDiscoveryBlocks();
+        Material originalType = snapshot.getBlockType(startLocation);
+        World world = snapshot.getWorld();
 
-        queue.add(startBlock);
-        visited.add(startBlock.getLocation());
+        BlockSnapshot.LocationKey startKey = new BlockSnapshot.LocationKey(startLocation);
+        queue.add(startKey);
+        visited.add(startKey);
 
         while (!queue.isEmpty() && treeBlocks.size() < maxBlocks) {
-            Block current = queue.poll();
-            Location loc = current.getLocation();
-
-            // Permission check
-            if (!ProtectionCheckUtils.canModifyBlock(player, loc, hooks)) {
-                continue;
-            }
+            BlockSnapshot.LocationKey currentKey = queue.poll();
+            Material type = snapshot.getBlockType(currentKey.getX(), currentKey.getY(), currentKey.getZ());
 
             // Check if it's a log
-            if (!isLog(current.getType(), config)) {
+            if (!isLog(type, config)) {
                 continue;
             }
 
             // Check same type if required
-            if (config.isStopChoppingIfDifferentTypes() && current.getType() != originalType) {
+            if (config.isStopChoppingIfDifferentTypes() && type != originalType) {
                 continue;
             }
 
-            treeBlocks.add(loc);
+            // Add to tree blocks
+            treeBlocks.add(currentKey.toLocation(world));
 
             // Add neighbors to queue
-            addNeighborsToQueue(current, queue, visited, connectedOnly);
+            addNeighborsToQueue(currentKey, queue, visited, snapshot, connectedOnly);
         }
 
         return treeBlocks;
     }
 
-    public static Set<Block> discoverLeavesBFS(
-            Block centerBlock,
+    /**
+     * Discover leaves from snapshot (ASYNC-SAFE)
+     *
+     * @param snapshot Block snapshot captured synchronously
+     * @param centerLocation Center of search area
+     * @param radius Search radius
+     * @param config Plugin configuration
+     * @param removedLogs Locations of logs that will be removed
+     * @return Set of leaf blocks that should be removed
+     */
+    public static Set<Location> discoverLeavesBFS(
+            BlockSnapshot snapshot,
+            Location centerLocation,
             int radius,
             Config config,
             Set<Location> removedLogs) {
 
-        Set<Block> leaves = new HashSet<>();
-        Set<Location> visited = new HashSet<>();
-        Queue<Block> queue = new LinkedList<>();
+        Set<Location> leaves = new HashSet<>();
+        Set<BlockSnapshot.LocationKey> visited = new HashSet<>();
+        Queue<BlockSnapshot.LocationKey> queue = new LinkedList<>();
 
-        Location center = centerBlock.getLocation();
+        World world = snapshot.getWorld();
+        BlockSnapshot.LocationKey centerKey = new BlockSnapshot.LocationKey(centerLocation);
         int radiusSquared = radius * radius;
 
-        queue.add(centerBlock);
-        visited.add(center);
+        queue.add(centerKey);
+        visited.add(centerKey);
 
         String mode = config.getLeafRemovalMode().toLowerCase();
 
+        // Convert removedLogs to LocationKey set for fast lookup
+        Set<BlockSnapshot.LocationKey> removedLogKeys = new HashSet<>();
+        for (Location loc : removedLogs) {
+            removedLogKeys.add(new BlockSnapshot.LocationKey(loc));
+        }
+
         while (!queue.isEmpty()) {
-            Block current = queue.poll();
-            Location loc = current.getLocation();
+            BlockSnapshot.LocationKey currentKey = queue.poll();
+            Location loc = currentKey.toLocation(world);
 
             // Check if within radius (spherical)
-            if (loc.distanceSquared(center) > radiusSquared) {
+            if (getDistanceSquared(currentKey, centerKey) > radiusSquared) {
                 continue;
             }
 
-            Material type = current.getType();
+            Material type = snapshot.getBlockType(currentKey.getX(), currentKey.getY(), currentKey.getZ());
 
             // If it's a leaf, check if should be removed
             if (isLeafBlock(type, config)) {
-                boolean shouldRemove = shouldRemoveLeaf(current, mode, config, removedLogs);
+                boolean shouldRemove = shouldRemoveLeaf(
+                        snapshot,
+                        currentKey,
+                        mode,
+                        config,
+                        removedLogKeys
+                );
                 if (shouldRemove) {
-                    leaves.add(current);
+                    leaves.add(loc);
                 }
 
                 // Continue searching through leaves
-                addLeafNeighborsToQueue(current, queue, visited, center, radiusSquared);
+                addLeafNeighborsToQueue(currentKey, queue, visited, centerKey, radiusSquared);
             }
             // If it's a log, continue searching (but don't remove)
             else if (isLog(type, config)) {
-                addLeafNeighborsToQueue(current, queue, visited, center, radiusSquared);
+                addLeafNeighborsToQueue(currentKey, queue, visited, centerKey, radiusSquared);
+            }
+            // If it's AIR or other blocks, still search neighbors
+            // This is CRITICAL for starting from a removed log location
+            else {
+                addLeafNeighborsToQueue(currentKey, queue, visited, centerKey, radiusSquared);
             }
         }
 
         return leaves;
     }
 
-    public static Set<Block> discoverLeavesRadial(
-            Block centerBlock,
+    /**
+     * Discover leaves using radial scan (ASYNC-SAFE, faster for small areas)
+     */
+    public static Set<Location> discoverLeavesRadial(
+            BlockSnapshot snapshot,
+            Location centerLocation,
             int radius,
             Config config,
             Set<Location> removedLogs) {
 
-        Set<Block> leaves = new HashSet<>();
-        Location center = centerBlock.getLocation();
+        Set<Location> leaves = new HashSet<>();
+        World world = snapshot.getWorld();
+        BlockSnapshot.LocationKey centerKey = new BlockSnapshot.LocationKey(centerLocation);
         String mode = config.getLeafRemovalMode().toLowerCase();
 
-        // Use BitSet for fast visited checks (3D coordinate to 1D index mapping)
-        int size = (radius * 2 + 1);
-        BitSet visited = new BitSet(size * size * size);
+        // Convert removedLogs to LocationKey set
+        Set<BlockSnapshot.LocationKey> removedLogKeys = new HashSet<>();
+        for (Location loc : removedLogs) {
+            removedLogKeys.add(new BlockSnapshot.LocationKey(loc));
+        }
 
         int radiusSquared = radius * radius;
 
         for (int x = -radius; x <= radius; x++) {
             for (int y = -radius; y <= radius; y++) {
                 for (int z = -radius; z <= radius; z++) {
-                    Location loc = center.clone().add(x, y, z);
-
                     // Spherical check
-                    if (loc.distanceSquared(center) > radiusSquared) {
+                    if (x * x + y * y + z * z > radiusSquared) {
                         continue;
                     }
 
-                    // BitSet index
-                    int index = getBitSetIndex(x, y, z, radius, size);
-                    if (visited.get(index)) {
-                        continue;
-                    }
-                    visited.set(index);
+                    BlockSnapshot.LocationKey key = new BlockSnapshot.LocationKey(
+                            centerKey.getX() + x,
+                            centerKey.getY() + y,
+                            centerKey.getZ() + z
+                    );
 
-                    Block block = loc.getBlock();
-                    Material type = block.getType();
+                    Material type = snapshot.getBlockType(key.getX(), key.getY(), key.getZ());
 
                     if (isLeafBlock(type, config)) {
-                        boolean shouldRemove = shouldRemoveLeaf(block, mode, config, removedLogs);
+                        boolean shouldRemove = shouldRemoveLeaf(
+                                snapshot,
+                                key,
+                                mode,
+                                config,
+                                removedLogKeys
+                        );
                         if (shouldRemove) {
-                            leaves.add(block);
+                            leaves.add(key.toLocation(world));
                         }
                     }
                 }
@@ -152,43 +200,47 @@ public class BlockDiscoveryUtils {
         return leaves;
     }
 
+    // ==================== Private Helper Methods ====================
+
     private static boolean shouldRemoveLeaf(
-            Block leafBlock,
+            BlockSnapshot snapshot,
+            BlockSnapshot.LocationKey leafKey,
             String mode,
             Config config,
-            Set<Location> removedLogs) {
+            Set<BlockSnapshot.LocationKey> removedLogKeys) {
 
         switch (mode) {
             case "aggressive":
                 return true;
 
             case "radius":
-                return !hasNearbyActiveLog(leafBlock.getLocation(), config, removedLogs, 4);
+                return !hasNearbyActiveLog(snapshot, leafKey, config, removedLogKeys, 4);
 
             case "smart":
             default:
-                return isOrphanedLeaf(leafBlock, config, removedLogs);
+                return isOrphanedLeaf(snapshot, leafKey, config, removedLogKeys);
         }
     }
 
-    /**
-     * Check if leaf is orphaned (not connected to any active logs)
-     */
-    private static boolean isOrphanedLeaf(Block leafBlock, Config config, Set<Location> removedLogs) {
-        Location leafLoc = leafBlock.getLocation();
+    private static boolean isOrphanedLeaf(
+            BlockSnapshot snapshot,
+            BlockSnapshot.LocationKey leafKey,
+            Config config,
+            Set<BlockSnapshot.LocationKey> removedLogKeys) {
 
-        if (!hasNearbyActiveLog(leafLoc, config, removedLogs, 2)) {
+        if (!hasNearbyActiveLog(snapshot, leafKey, config, removedLogKeys, 2)) {
             return true;
         }
 
-        Set<Location> visited = new HashSet<>();
-        return !isConnectedToActiveLog(leafBlock, config, removedLogs, visited, 0);
+        Set<BlockSnapshot.LocationKey> visited = new HashSet<>();
+        return !isConnectedToActiveLog(snapshot, leafKey, config, removedLogKeys, visited, 0);
     }
 
     private static boolean hasNearbyActiveLog(
-            Location leafLoc,
+            BlockSnapshot snapshot,
+            BlockSnapshot.LocationKey leafKey,
             Config config,
-            Set<Location> removedLogs,
+            Set<BlockSnapshot.LocationKey> removedLogKeys,
             int checkRadius) {
 
         for (int x = -checkRadius; x <= checkRadius; x++) {
@@ -196,10 +248,15 @@ public class BlockDiscoveryUtils {
                 for (int z = -checkRadius; z <= checkRadius; z++) {
                     if (x == 0 && y == 0 && z == 0) continue;
 
-                    Location checkLoc = leafLoc.clone().add(x, y, z);
-                    Block block = checkLoc.getBlock();
+                    BlockSnapshot.LocationKey checkKey = new BlockSnapshot.LocationKey(
+                            leafKey.getX() + x,
+                            leafKey.getY() + y,
+                            leafKey.getZ() + z
+                    );
 
-                    if (isLog(block.getType(), config) && !isLocationInSet(checkLoc, removedLogs)) {
+                    Material type = snapshot.getBlockType(checkKey.getX(), checkKey.getY(), checkKey.getZ());
+
+                    if (isLog(type, config) && !removedLogKeys.contains(checkKey)) {
                         return true;
                     }
                 }
@@ -209,37 +266,41 @@ public class BlockDiscoveryUtils {
     }
 
     private static boolean isConnectedToActiveLog(
-            Block startBlock,
+            BlockSnapshot snapshot,
+            BlockSnapshot.LocationKey startKey,
             Config config,
-            Set<Location> removedLogs,
-            Set<Location> visited,
+            Set<BlockSnapshot.LocationKey> removedLogKeys,
+            Set<BlockSnapshot.LocationKey> visited,
             int depth) {
 
         if (depth > 8 || visited.size() > 100) {
             return false;
         }
 
-        Location startLoc = startBlock.getLocation();
-        if (visited.contains(startLoc)) {
+        if (visited.contains(startKey)) {
             return false;
         }
-        visited.add(startLoc);
+        visited.add(startKey);
 
         for (int x = -1; x <= 1; x++) {
             for (int y = -1; y <= 1; y++) {
                 for (int z = -1; z <= 1; z++) {
                     if (x == 0 && y == 0 && z == 0) continue;
 
-                    Location checkLoc = startLoc.clone().add(x, y, z);
-                    Block block = checkLoc.getBlock();
-                    Material type = block.getType();
+                    BlockSnapshot.LocationKey checkKey = new BlockSnapshot.LocationKey(
+                            startKey.getX() + x,
+                            startKey.getY() + y,
+                            startKey.getZ() + z
+                    );
 
-                    if (isLog(type, config) && !isLocationInSet(checkLoc, removedLogs)) {
+                    Material type = snapshot.getBlockType(checkKey.getX(), checkKey.getY(), checkKey.getZ());
+
+                    if (isLog(type, config) && !removedLogKeys.contains(checkKey)) {
                         return true;
                     }
 
-                    if (isLeafBlock(type, config) && !visited.contains(checkLoc)) {
-                        if (isConnectedToActiveLog(block, config, removedLogs, visited, depth + 1)) {
+                    if (isLeafBlock(type, config) && !visited.contains(checkKey)) {
+                        if (isConnectedToActiveLog(snapshot, checkKey, config, removedLogKeys, visited, depth + 1)) {
                             return true;
                         }
                     }
@@ -250,38 +311,47 @@ public class BlockDiscoveryUtils {
     }
 
     private static void addNeighborsToQueue(
-            Block current,
-            Queue<Block> queue,
-            Set<Location> visited,
+            BlockSnapshot.LocationKey current,
+            Queue<BlockSnapshot.LocationKey> queue,
+            Set<BlockSnapshot.LocationKey> visited,
+            BlockSnapshot snapshot,
             boolean connectedOnly) {
 
-        for (int yOffset = -1; yOffset <= 1; yOffset++) {
-            for (int xOffset = -1; xOffset <= 1; xOffset++) {
-                for (int zOffset = -1; zOffset <= 1; zOffset++) {
-                    if (xOffset == 0 && yOffset == 0 && zOffset == 0) continue;
+        for (int y = -1; y <= 1; y++) {
+            for (int x = -1; x <= 1; x++) {
+                for (int z = -1; z <= 1; z++) {
+                    if (x == 0 && y == 0 && z == 0) continue;
 
-                    Block neighbor = current.getRelative(xOffset, yOffset, zOffset);
-                    Location neighborLoc = neighbor.getLocation();
+                    BlockSnapshot.LocationKey neighborKey = new BlockSnapshot.LocationKey(
+                            current.getX() + x,
+                            current.getY() + y,
+                            current.getZ() + z
+                    );
 
-                    if (visited.contains(neighborLoc)) continue;
+                    if (visited.contains(neighborKey)) continue;
 
-                    // Check connectivity if required
-                    if (connectedOnly && blockNotConnected(current, neighbor)) {
+                    // Check if block exists in snapshot
+                    if (!snapshot.hasBlock(neighborKey.toLocation(snapshot.getWorld()))) {
                         continue;
                     }
 
-                    visited.add(neighborLoc);
-                    queue.add(neighbor);
+                    // Check connectivity if required
+                    if (connectedOnly && !isConnectedKeys(current, neighborKey)) {
+                        continue;
+                    }
+
+                    visited.add(neighborKey);
+                    queue.add(neighborKey);
                 }
             }
         }
     }
 
     private static void addLeafNeighborsToQueue(
-            Block current,
-            Queue<Block> queue,
-            Set<Location> visited,
-            Location center,
+            BlockSnapshot.LocationKey current,
+            Queue<BlockSnapshot.LocationKey> queue,
+            Set<BlockSnapshot.LocationKey> visited,
+            BlockSnapshot.LocationKey center,
             int radiusSquared) {
 
         for (int x = -1; x <= 1; x++) {
@@ -289,47 +359,36 @@ public class BlockDiscoveryUtils {
                 for (int z = -1; z <= 1; z++) {
                     if (x == 0 && y == 0 && z == 0) continue;
 
-                    Block neighbor = current.getRelative(x, y, z);
-                    Location neighborLoc = neighbor.getLocation();
+                    BlockSnapshot.LocationKey neighborKey = new BlockSnapshot.LocationKey(
+                            current.getX() + x,
+                            current.getY() + y,
+                            current.getZ() + z
+                    );
 
-                    if (visited.contains(neighborLoc)) continue;
-                    if (neighborLoc.distanceSquared(center) > radiusSquared) continue;
+                    if (visited.contains(neighborKey)) continue;
+                    if (getDistanceSquared(neighborKey, center) > radiusSquared) continue;
 
-                    visited.add(neighborLoc);
-                    queue.add(neighbor);
+                    // CRITICAL: Only add to queue if not already visited
+                    // Don't need to check snapshot here - will be checked when processing
+                    visited.add(neighborKey);
+                    queue.add(neighborKey);
                 }
             }
         }
     }
 
-    private static int getBitSetIndex(int x, int y, int z, int radius, int size) {
-        int nx = x + radius;
-        int ny = y + radius;
-        int nz = z + radius;
-        return nx + ny * size + nz * size * size;
+    private static boolean isConnectedKeys(BlockSnapshot.LocationKey k1, BlockSnapshot.LocationKey k2) {
+        int dx = Math.abs(k1.getX() - k2.getX());
+        int dy = Math.abs(k1.getY() - k2.getY());
+        int dz = Math.abs(k1.getZ() - k2.getZ());
+        return (dx + dy + dz) == 1;
     }
 
-    private static boolean blockNotConnected(Block block1, Block block2) {
-        int dx = Math.abs(block1.getX() - block2.getX());
-        int dy = Math.abs(block1.getY() - block2.getY());
-        int dz = Math.abs(block1.getZ() - block2.getZ());
-
-        if (dx + dy + dz == 1) return false;
-
-        // Not connected
-        return true;
-    }
-
-    /**
-     * Check if location is in a set (block coordinate comparison)
-     */
-    private static boolean isLocationInSet(Location loc, Set<Location> locationSet) {
-        return locationSet.stream().anyMatch(setLoc ->
-                setLoc.getBlockX() == loc.getBlockX() &&
-                        setLoc.getBlockY() == loc.getBlockY() &&
-                        setLoc.getBlockZ() == loc.getBlockZ() &&
-                        Objects.equals(setLoc.getWorld(), loc.getWorld())
-        );
+    private static int getDistanceSquared(BlockSnapshot.LocationKey k1, BlockSnapshot.LocationKey k2) {
+        int dx = k1.getX() - k2.getX();
+        int dy = k1.getY() - k2.getY();
+        int dz = k1.getZ() - k2.getZ();
+        return dx * dx + dy * dy + dz * dz;
     }
 
     public static boolean isLog(Material material, Config config) {
