@@ -80,10 +80,14 @@ public class Command implements CommandExecutor {
         }
 
         if (!(sender instanceof Player player)) {
-            if (args.length > 0) {
-                handleTargetPlayerToggle(sender, args[0]);
+            if (sender.hasPermission("autotreechop.other")) {
+                if (args.length > 0) {
+                    handleTargetPlayerToggle(sender, args[0]);
+                } else {
+                    sendMessage(sender, ONLY_PLAYERS_MESSAGE);
+                }
             } else {
-                sendMessage(sender, ONLY_PLAYERS_MESSAGE);
+                sendMessage(sender, NO_PERMISSION_MESSAGE);
             }
             return true;
         }
