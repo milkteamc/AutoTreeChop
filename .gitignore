@@ -117,3 +117,8 @@ run/
 .vscode/
 
 .project
+
+bin
+
+.settings
+.classpath
