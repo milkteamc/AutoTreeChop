@@ -1,5 +1,6 @@
 package org.milkteamc.autotreechop.events;
 
+import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -11,8 +12,11 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.inventory.ItemStack;
 import org.milkteamc.autotreechop.AutoTreeChop;
 import org.milkteamc.autotreechop.PlayerConfig;
-import org.milkteamc.autotreechop.utils.*;
+import org.milkteamc.autotreechop.utils.BlockDiscoveryUtils;
+import org.milkteamc.autotreechop.utils.EffectUtils;
+import org.milkteamc.autotreechop.utils.PermissionUtils;
 import org.milkteamc.autotreechop.utils.ProtectionCheckUtils.ProtectionHooks;
+import org.milkteamc.autotreechop.utils.SessionManager;
 
 import java.util.UUID;
 
@@ -51,8 +55,9 @@ public class BlockBreakListener implements Listener {
         if (playerConfig.isAutoTreeChopEnabled() && BlockDiscoveryUtils.isLog(material, plugin.getPluginConfig())) {
 
             if (plugin.getCooldownManager().isInCooldown(playerUUID)) {
-                sendMessage(player, STILL_IN_COOLDOWN_MESSAGE
-                        .insertNumber("cooldown_time", plugin.getCooldownManager().getRemainingCooldown(playerUUID))
+                long remainingCooldown = plugin.getCooldownManager().getRemainingCooldown(playerUUID);
+                sendMessage(player, STILL_IN_COOLDOWN_MESSAGE,
+                        Placeholder.parsed("cooldown_time", String.valueOf(remainingCooldown))
                 );
                 event.setCancelled(true);
                 return;
@@ -60,7 +65,7 @@ public class BlockBreakListener implements Listener {
 
             if (!PermissionUtils.hasVipBlock(player, playerConfig, plugin.getPluginConfig())) {
                 if (playerConfig.getDailyBlocksBroken() >= plugin.getPluginConfig().getMaxBlocksPerDay()) {
-                    EffectUtils.sendMaxBlockLimitReachedMessage(player, block, HIT_MAX_BLOCK_MESSAGE);
+                    EffectUtils.sendMaxBlockLimitReachedMessage(player, block);
                     event.setCancelled(true);
                     return;
                 }

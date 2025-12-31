@@ -1,9 +1,7 @@
 package org.milkteamc.autotreechop;
 
-import de.cubbossa.tinytranslations.*;
-import de.cubbossa.tinytranslations.libs.kyori.adventure.text.ComponentLike;
-import de.cubbossa.tinytranslations.storage.properties.PropertiesMessageStorage;
-import de.cubbossa.tinytranslations.storage.properties.PropertiesStyleStorage;
+import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
+import org.bstats.bukkit.Metrics;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -12,7 +10,10 @@ import org.milkteamc.autotreechop.database.DatabaseManager;
 import org.milkteamc.autotreechop.events.*;
 import org.milkteamc.autotreechop.hooks.*;
 import org.milkteamc.autotreechop.tasks.PlayerDataSaveTask;
-import org.milkteamc.autotreechop.utils.*;
+import org.milkteamc.autotreechop.translation.TranslationManager;
+import org.milkteamc.autotreechop.utils.CooldownManager;
+import org.milkteamc.autotreechop.utils.SessionManager;
+import org.milkteamc.autotreechop.utils.TreeChopUtils;
 
 import java.io.File;
 import java.util.*;
@@ -20,49 +21,35 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class AutoTreeChop extends JavaPlugin implements CommandExecutor {
 
-    public static final Message noResidencePermissions = new MessageBuilder("noResidencePermissions")
-            .withDefault("<prefix_negative>You don't have permission to use AutoTreeChop here.</prefix_negative>").build();
-    public static final Message ENABLED_MESSAGE = new MessageBuilder("enabled")
-            .withDefault("<prefix>Auto tree chopping enabled.</prefix>").build();
-    public static final Message DISABLED_MESSAGE = new MessageBuilder("disabled")
-            .withDefault("<prefix_negative>Auto tree chopping disabled.</prefix_negative>").build();
-    public static final Message NO_PERMISSION_MESSAGE = new MessageBuilder("no-permission")
-            .withDefault(GlobalMessages.NO_PERM_CMD).build();
-    public static final Message ONLY_PLAYERS_MESSAGE = new MessageBuilder("only-players")
-            .withDefault(GlobalMessages.CMD_PLAYER_ONLY).build();
-    public static final Message HIT_MAX_USAGE_MESSAGE = new MessageBuilder("hitmaxusage")
-            .withDefault("<prefix_negative>You've reached the daily usage limit.</prefix_negative>").build();
-    public static final Message HIT_MAX_BLOCK_MESSAGE = new MessageBuilder("hitmaxblock")
-            .withDefault("<prefix_negative>You have reached your daily block breaking limit.</prefix_negative>").build();
-    public static final Message USAGE_MESSAGE = new MessageBuilder("usage")
-            .withDefault("<prefix>You have used the AutoTreeChop {current_uses}/{max_uses} times today.</prefix>").build();
-    public static final Message BLOCKS_BROKEN_MESSAGE = new MessageBuilder("blocks-broken")
-            .withDefault("<prefix>You have broken {current_blocks}/{max_blocks} blocks today.</prefix>").build();
-    public static final Message ENABLED_BY_OTHER_MESSAGE = new MessageBuilder("enabledByOther")
-            .withDefault("<prefix>Auto tree chopping enabled by {player}.</prefix>").build();
-    public static final Message ENABLED_FOR_OTHER_MESSAGE = new MessageBuilder("enabledForOther")
-            .withDefault("<prefix>Auto tree chopping enabled for {player}</prefix>").build();
-    public static final Message DISABLED_BY_OTHER_MESSAGE = new MessageBuilder("disabledByOther")
-            .withDefault("<prefix_negative>Auto tree chopping disabled by {player}.</prefix_negative>").build();
-    public static final Message DISABLED_FOR_OTHER_MESSAGE = new MessageBuilder("disabledForOther")
-            .withDefault("<prefix_negative>Auto tree chopping disabled for {player}</prefix_negative>").build();
-    public static final Message STILL_IN_COOLDOWN_MESSAGE = new MessageBuilder("stillInCooldown")
-            .withDefault("<prefix_negative>You are still in cooldown! Try again after {cooldown_time} seconds.</prefix_negative>").build();
-    public static final Message CONSOLE_NAME = new MessageBuilder("consoleName")
-            .withDefault("console").build();
-    public static final Message SNEAK_ENABLED_MESSAGE = new MessageBuilder("sneakEnabled")
-            .withDefault("<prefix>Auto tree chopping enabled by sneaking.</prefix>").build();
-    public static final Message SNEAK_DISABLED_MESSAGE = new MessageBuilder("sneakDisabled")
-            .withDefault("<prefix_negative>Auto tree chopping disabled by stopping sneak.</prefix_negative>").build();
+    // Message keys (replacing old Message objects)
+    public static final String NO_RESIDENCE_PERMISSIONS = "noResidencePermissions";
+    public static final String ENABLED_MESSAGE = "enabled";
+    public static final String DISABLED_MESSAGE = "disabled";
+    public static final String NO_PERMISSION_MESSAGE = "no-permission";
+    public static final String ONLY_PLAYERS_MESSAGE = "only-players";
+    public static final String HIT_MAX_USAGE_MESSAGE = "hitmaxusage";
+    public static final String HIT_MAX_BLOCK_MESSAGE = "hitmaxblock";
+    public static final String USAGE_MESSAGE = "usage";
+    public static final String BLOCKS_BROKEN_MESSAGE = "blocks-broken";
+    public static final String ENABLED_BY_OTHER_MESSAGE = "enabledByOther";
+    public static final String ENABLED_FOR_OTHER_MESSAGE = "enabledForOther";
+    public static final String DISABLED_BY_OTHER_MESSAGE = "disabledByOther";
+    public static final String DISABLED_FOR_OTHER_MESSAGE = "disabledForOther";
+    public static final String STILL_IN_COOLDOWN_MESSAGE = "stillInCooldown";
+    public static final String CONSOLE_NAME = "consoleName";
+    public static final String SNEAK_ENABLED_MESSAGE = "sneakEnabled";
+    public static final String SNEAK_DISABLED_MESSAGE = "sneakDisabled";
 
     private static final long SAVE_INTERVAL = 1200L; // 60s
     private static final int SAVE_THRESHOLD = 15;
+
+    private static AutoTreeChop instance;
 
     private Config config;
     private AutoTreeChopAPI autoTreeChopAPI;
     private Map<UUID, PlayerConfig> playerConfigs = new ConcurrentHashMap<>();
     private Metrics metrics;
-    private MessageTranslator translations;
+    private TranslationManager translationManager;
 
     private boolean worldGuardEnabled = false;
     private boolean residenceEnabled = false;
@@ -80,8 +67,13 @@ public class AutoTreeChop extends JavaPlugin implements CommandExecutor {
 
     private TreeChopUtils treeChopUtils;
 
-    public static void sendMessage(CommandSender sender, ComponentLike message) {
-        BukkitTinyTranslations.sendMessageIfNotEmpty(sender, message);
+    /**
+     * Sends a translated message to a command sender
+     */
+    public static void sendMessage(CommandSender sender, String messageKey, TagResolver... resolvers) {
+        if (instance != null && instance.translationManager != null) {
+            instance.translationManager.sendMessage(sender, messageKey, resolvers);
+        }
     }
 
     public static boolean isFolia() {
@@ -92,9 +84,20 @@ public class AutoTreeChop extends JavaPlugin implements CommandExecutor {
             return false;
         }
     }
+    
+    public static boolean isPaper() {
+        try {
+            Class.forName("com.destroystokyo.paper.ParticleBuilder");
+            return true;
+        } catch (ClassNotFoundException e) {
+            return false;
+        }
+    }
 
     @Override
     public void onEnable() {
+        instance = this;
+
         saveDefaultConfig();
         config = new Config(this);
 
@@ -110,11 +113,8 @@ public class AutoTreeChop extends JavaPlugin implements CommandExecutor {
         Objects.requireNonNull(getCommand("autotreechop")).setTabCompleter(new org.milkteamc.autotreechop.command.TabCompleter());
         Objects.requireNonNull(getCommand("atc")).setTabCompleter(new org.milkteamc.autotreechop.command.TabCompleter());
 
-        translations = BukkitTinyTranslations.application(this);
-        translations.setMessageStorage(new PropertiesMessageStorage(new File(getDataFolder(), "/lang/")));
-        translations.setStyleStorage(new PropertiesStyleStorage(new File(getDataFolder(), "/lang/styles.properties")));
-        translations.addMessages(TinyTranslations.messageFieldsFromClass(AutoTreeChop.class));
-
+        // Initialize translation system
+        translationManager = new TranslationManager(this);
         loadLocale();
 
         if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
@@ -155,6 +155,16 @@ public class AutoTreeChop extends JavaPlugin implements CommandExecutor {
         this.treeChopUtils = new TreeChopUtils(this);
 
         getLogger().info("AutoTreeChop enabled!");
+        
+        if (!isPaper()) {
+            Bukkit.getScheduler().runTaskLater(this, () -> {
+                getLogger().warning("=================================================");
+                getLogger().warning("Spigot support is deprecated.");
+                getLogger().warning("It will be removed in v1.8.0.");
+                getLogger().warning("Please migrate to Paper or a Paper fork.");
+                getLogger().warning("=================================================");
+            }, 40L); // 2s
+        }
     }
 
     private void registerEvents() {
@@ -220,16 +230,16 @@ public class AutoTreeChop extends JavaPlugin implements CommandExecutor {
 
     private void loadLocale() {
         saveResourceIfNotExists("lang/styles.properties");
+        saveResourceIfNotExists("lang/en.properties");
         saveResourceIfNotExists("lang/de.properties");
         saveResourceIfNotExists("lang/es.properties");
         saveResourceIfNotExists("lang/fr.properties");
         saveResourceIfNotExists("lang/ja.properties");
         saveResourceIfNotExists("lang/ru.properties");
         saveResourceIfNotExists("lang/zh.properties");
-        translations.setUseClientLocale(config.isUseClientLocale());
-        translations.defaultLocale(config.getLocale() == null ? Locale.getDefault() : config.getLocale());
-        translations.loadStyles();
-        translations.loadLocales();
+
+        Locale defaultLocale = config.getLocale() == null ? Locale.getDefault() : config.getLocale();
+        translationManager.initialize(defaultLocale, config.isUseClientLocale());
     }
 
     private void saveResourceIfNotExists(String resourcePath) {
@@ -263,7 +273,10 @@ public class AutoTreeChop extends JavaPlugin implements CommandExecutor {
             sessionManager.clearAllPlayerSessions(uuid);
         }
 
-        translations.close();
+        if (translationManager != null) {
+            translationManager.close();
+        }
+
         metrics.shutdown();
 
         getLogger().info("AutoTreeChop disabled!");
@@ -331,6 +344,10 @@ public class AutoTreeChop extends JavaPlugin implements CommandExecutor {
         return treeChopUtils;
     }
 
+    public TranslationManager getTranslationManager() {
+        return translationManager;
+    }
+
     public boolean isWorldGuardEnabled() {
         return worldGuardEnabled;
     }
@@ -361,5 +378,9 @@ public class AutoTreeChop extends JavaPlugin implements CommandExecutor {
 
     public LandsHook getLandsHook() {
         return landsHook;
+    }
+
+    public static AutoTreeChop getInstance() {
+        return instance;
     }
 }

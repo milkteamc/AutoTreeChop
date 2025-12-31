@@ -1,8 +1,8 @@
-# AutoTreeChop by Maoyue
+# AutoTreeChop by MilkTeaMC team
 # Discord support server: https://discord.gg/uQ4UXANnP2
 # Modrinth Page: https://modrinth.com/plugin/autotreechop
 # Source code: https://github.com/milkteamc/AutoTreeChop
-# See original config file at: https://github.com/milkteamc/AutoTreeChop/blob/master/src/main/resources/config.yml
+# Default config file: https://github.com/milkteamc/AutoTreeChop/blob/master/src/main/resources/config.yml
 
 # The plugin locale (<language>-<country>-<variant>)
 # en, de, zh, es, fr, ja, zh-TW, en-US, de-DE, de-AU, ...
@@ -95,6 +95,8 @@ log-types:
   - MANGROVE_LOG
   - CHERRY_LOG
   - PALE_OAK_LOG
+  - WARPED_STEM
+  - CRIMSON_STEM
 
 # Leaf removal setting
 enable-leaf-removal: true
@@ -102,9 +104,9 @@ enable-leaf-removal: true
 # and aggressive (guaranteed clean but may remove leaves from other trees)
 leaf-removal-mode: smart
 # Delay after tree chopping, 20ticks = 1 second
-leaf-removal-delay-ticks: 1
+leaf-removal-delay-ticks: 5
 # Blocks around the original log to search for leaves
-leaf-removal-radius: 8
+leaf-removal-radius: 10
 # Whether removed leaves should drop items
 leaf-removal-drop-items: false
 # Show particle effects when removing leaves
@@ -126,12 +128,14 @@ leaf-types:
   - MANGROVE_LEAVES
   - CHERRY_LEAVES
   - PALE_OAK_LEAVES
+  - WARPED_WART_BLOCK
+  - NETHER_WART_BLOCK
 
 # Replanting setting
 # Enable automatic sapling replanting after tree chopping
 enable-auto-replant: true
 # Delay before planting sapling (in ticks, 20 ticks = 1 second)
-replant-delay-ticks: 10
+replant-delay-ticks: 15
 # If true, players must have saplings in inventory to replant
 # If false, saplings are automatically provided
 require-sapling-in-inventory: false
@@ -149,6 +153,8 @@ log-sapling-mapping:
   MANGROVE_LOG: MANGROVE_PROPAGULE
   CHERRY_LOG: CHERRY_SAPLING
   PALE_OAK_LOG: PALE_OAK_SAPLING
+  WARPED_STEM: WARPED_FUNGUS
+  CRIMSON_STEM: CRIMSON_FUNGUS
 # Define valid soil types where saplings can be planted
 valid-soil-types:
   - DIRT

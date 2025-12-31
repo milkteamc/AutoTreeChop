@@ -186,16 +186,48 @@ public class DatabaseManager {
             this.lastUseDate = lastUseDate;
         }
 
-        public UUID getPlayerUUID() { return playerUUID; }
-        public boolean isAutoTreeChopEnabled() { return autoTreeChopEnabled; }
-        public void setAutoTreeChopEnabled(boolean enabled) { this.autoTreeChopEnabled = enabled; }
-        public int getDailyUses() { return dailyUses; }
-        public void setDailyUses(int uses) { this.dailyUses = uses; }
-        public void incrementDailyUses() { this.dailyUses++; }
-        public int getDailyBlocksBroken() { return dailyBlocksBroken; }
-        public void setDailyBlocksBroken(int blocks) { this.dailyBlocksBroken = blocks; }
-        public void incrementDailyBlocksBroken() { this.dailyBlocksBroken++; }
-        public LocalDate getLastUseDate() { return lastUseDate; }
-        public void setLastUseDate(LocalDate date) { this.lastUseDate = date; }
+        public UUID getPlayerUUID() {
+            return playerUUID;
+        }
+
+        public boolean isAutoTreeChopEnabled() {
+            return autoTreeChopEnabled;
+        }
+
+        public void setAutoTreeChopEnabled(boolean enabled) {
+            this.autoTreeChopEnabled = enabled;
+        }
+
+        public int getDailyUses() {
+            return dailyUses;
+        }
+
+        public void setDailyUses(int uses) {
+            this.dailyUses = uses;
+        }
+
+        public void incrementDailyUses() {
+            this.dailyUses++;
+        }
+
+        public int getDailyBlocksBroken() {
+            return dailyBlocksBroken;
+        }
+
+        public void setDailyBlocksBroken(int blocks) {
+            this.dailyBlocksBroken = blocks;
+        }
+
+        public void incrementDailyBlocksBroken() {
+            this.dailyBlocksBroken++;
+        }
+
+        public LocalDate getLastUseDate() {
+            return lastUseDate;
+        }
+
+        public void setLastUseDate(LocalDate date) {
+            this.lastUseDate = date;
+        }
     }
 }

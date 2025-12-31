@@ -1,7 +1,7 @@
 plugins {
     id 'java'
     id 'maven-publish'
-    id 'com.gradleup.shadow' version '9.2.2'
+    id 'com.gradleup.shadow' version '9.3.0'
     id 'xyz.jpenilla.run-paper' version '3.0.2'
     id 'com.modrinth.minotaur' version '2.+'
 }
@@ -9,64 +9,72 @@ plugins {
 group = 'org.milkteamc'
 version = '1.7.2-SNAPSHOT'
 
+// Java Configuration
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+// Repositories
 repositories {
     mavenLocal()
     mavenCentral()
+
     maven {
-        name = "sonatype"
-        url = "https://oss.sonatype.org/content/groups/public/"
+        name = 'sonatype'
+        url = 'https://oss.sonatype.org/content/groups/public/'
     }
+
     maven {
+        name = 'placeholderapi'
         url = 'https://repo.extendedclip.com/content/repositories/placeholderapi/'
     }
+
     maven {
-        url = "https://nexus.leonardbausenwein.de/repository/maven-public/"
-    }
-    maven {
-        url = "https://maven.playpro.com/"
-    }
-    maven {
+        name = 'jitpack'
         url = 'https://jitpack.io'
     }
+
     maven {
+        name = 'xenondevs'
         url = 'https://repo.xenondevs.xyz/releases'
     }
+
     maven {
-        url = "https://maven.enginehub.org/repo/"
+        name = 'enginehub'
+        url = 'https://maven.enginehub.org/repo/'
     }
+
     maven {
-        url = "https://repo.papermc.io/repository/maven-public/"
+        name = 'papermc'
+        url = 'https://repo.papermc.io/repository/maven-public/'
     }
 }
 
+// Dependencies
 dependencies {
-    compileOnly "io.papermc.paper:paper-api:1.20.4-R0.1-SNAPSHOT"
-    compileOnly 'me.clip:placeholderapi:2.11.7'
-    implementation "de.cubbossa:TinyTranslations-bukkit:4.5.2"
+    // Paper API
+    compileOnly 'io.papermc.paper:paper-api:1.21.1-R0.1-SNAPSHOT'
+
+    // Adventure (Kyori)
+    implementation 'net.kyori:adventure-platform-bukkit:4.4.1'
+    implementation 'net.kyori:adventure-text-minimessage:4.25.0'
+
+    // Utilities
     implementation 'com.github.Anon8281:UniversalScheduler:0.1.7'
-    compileOnly files("./libs/Residence5.1.4.3.jar")
-    compileOnly "com.github.angeschossen:LandsAPI:7.17.2"
-    compileOnly 'com.sk89q.worldguard:worldguard-bukkit:7.0.9'
-    compileOnly "com.github.GriefPrevention:GriefPrevention:16.18.4"
-    implementation "com.zaxxer:HikariCP:7.0.2"
+    implementation 'com.zaxxer:HikariCP:7.0.2'
+    implementation 'org.bstats:bstats-bukkit:3.1.0'
+
+    // Plugin Integrations
+    compileOnly 'me.clip:placeholderapi:2.11.7'
+    compileOnly files('./libs/Residence5.1.4.3.jar')
+    compileOnly 'com.github.angeschossen:LandsAPI:7.17.2'
+    compileOnly 'com.sk89q.worldguard:worldguard-bukkit:7.0.14'
+    compileOnly 'com.github.GriefPrevention:GriefPrevention:16.18.4'
 }
 
-def targetJavaVersion = 17
-java {
-    def javaVersion = JavaVersion.toVersion(targetJavaVersion)
-    sourceCompatibility = javaVersion
-    targetCompatibility = javaVersion
-    if (JavaVersion.current() < javaVersion) {
-        toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
-    }
-}
-
-tasks.withType(JavaCompile).configureEach {
-    if (targetJavaVersion >= 10 || JavaVersion.current().isJava10Compatible()) {
-        options.release = targetJavaVersion
-    }
-}
-
+// Resource Processing
 processResources {
     def props = [version: version]
     inputs.properties props
@@ -76,37 +84,42 @@ processResources {
     }
 }
 
+// Build Configuration
 tasks.build {
-    dependsOn("shadowJar")
+    dependsOn('shadowJar')
 }
 
+// JAR Tasks
+tasks.jar {
+    archiveFileName = "AutoTreeChop-${version}-original.jar"
+}
 
 tasks.shadowJar {
     archiveFileName = "AutoTreeChop-${version}.jar"
     configurations = [project.configurations.runtimeClasspath]
     minimize()
 
+    // Relocations
     relocate 'com.jeff_media.updatechecker', 'org.milkteamc.autotreechop.libs.updatechecker'
-    relocate 'de.cubbossa.tinytranslations', 'org.milkteamc.autotreechop.libs.tinytranslations'
+    relocate 'net.kyori', 'org.milkteamc.autotreechop.libs.kyori'
     relocate 'com.zaxxer.hikari', 'org.milkteamc.autotreechop.libs.hikari'
+    relocate 'org.bstats', 'org.milkteamc.autotreechop.libs.bstats'
     relocate 'com.github.Anon8281.universalScheduler', 'org.milkteamc.autotreechop.libs.universalScheduler'
 
-    // Add the license file to the JAR
-    from("LICENSE") {
+    // Include License
+    from('LICENSE') {
         into 'META-INF'
     }
 }
 
-tasks.jar {
-    archiveFileName = "AutoTreeChop-${version}-original.jar"
-}
-
+// Run Server Configuration
 tasks.runServer {
-    minecraftVersion("1.21.10")
+    minecraftVersion('1.21.11')
 }
 
 runPaper.folia.registerTask()
 
+// Git Information
 def gitHash = 'unknown'
 def gitMessage = 'No commit message available.'
 
@@ -122,31 +135,36 @@ try {
     if (msgProc.exitValue() == 0) {
         gitMessage = msgProc.text.trim()
     }
-} catch (Exception ignored) {}
+} catch (Exception ignored) {
+    // Git commands failed, use defaults
+}
 
+// Modrinth Publishing
 modrinth {
-    token = System.getenv("MODRINTH_TOKEN")
-    projectId = "autotreechop"
-    versionType = "alpha"
+    token = System.getenv('MODRINTH_TOKEN')
+    projectId = 'autotreechop'
+    versionType = 'alpha'
 
     versionNumber = "${version}-${gitHash}"
     versionName = "${version}-${gitHash}"
     changelog = """
-🚨 **This is a SNAPSHOT version, ONLY use it in test server!**  
-Report any issues to our [GitHub](https://github.com/milkteamc/AutoTreeChop/issues)
-
-**Latest Commit:**
-> ${gitMessage}
-""".stripIndent().trim()
+        🚨 **This is a SNAPSHOT version, ONLY use it in test server!**  
+        Report any issues to our [GitHub](https://github.com/milkteamc/AutoTreeChop/issues)
+        
+        **Latest Commit:**
+        > ${gitMessage}
+    """.stripIndent().trim()
 
     uploadFile = tasks.shadowJar.archiveFile
 
     gameVersions = [
-            "1.17", "1.17.1",
-            "1.18", "1.18.1", "1.18.2",
-            "1.19", "1.19.1", "1.19.2", "1.19.3", "1.19.4",
-            "1.20", "1.20.1", "1.20.2", "1.20.3", "1.20.4", "1.20.5", "1.20.6",
-            "1.21", "1.21.1", "1.21.2", "1.21.3", "1.21.4", "1.21.5", "1.21.6", "1.21.7", "1.21.8", "1.21.9", "1.21.10"
+            '1.17', '1.17.1',
+            '1.18', '1.18.1', '1.18.2',
+            '1.19', '1.19.1', '1.19.2', '1.19.3', '1.19.4',
+            '1.20', '1.20.1', '1.20.2', '1.20.3', '1.20.4', '1.20.5', '1.20.6',
+            '1.21', '1.21.1', '1.21.2', '1.21.3', '1.21.4', '1.21.5', '1.21.6',
+            '1.21.7', '1.21.8', '1.21.9', '1.21.10', '1.21.11'
     ]
-    loaders = ["paper", "purpur", "folia", "spigot", "bukkit"]
+
+    loaders = ['paper', 'purpur', 'folia', 'spigot']
 }
