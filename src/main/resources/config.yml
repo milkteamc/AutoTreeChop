@@ -153,8 +153,6 @@ log-sapling-mapping:
   MANGROVE_LOG: MANGROVE_PROPAGULE
   CHERRY_LOG: CHERRY_SAPLING
   PALE_OAK_LOG: PALE_OAK_SAPLING
-  WARPED_STEM: WARPED_FUNGUS
-  CRIMSON_STEM: CRIMSON_FUNGUS
 # Define valid soil types where saplings can be planted
 valid-soil-types:
   - DIRT
