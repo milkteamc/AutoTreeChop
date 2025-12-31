@@ -36,10 +36,6 @@ public class TreeReplantUtils {
         // Store the original location for later use
         Location originalLocation = brokenLogBlock.getLocation().clone();
 
-
-        // Check what's below the original location
-        Block below = brokenLogBlock.getRelative(BlockFace.DOWN);
-
         Runnable replantTask = () -> {
             // At replant time, re-evaluate the location since blocks have changed
             Location plantLocation = findSuitablePlantLocation(originalLocation, config, plugin);
@@ -47,7 +43,6 @@ public class TreeReplantUtils {
             if (plantLocation == null) {
                 return;
             }
-
 
             // Double-check permissions at plant time
             if (!hasReplantPermission(player, plantLocation, worldGuardEnabled, residenceEnabled,
@@ -62,7 +57,6 @@ public class TreeReplantUtils {
                 if (config.getReplantVisualEffect()) {
                     EffectUtils.showReplantEffect(player, plantLocation.getBlock());
                 }
-            } else {
             }
         };
 
@@ -78,7 +72,6 @@ public class TreeReplantUtils {
 
     private static Location findSuitablePlantLocation(Location originalLocation, Config config, AutoTreeChop plugin) {
         Block originalBlock = originalLocation.getBlock();
-
 
         Block belowOriginal = originalBlock.getRelative(BlockFace.DOWN);
 
@@ -101,31 +94,16 @@ public class TreeReplantUtils {
 
         for (int x = -2; x <= 2; x++) {
             for (int z = -2; z <= 2; z++) {
-                if (x == 0 && z == 0) continue;
+                if (Math.abs(x) <= 1 && Math.abs(z) <= 1) continue; // 跳過已檢查的區域
 
-                // Start from original Y and search downward
                 for (int yOffset = 0; yOffset >= -3; yOffset--) {
                     Block checkBlock = originalBlock.getRelative(x, yOffset, z);
                     Block belowCheck = checkBlock.getRelative(BlockFace.DOWN);
 
-                    // Make sure we're not going into the ground
-                    if (belowCheck.getType().isSolid() &&
-                            isValidSoil(belowCheck.getType(), config) &&
-                            isClearForSapling(checkBlock)) {
+                    if (isValidSoil(belowCheck.getType(), config) && isClearForSapling(checkBlock)) {
                         return checkBlock.getLocation();
                     }
                 }
-            }
-        }
-
-        for (int yOffset = 0; yOffset >= -10; yOffset--) {
-            Block checkBlock = originalBlock.getRelative(0, yOffset, 0);
-            Block belowCheck = checkBlock.getRelative(BlockFace.DOWN);
-
-            if (belowCheck.getType().isSolid() &&
-                    isValidSoil(belowCheck.getType(), config) &&
-                    (checkBlock.getType() == Material.AIR || isClearForSapling(checkBlock))) {
-                return checkBlock.getLocation();
             }
         }
 
