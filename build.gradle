@@ -10,13 +10,9 @@ group = 'org.milkteamc'
 version = '1.7.2-SNAPSHOT'
 
 // Java Configuration
-def targetJavaVersion = 21
 java {
-    def javaVersion = JavaVersion.toVersion(targetJavaVersion)
-    sourceCompatibility = javaVersion
-    targetCompatibility = javaVersion
-    if (JavaVersion.current() < javaVersion) {
-        toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
     }
 }
 
@@ -75,13 +71,6 @@ dependencies {
     compileOnly 'com.github.angeschossen:LandsAPI:7.17.2'
     compileOnly 'com.sk89q.worldguard:worldguard-bukkit:7.0.9'
     compileOnly 'com.github.GriefPrevention:GriefPrevention:16.18.4'
-}
-
-// Compilation Settings
-tasks.withType(JavaCompile).configureEach {
-    if (targetJavaVersion >= 10 || JavaVersion.current().isJava10Compatible()) {
-        options.release = targetJavaVersion
-    }
 }
 
 // Resource Processing
