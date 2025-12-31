@@ -64,6 +64,7 @@ dependencies {
     // Utilities
     implementation 'com.github.Anon8281:UniversalScheduler:0.1.7'
     implementation 'com.zaxxer:HikariCP:7.0.2'
+    implementation 'org.bstats:bstats-bukkit:3.1.0'
 
     // Plugin Integrations
     compileOnly 'me.clip:placeholderapi:2.11.7'
@@ -102,6 +103,7 @@ tasks.shadowJar {
     relocate 'com.jeff_media.updatechecker', 'org.milkteamc.autotreechop.libs.updatechecker'
     relocate 'net.kyori', 'org.milkteamc.autotreechop.libs.kyori'
     relocate 'com.zaxxer.hikari', 'org.milkteamc.autotreechop.libs.hikari'
+    relocate 'org.bstats', 'org.milkteamc.autotreechop.libs.bstats'
     relocate 'com.github.Anon8281.universalScheduler', 'org.milkteamc.autotreechop.libs.universalScheduler'
 
     // Include License

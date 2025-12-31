@@ -1,6 +1,7 @@
 package org.milkteamc.autotreechop;
 
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
+import org.bstats.bukkit.Metrics;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
