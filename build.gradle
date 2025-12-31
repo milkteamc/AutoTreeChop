@@ -10,7 +10,7 @@ group = 'org.milkteamc'
 version = '1.7.2-SNAPSHOT'
 
 // Java Configuration
-def targetJavaVersion = 17
+def targetJavaVersion = 21
 java {
     def javaVersion = JavaVersion.toVersion(targetJavaVersion)
     sourceCompatibility = javaVersion
