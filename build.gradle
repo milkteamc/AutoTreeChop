@@ -69,7 +69,7 @@ dependencies {
     // Plugin Integrations
     compileOnly 'me.clip:placeholderapi:2.11.7'
     compileOnly files('./libs/Residence5.1.4.3.jar')
-    compileOnly 'com.github.angeschossen:LandsAPI:7.17.2'
+    compileOnly 'com.github.angeschossen:LandsAPI:7.19.15'
     compileOnly 'com.sk89q.worldguard:worldguard-bukkit:7.0.14'
     compileOnly 'com.github.GriefPrevention:GriefPrevention:16.18.4'
 }
