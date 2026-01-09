@@ -7,7 +7,7 @@ plugins {
 }
 
 group = 'org.milkteamc'
-version = '1.7.2-SNAPSHOT'
+version = '1.7.2'
 
 // Java Configuration
 java {
@@ -16,7 +16,6 @@ java {
     }
 }
 
-// Repositories
 repositories {
     mavenLocal()
     mavenCentral()
@@ -52,21 +51,16 @@ repositories {
     }
 }
 
-// Dependencies
 dependencies {
-    // Paper API
     compileOnly 'io.papermc.paper:paper-api:1.21.1-R0.1-SNAPSHOT'
 
-    // Adventure (Kyori)
     implementation 'net.kyori:adventure-platform-bukkit:4.4.1'
     implementation 'net.kyori:adventure-text-minimessage:4.25.0'
 
-    // Utilities
     implementation 'com.github.Anon8281:UniversalScheduler:0.1.7'
     implementation 'com.zaxxer:HikariCP:7.0.2'
     implementation 'org.bstats:bstats-bukkit:3.1.0'
 
-    // Plugin Integrations
     compileOnly 'me.clip:placeholderapi:2.11.7'
     compileOnly files('./libs/Residence5.1.4.3.jar')
     compileOnly 'com.github.angeschossen:LandsAPI:7.17.2'
@@ -74,60 +68,21 @@ dependencies {
     compileOnly 'com.github.GriefPrevention:GriefPrevention:16.18.4'
 }
 
-// Resource Processing
-processResources {
-    def props = [version: version]
-    inputs.properties props
-    filteringCharset = 'UTF-8'
-    filesMatching('plugin.yml') {
-        expand props
-    }
-}
-
-// Build Configuration
-tasks.build {
-    dependsOn('shadowJar')
-}
-
-// JAR Tasks
-tasks.jar {
-    archiveFileName = "AutoTreeChop-${version}-original.jar"
-}
-
-tasks.shadowJar {
-    archiveFileName = "AutoTreeChop-${version}.jar"
-    configurations = [project.configurations.runtimeClasspath]
-    minimize()
-
-    // Relocations
-    relocate 'com.jeff_media.updatechecker', 'org.milkteamc.autotreechop.libs.updatechecker'
-    relocate 'net.kyori', 'org.milkteamc.autotreechop.libs.kyori'
-    relocate 'com.zaxxer.hikari', 'org.milkteamc.autotreechop.libs.hikari'
-    relocate 'org.bstats', 'org.milkteamc.autotreechop.libs.bstats'
-    relocate 'com.github.Anon8281.universalScheduler', 'org.milkteamc.autotreechop.libs.universalScheduler'
-
-    // Include License
-    from('LICENSE') {
-        into 'META-INF'
-    }
-}
-
-// Run Server Configuration
-tasks.runServer {
-    minecraftVersion('1.21.11')
-}
-
-runPaper.folia.registerTask()
-
-// Git Information
 def gitHash = 'unknown'
+def gitBranch = 'unknown'
 def gitMessage = 'No commit message available.'
 
 try {
-    def hashProc = 'git rev-parse --short HEAD'.execute()
+    def hashProc = 'git rev-parse --short=7 HEAD'.execute()
     hashProc.waitFor()
     if (hashProc.exitValue() == 0) {
         gitHash = hashProc.text.trim()
+    }
+
+    def branchProc = 'git rev-parse --abbrev-ref HEAD'.execute()
+    branchProc.waitFor()
+    if (branchProc.exitValue() == 0) {
+        gitBranch = branchProc.text.trim()
     }
 
     def msgProc = 'git log -1 --pretty=%B'.execute()
@@ -139,20 +94,75 @@ try {
     // Git commands failed, use defaults
 }
 
-// Modrinth Publishing
+def fullVersion = "${version}-alpha+${gitHash}"
+
+processResources {
+    def props = [version: fullVersion]
+    inputs.properties props
+    filteringCharset = 'UTF-8'
+    filesMatching('plugin.yml') {
+        expand props
+    }
+}
+
+tasks.build {
+    dependsOn('shadowJar')
+}
+
+tasks.jar {
+    archiveFileName = "AutoTreeChop-${fullVersion}-original.jar"
+}
+
+tasks.shadowJar {
+    archiveFileName = "AutoTreeChop-${fullVersion}.jar"
+    configurations = [project.configurations.runtimeClasspath]
+    minimize()
+
+    relocate 'com.jeff_media.updatechecker', 'org.milkteamc.autotreechop.libs.updatechecker'
+    relocate 'net.kyori', 'org.milkteamc.autotreechop.libs.kyori'
+    relocate 'com.zaxxer.hikari', 'org.milkteamc.autotreechop.libs.hikari'
+    relocate 'org.bstats', 'org.milkteamc.autotreechop.libs.bstats'
+    relocate 'com.github.Anon8281.universalScheduler', 'org.milkteamc.autotreechop.libs.universalScheduler'
+
+    from('LICENSE') {
+        into 'META-INF'
+    }
+
+    manifest {
+        attributes(
+            'Implementation-Version': fullVersion,
+            'Git-Commit': gitHash,
+            'Git-Branch': gitBranch
+        )
+    }
+}
+
+tasks.runServer {
+    minecraftVersion('1.21.11')
+}
+
+runPaper.folia.registerTask()
+
 modrinth {
     token = System.getenv('MODRINTH_TOKEN')
     projectId = 'autotreechop'
     versionType = 'alpha'
 
-    versionNumber = "${version}-${gitHash}"
-    versionName = "${version}-${gitHash}"
+    versionNumber = fullVersion
+    versionName = "v${fullVersion}"
     changelog = """
-        🚨 **This is a SNAPSHOT version, ONLY use it in test server!**  
-        Report any issues to our [GitHub](https://github.com/milkteamc/AutoTreeChop/issues)
+        🚨 **This is an ALPHA version - Use at your own risk!**
         
-        **Latest Commit:**
+        **Branch:** `${gitBranch}`  
+        **Commit:** `${gitHash}`
+        
+        **Latest Changes:**
         > ${gitMessage}
+        
+        ---
+        
+        📝 Report issues: [GitHub Issues](https://github.com/milkteamc/AutoTreeChop/issues)  
+        💬 Get support: [Discord](https://discord.gg/uQ4UXANnP2)
     """.stripIndent().trim()
 
     uploadFile = tasks.shadowJar.archiveFile
@@ -167,4 +177,8 @@ modrinth {
     ]
 
     loaders = ['paper', 'purpur', 'folia', 'spigot']
+
+    dependencies {
+        optional.project 'placeholderapi'
+    }
 }
