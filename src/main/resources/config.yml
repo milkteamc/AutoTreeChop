@@ -7,7 +7,7 @@
 # The plugin locale (<language>-<country>-<variant>)
 # en, de, zh, es, fr, ja, zh-TW, en-US, de-DE, de-AU, ...
 # See all available language in lang folder.
-# Open a PR at our GitHub to let plugin support more language!
+# Want to help translate? Get started here: https://translate.codeberg.org/projects/autotreechop/autotreechop/
 locale: en
 
 # If set to true, the plugin will automatically translate to the locale of the player (if there are translations present)
