@@ -84,15 +84,6 @@ public class AutoTreeChop extends JavaPlugin implements CommandExecutor {
             return false;
         }
     }
-    
-    public static boolean isPaper() {
-        try {
-            Class.forName("com.destroystokyo.paper.ParticleBuilder");
-            return true;
-        } catch (ClassNotFoundException e) {
-            return false;
-        }
-    }
 
     @Override
     public void onEnable() {
@@ -153,16 +144,6 @@ public class AutoTreeChop extends JavaPlugin implements CommandExecutor {
         this.treeChopUtils = new TreeChopUtils(this);
 
         getLogger().info("AutoTreeChop enabled!");
-        
-        if (!isPaper()) {
-            Bukkit.getScheduler().runTaskLater(this, () -> {
-                getLogger().warning("=================================================");
-                getLogger().warning("Spigot support is deprecated.");
-                getLogger().warning("It will be removed in v1.8.0.");
-                getLogger().warning("Please migrate to Paper or a Paper fork.");
-                getLogger().warning("=================================================");
-            }, 40L); // 2s
-        }
     }
 
     private void registerEvents() {
