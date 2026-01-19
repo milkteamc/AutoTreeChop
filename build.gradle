@@ -94,7 +94,8 @@ try {
     // Git commands failed, use defaults
 }
 
-def fullVersion = "${version}-alpha+${gitHash}"
+def isRelease = project.hasProperty('release')
+def fullVersion = isRelease ? version : "${version}-alpha+${gitHash}"
 
 processResources {
     def props = [version: fullVersion]
