@@ -1,5 +1,6 @@
 package org.milkteamc.autotreechop;
 
+import com.cryptomorin.xseries.XMaterial;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -151,16 +152,33 @@ public class Config {
         maxDiscoveryBlocks = config.getInt("max-discovery-blocks", 1000);
         callBlockBreakEvent = config.getBoolean("call-block-break-event", true);
 
-        // Load leaf types
         List<String> leafTypeStrings = config.getStringList("leaf-types");
         leafTypes = leafTypeStrings.stream()
-                .map(Material::getMaterial)
+                .map(name -> {
+                    Optional<XMaterial> xMat = XMaterial.matchXMaterial(name);
+                    if (xMat.isPresent()) {
+                        Material mat = xMat.get().parseMaterial();
+                        if (mat != null) {
+                            return mat;
+                        }
+                    }
+                    return Material.getMaterial(name);
+                })
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
         List<String> soilTypeStrings = config.getStringList("valid-soil-types");
         validSoilTypes = soilTypeStrings.stream()
-                .map(Material::getMaterial)
+                .map(name -> {
+                    Optional<XMaterial> xMat = XMaterial.matchXMaterial(name);
+                    if (xMat.isPresent()) {
+                        Material mat = xMat.get().parseMaterial();
+                        if (mat != null) {
+                            return mat;
+                        }
+                    }
+                    return Material.getMaterial(name);
+                })
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
@@ -168,22 +186,43 @@ public class Config {
         ConfigurationSection mappingSection = config.getConfigurationSection("log-sapling-mapping");
         if (mappingSection != null) {
             for (String logTypeStr : mappingSection.getKeys(false)) {
-                Material logType = Material.getMaterial(logTypeStr);
-                Material saplingType = Material.getMaterial(mappingSection.getString(logTypeStr));
-                if (logType != null && saplingType != null) {
-                    logSaplingMapping.put(logType, saplingType);
+                String saplingTypeStr = mappingSection.getString(logTypeStr);
+                
+                Optional<XMaterial> xLogMat = XMaterial.matchXMaterial(logTypeStr);
+                Optional<XMaterial> xSaplingMat = XMaterial.matchXMaterial(saplingTypeStr);
+                
+                if (xLogMat.isPresent() && xSaplingMat.isPresent()) {
+                    Material logType = xLogMat.get().parseMaterial();
+                    Material saplingType = xSaplingMat.get().parseMaterial();
+                    
+                    if (logType != null && saplingType != null) {
+                        logSaplingMapping.put(logType, saplingType);
+                    } else {
+                        plugin.getLogger().fine("Skipping log-sapling mapping (not available in this version): " + 
+                            logTypeStr + " -> " + saplingTypeStr);
+                    }
+                } else {
+                    plugin.getLogger().fine("Skipping log-sapling mapping (not available in this version): " + 
+                        logTypeStr + " -> " + saplingTypeStr);
                 }
             }
         }
 
-        // Load log types
         List<String> logTypeStrings = config.getStringList("log-types");
         logTypes = logTypeStrings.stream()
-                .map(Material::getMaterial)
+                .map(name -> {
+                    Optional<XMaterial> xMat = XMaterial.matchXMaterial(name);
+                    if (xMat.isPresent()) {
+                        Material mat = xMat.get().parseMaterial();
+                        if (mat != null) {
+                            return mat;
+                        }
+                    }
+                    return Material.getMaterial(name);
+                })
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
-        // Locale handling
         Object localeObj = config.get("locale");
         if (localeObj instanceof String) {
             this.locale = Locale.forLanguageTag((String) localeObj);
@@ -193,6 +232,10 @@ public class Config {
             this.locale = Locale.ENGLISH;
             plugin.getLogger().warning("Invalid locale setting in config.yml. Using default: English");
         }
+
+        plugin.getLogger().info("Loaded " + logTypes.size() + " log types");
+        plugin.getLogger().info("Loaded " + leafTypes.size() + " leaf types");
+        plugin.getLogger().info("Loaded " + logSaplingMapping.size() + " log-sapling mappings");
     }
 
     private FileConfiguration getDefaultConfig() {

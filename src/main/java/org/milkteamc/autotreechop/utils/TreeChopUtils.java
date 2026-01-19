@@ -1,5 +1,7 @@
 package org.milkteamc.autotreechop.utils;
 
+import com.cryptomorin.xseries.XMaterial;
+import com.cryptomorin.xseries.XSound;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -104,20 +106,25 @@ public class TreeChopUtils {
 
     public static boolean isTool(Player player) {
         ItemStack item = player.getInventory().getItemInMainHand();
-        if (item == null || item.getType() == Material.AIR) {
+        
+        if (item == null || XMaterial.matchXMaterial(item) == XMaterial.AIR) {
             return false;
         }
 
         String materialName = item.getType().toString();
 
-        return materialName.endsWith("_AXE") ||
+        if (materialName.endsWith("_AXE") ||
                 materialName.endsWith("_HOE") ||
                 materialName.endsWith("_PICKAXE") ||
                 materialName.endsWith("_SHOVEL") ||
-                materialName.endsWith("_SWORD") ||
-                item.getType() == Material.SHEARS ||
-                item.getType() == Material.FISHING_ROD ||
-                item.getType() == Material.FLINT_AND_STEEL;
+                materialName.endsWith("_SWORD")) {
+            return true;
+        }
+
+        XMaterial xMat = XMaterial.matchXMaterial(item);
+        return xMat == XMaterial.SHEARS ||
+               xMat == XMaterial.FISHING_ROD ||
+               xMat == XMaterial.FLINT_AND_STEEL;
     }
 
     /**
@@ -307,7 +314,7 @@ public class TreeChopUtils {
                     }
 
                     if (config.getPlayBreakSound()) {
-                        block.getWorld().playSound(location, org.bukkit.Sound.BLOCK_WOOD_BREAK, 1.0f, 1.0f);
+                        XSound.BLOCK_WOOD_BREAK.play(location, 1.0f, 1.0f);
                     }
                     block.breakNaturally();
 
@@ -530,16 +537,19 @@ public class TreeChopUtils {
                 }
             }
 
-            // Show visual effects
             if (config.getLeafRemovalVisualEffects()) {
                 EffectUtils.showLeafRemovalEffect(player, leafBlock);
             }
 
-            // Remove the block
             if (config.getLeafRemovalDropItems()) {
                 leafBlock.breakNaturally();
             } else {
-                leafBlock.setType(Material.AIR, false);
+                Material air = XMaterial.AIR.parseMaterial();
+                if (air != null) {
+                    leafBlock.setType(air, false);
+                } else {
+                    leafBlock.setType(Material.AIR, false);
+                }
             }
 
             // Update daily blocks count if needed
