@@ -216,6 +216,7 @@ public class AutoTreeChop extends JavaPlugin implements CommandExecutor {
         saveResourceIfNotExists("lang/ja.properties");
         saveResourceIfNotExists("lang/ru.properties");
         saveResourceIfNotExists("lang/zh.properties");
+        saveResourceIfNotExists("lang/ms.properties");
 
         Locale defaultLocale = config.getLocale() == null ? Locale.getDefault() : config.getLocale();
         translationManager.initialize(defaultLocale, config.isUseClientLocale());
