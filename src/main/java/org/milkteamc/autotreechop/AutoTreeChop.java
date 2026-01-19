@@ -84,15 +84,6 @@ public class AutoTreeChop extends JavaPlugin implements CommandExecutor {
             return false;
         }
     }
-    
-    public static boolean isPaper() {
-        try {
-            Class.forName("com.destroystokyo.paper.ParticleBuilder");
-            return true;
-        } catch (ClassNotFoundException e) {
-            return false;
-        }
-    }
 
     @Override
     public void onEnable() {
@@ -120,8 +111,6 @@ public class AutoTreeChop extends JavaPlugin implements CommandExecutor {
         if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
             new AutoTreeChopExpansion(this).register();
             getLogger().info("PlaceholderAPI expansion for AutoTreeChop has been registered.");
-        } else {
-            getLogger().warning("PlaceholderAPI not found. Placeholder expansion for AutoTreeChop will not work.");
         }
 
         new ModrinthUpdateChecker(this, "autotreechop", "paper")
@@ -155,16 +144,6 @@ public class AutoTreeChop extends JavaPlugin implements CommandExecutor {
         this.treeChopUtils = new TreeChopUtils(this);
 
         getLogger().info("AutoTreeChop enabled!");
-        
-        if (!isPaper()) {
-            Bukkit.getScheduler().runTaskLater(this, () -> {
-                getLogger().warning("=================================================");
-                getLogger().warning("Spigot support is deprecated.");
-                getLogger().warning("It will be removed in v1.8.0.");
-                getLogger().warning("Please migrate to Paper or a Paper fork.");
-                getLogger().warning("=================================================");
-            }, 40L); // 2s
-        }
     }
 
     private void registerEvents() {
@@ -237,6 +216,7 @@ public class AutoTreeChop extends JavaPlugin implements CommandExecutor {
         saveResourceIfNotExists("lang/ja.properties");
         saveResourceIfNotExists("lang/ru.properties");
         saveResourceIfNotExists("lang/zh.properties");
+        saveResourceIfNotExists("lang/ms.properties");
 
         Locale defaultLocale = config.getLocale() == null ? Locale.getDefault() : config.getLocale();
         translationManager.initialize(defaultLocale, config.isUseClientLocale());
