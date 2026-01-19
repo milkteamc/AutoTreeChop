@@ -120,8 +120,6 @@ public class AutoTreeChop extends JavaPlugin implements CommandExecutor {
         if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
             new AutoTreeChopExpansion(this).register();
             getLogger().info("PlaceholderAPI expansion for AutoTreeChop has been registered.");
-        } else {
-            getLogger().warning("PlaceholderAPI not found. Placeholder expansion for AutoTreeChop will not work.");
         }
 
         new ModrinthUpdateChecker(this, "autotreechop", "paper")
