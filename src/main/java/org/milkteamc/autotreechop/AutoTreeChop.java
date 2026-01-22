@@ -6,6 +6,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.milkteamc.autotreechop.command.*;
 import org.milkteamc.autotreechop.database.DatabaseManager;
 import org.milkteamc.autotreechop.events.*;
 import org.milkteamc.autotreechop.hooks.*;
@@ -14,6 +15,7 @@ import org.milkteamc.autotreechop.translation.TranslationManager;
 import org.milkteamc.autotreechop.utils.CooldownManager;
 import org.milkteamc.autotreechop.utils.SessionManager;
 import org.milkteamc.autotreechop.utils.TreeChopUtils;
+import revxrsal.commands.bukkit.BukkitLamp;
 
 import java.io.File;
 import java.util.*;
@@ -97,12 +99,13 @@ public class AutoTreeChop extends JavaPlugin implements CommandExecutor {
         // Register event listeners
         registerEvents();
 
-        // Register command and tab completer
-        org.milkteamc.autotreechop.command.Command command = new org.milkteamc.autotreechop.command.Command(this);
-        Objects.requireNonNull(getCommand("autotreechop")).setExecutor(command);
-        Objects.requireNonNull(getCommand("atc")).setExecutor(command);
-        Objects.requireNonNull(getCommand("autotreechop")).setTabCompleter(new org.milkteamc.autotreechop.command.TabCompleter());
-        Objects.requireNonNull(getCommand("atc")).setTabCompleter(new org.milkteamc.autotreechop.command.TabCompleter());
+        // Register commands
+        var lamp = BukkitLamp.builder(this).build();
+        lamp.register(new ReloadCommand(this, config));
+        lamp.register(new AboutCommand(this));
+        lamp.register(new ToggleCommand(this));
+        lamp.register(new MainCommand(this));
+        lamp.register(new UsageCommand(this, config));
 
         // Initialize translation system
         translationManager = new TranslationManager(this);
