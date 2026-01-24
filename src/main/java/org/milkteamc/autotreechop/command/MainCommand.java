@@ -2,6 +2,7 @@ package org.milkteamc.autotreechop.command;
 
 import org.milkteamc.autotreechop.AutoTreeChop;
 import revxrsal.commands.bukkit.actor.BukkitCommandActor;
+import revxrsal.commands.bukkit.annotation.CommandPermission;
 import revxrsal.commands.annotation.Command;
 
 import static org.milkteamc.autotreechop.AutoTreeChop.*;
@@ -16,6 +17,7 @@ public class MainCommand {
     }
 
     @Command({"atc", "autotreechop"})
+    @CommandPermission("autotreechop.use")
     public void main(BukkitCommandActor actor) {
         
         if (actor.isPlayer()) {

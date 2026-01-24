@@ -4,6 +4,7 @@ import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import org.bukkit.entity.Player;
 import org.milkteamc.autotreechop.AutoTreeChop;
 import revxrsal.commands.bukkit.actor.BukkitCommandActor;
+import revxrsal.commands.bukkit.annotation.CommandPermission;
 import revxrsal.commands.annotation.Command;
 import revxrsal.commands.annotation.Subcommand;
 
@@ -19,6 +20,7 @@ public class ToggleCommand {
     }
 
     @Subcommand("toggle")
+    @CommandPermission("autotreechop.other")
     public void toggle(BukkitCommandActor actor, Player targetPlayer) {
 
         java.util.UUID targetUUID = targetPlayer.getUniqueId();
@@ -37,5 +39,10 @@ public class ToggleCommand {
             sendMessage(targetPlayer, DISABLED_BY_OTHER_MESSAGE,
                     Placeholder.parsed("player", actor.sender().getName()));
         }
+    }
+    
+    @Subcommand("enable")
+    public void enable(BukkitCommandActor actor, Player targetPlayer) {
+        
     }
 }
