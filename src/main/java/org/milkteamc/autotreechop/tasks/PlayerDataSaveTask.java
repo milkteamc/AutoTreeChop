@@ -1,13 +1,12 @@
 package org.milkteamc.autotreechop.tasks;
 
 import com.github.Anon8281.universalScheduler.UniversalRunnable;
-import org.milkteamc.autotreechop.AutoTreeChop;
-import org.milkteamc.autotreechop.PlayerConfig;
-import org.milkteamc.autotreechop.database.DatabaseManager;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import org.milkteamc.autotreechop.AutoTreeChop;
+import org.milkteamc.autotreechop.PlayerConfig;
+import org.milkteamc.autotreechop.database.DatabaseManager;
 
 public class PlayerDataSaveTask extends UniversalRunnable {
 
@@ -54,7 +53,8 @@ public class PlayerDataSaveTask extends UniversalRunnable {
         }
 
         if (!dirtyDataMap.isEmpty()) {
-            plugin.getDatabaseManager().savePlayerDataBatchAsync(dirtyDataMap)
+            plugin.getDatabaseManager()
+                    .savePlayerDataBatchAsync(dirtyDataMap)
                     .thenRun(() -> {
                         dirtyCount = 0;
                     })

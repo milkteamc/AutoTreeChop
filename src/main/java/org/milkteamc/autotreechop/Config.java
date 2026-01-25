@@ -1,15 +1,21 @@
 package org.milkteamc.autotreechop;
 
 import com.cryptomorin.xseries.XMaterial;
+import java.io.File;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.*;
-import java.util.stream.Collectors;
 
 public class Config {
 
@@ -157,7 +163,7 @@ public class Config {
                 .map(name -> {
                     Optional<XMaterial> xMat = XMaterial.matchXMaterial(name);
                     if (xMat.isPresent()) {
-                        Material mat = xMat.get().parseMaterial();
+                        Material mat = xMat.get().get();
                         if (mat != null) {
                             return mat;
                         }
@@ -172,7 +178,7 @@ public class Config {
                 .map(name -> {
                     Optional<XMaterial> xMat = XMaterial.matchXMaterial(name);
                     if (xMat.isPresent()) {
-                        Material mat = xMat.get().parseMaterial();
+                        Material mat = xMat.get().get();
                         if (mat != null) {
                             return mat;
                         }
@@ -187,23 +193,25 @@ public class Config {
         if (mappingSection != null) {
             for (String logTypeStr : mappingSection.getKeys(false)) {
                 String saplingTypeStr = mappingSection.getString(logTypeStr);
-                
+
                 Optional<XMaterial> xLogMat = XMaterial.matchXMaterial(logTypeStr);
                 Optional<XMaterial> xSaplingMat = XMaterial.matchXMaterial(saplingTypeStr);
-                
+
                 if (xLogMat.isPresent() && xSaplingMat.isPresent()) {
-                    Material logType = xLogMat.get().parseMaterial();
-                    Material saplingType = xSaplingMat.get().parseMaterial();
-                    
+                    Material logType = xLogMat.get().get();
+                    Material saplingType = xSaplingMat.get().get();
+
                     if (logType != null && saplingType != null) {
                         logSaplingMapping.put(logType, saplingType);
                     } else {
-                        plugin.getLogger().fine("Skipping log-sapling mapping (not available in this version): " + 
-                            logTypeStr + " -> " + saplingTypeStr);
+                        plugin.getLogger()
+                                .fine("Skipping log-sapling mapping (not available in this version): " + logTypeStr
+                                        + " -> " + saplingTypeStr);
                     }
                 } else {
-                    plugin.getLogger().fine("Skipping log-sapling mapping (not available in this version): " + 
-                        logTypeStr + " -> " + saplingTypeStr);
+                    plugin.getLogger()
+                            .fine("Skipping log-sapling mapping (not available in this version): " + logTypeStr + " -> "
+                                    + saplingTypeStr);
                 }
             }
         }
@@ -213,7 +221,7 @@ public class Config {
                 .map(name -> {
                     Optional<XMaterial> xMat = XMaterial.matchXMaterial(name);
                     if (xMat.isPresent()) {
-                        Material mat = xMat.get().parseMaterial();
+                        Material mat = xMat.get().get();
                         if (mat != null) {
                             return mat;
                         }
@@ -269,14 +277,23 @@ public class Config {
         defaultConfig.set("enable-sneak-toggle", false);
         defaultConfig.set("enable-command-toggle", true);
         defaultConfig.set("sneak-message", false);
-        defaultConfig.set("log-types", Arrays.asList("OAK_LOG", "SPRUCE_LOG", "BIRCH_LOG", "JUNGLE_LOG", "ACACIA_LOG", "DARK_OAK_LOG", "MANGROVE_LOG", "CHERRY_LOG"));
+        defaultConfig.set(
+                "log-types",
+                Arrays.asList(
+                        "OAK_LOG",
+                        "SPRUCE_LOG",
+                        "BIRCH_LOG",
+                        "JUNGLE_LOG",
+                        "ACACIA_LOG",
+                        "DARK_OAK_LOG",
+                        "MANGROVE_LOG",
+                        "CHERRY_LOG"));
         defaultConfig.set("enable-auto-replant", true);
         defaultConfig.set("replant-delay-ticks", 1L);
         defaultConfig.set("require-sapling-in-inventory", false);
         defaultConfig.set("replant-visual-effect", true);
-        defaultConfig.set("valid-soil-types", Arrays.asList(
-                "DIRT", "GRASS_BLOCK", "PODZOL", "COARSE_DIRT", "ROOTED_DIRT"
-        ));
+        defaultConfig.set(
+                "valid-soil-types", Arrays.asList("DIRT", "GRASS_BLOCK", "PODZOL", "COARSE_DIRT", "ROOTED_DIRT"));
         ConfigurationSection logSaplingSection = defaultConfig.createSection("log-sapling-mapping");
         logSaplingSection.set("OAK_LOG", "OAK_SAPLING");
         logSaplingSection.set("BIRCH_LOG", "BIRCH_SAPLING");
@@ -296,8 +313,18 @@ public class Config {
         defaultConfig.set("leaf-removal-async", true);
         defaultConfig.set("leaf-removal-batch-size", 20);
         defaultConfig.set("leaf-removal-counts-towards-limit", false);
-        defaultConfig.set("leaf-types", Arrays.asList("OAK_LEAVES", "SPRUCE_LEAVES", "BIRCH_LEAVES", "JUNGLE_LEAVES",
-                "ACACIA_LEAVES", "DARK_OAK_LEAVES", "MANGROVE_LEAVES", "CHERRY_LEAVES", "PALE_OAK_LEAVES"));
+        defaultConfig.set(
+                "leaf-types",
+                Arrays.asList(
+                        "OAK_LEAVES",
+                        "SPRUCE_LEAVES",
+                        "BIRCH_LEAVES",
+                        "JUNGLE_LEAVES",
+                        "ACACIA_LEAVES",
+                        "DARK_OAK_LEAVES",
+                        "MANGROVE_LEAVES",
+                        "CHERRY_LEAVES",
+                        "PALE_OAK_LEAVES"));
         defaultConfig.set("leaf-removal-mode", "smart");
 
         defaultConfig.set("chop-batch-size", 50);

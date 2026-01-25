@@ -1,5 +1,10 @@
 package org.milkteamc.autotreechop.translation;
 
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Level;
 import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.platform.bukkit.BukkitAudiences;
 import net.kyori.adventure.text.Component;
@@ -7,12 +12,6 @@ import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.milkteamc.autotreechop.AutoTreeChop;
-
-import java.io.*;
-import java.nio.charset.StandardCharsets;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Level;
 
 /**
  * Manages translations and message sending with per-player locale support
@@ -63,7 +62,8 @@ public class TranslationManager {
             return;
         }
 
-        File[] files = langFolder.listFiles((dir, name) -> name.endsWith(".properties") && !name.equals("styles.properties"));
+        File[] files =
+                langFolder.listFiles((dir, name) -> name.endsWith(".properties") && !name.equals("styles.properties"));
         if (files == null || files.length == 0) {
             plugin.getLogger().warning("No translation files found in lang folder");
             return;
@@ -80,8 +80,7 @@ public class TranslationManager {
             }
 
             Properties properties = new Properties();
-            try (InputStreamReader reader = new InputStreamReader(
-                    new FileInputStream(file), StandardCharsets.UTF_8)) {
+            try (InputStreamReader reader = new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8)) {
                 properties.load(reader);
                 translations.put(locale, properties);
             } catch (IOException e) {

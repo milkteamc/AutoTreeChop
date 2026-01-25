@@ -1,13 +1,12 @@
 package org.milkteamc.autotreechop.utils;
 
 import com.cryptomorin.xseries.XMaterial;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.World;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.World;
 
 /**
  * Immutable snapshot of block data captured synchronously for async processing
@@ -16,8 +15,7 @@ public class BlockSnapshot {
     private final Map<LocationKey, Material> blockData;
     private final World world;
     private final Location centerLocation;
-    private static final Material AIR_MATERIAL = XMaterial.AIR.parseMaterial() != null ? 
-            XMaterial.AIR.parseMaterial() : Material.AIR;
+    private static final Material AIR_MATERIAL = XMaterial.AIR.get() != null ? XMaterial.AIR.get() : Material.AIR;
 
     public BlockSnapshot(Map<LocationKey, Material> blockData, World world, Location centerLocation) {
         this.blockData = new HashMap<>(blockData);
@@ -83,9 +81,17 @@ public class BlockSnapshot {
             return new Location(world, x, y, z);
         }
 
-        public int getX() { return x; }
-        public int getY() { return y; }
-        public int getZ() { return z; }
+        public int getX() {
+            return x;
+        }
+
+        public int getY() {
+            return y;
+        }
+
+        public int getZ() {
+            return z;
+        }
 
         @Override
         public boolean equals(Object o) {

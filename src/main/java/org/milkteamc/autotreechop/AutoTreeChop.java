@@ -1,15 +1,30 @@
 package org.milkteamc.autotreechop;
 
+import java.io.File;
+import java.util.HashSet;
+import java.util.Locale;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import org.bstats.bukkit.Metrics;
 import org.bukkit.Bukkit;
-import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.milkteamc.autotreechop.command.*;
+import org.milkteamc.autotreechop.command.AboutCommand;
+import org.milkteamc.autotreechop.command.MainCommand;
+import org.milkteamc.autotreechop.command.ReloadCommand;
+import org.milkteamc.autotreechop.command.ToggleCommand;
+import org.milkteamc.autotreechop.command.UsageCommand;
 import org.milkteamc.autotreechop.database.DatabaseManager;
-import org.milkteamc.autotreechop.events.*;
-import org.milkteamc.autotreechop.hooks.*;
+import org.milkteamc.autotreechop.events.BlockBreakListener;
+import org.milkteamc.autotreechop.events.PlayerJoinListener;
+import org.milkteamc.autotreechop.events.PlayerQuitListener;
+import org.milkteamc.autotreechop.events.PlayerSneakListener;
+import org.milkteamc.autotreechop.hooks.GriefPreventionHook;
+import org.milkteamc.autotreechop.hooks.LandsHook;
+import org.milkteamc.autotreechop.hooks.ResidenceHook;
+import org.milkteamc.autotreechop.hooks.WorldGuardHook;
 import org.milkteamc.autotreechop.tasks.PlayerDataSaveTask;
 import org.milkteamc.autotreechop.translation.TranslationManager;
 import org.milkteamc.autotreechop.utils.CooldownManager;
@@ -17,11 +32,7 @@ import org.milkteamc.autotreechop.utils.SessionManager;
 import org.milkteamc.autotreechop.utils.TreeChopUtils;
 import revxrsal.commands.bukkit.BukkitLamp;
 
-import java.io.File;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-
-public class AutoTreeChop extends JavaPlugin implements CommandExecutor {
+public class AutoTreeChop extends JavaPlugin {
 
     // Message keys (replacing old Message objects)
     public static final String NO_RESIDENCE_PERMISSIONS = "noResidencePermissions";
@@ -132,8 +143,7 @@ public class AutoTreeChop extends JavaPlugin implements CommandExecutor {
                 config.getPort(),
                 config.getDatabase(),
                 config.getUsername(),
-                config.getPassword()
-        );
+                config.getPassword());
 
         saveTask = new PlayerDataSaveTask(this, SAVE_THRESHOLD);
         saveTask.runTaskTimerAsynchronously(this, SAVE_INTERVAL, SAVE_INTERVAL);
@@ -163,7 +173,9 @@ public class AutoTreeChop extends JavaPlugin implements CommandExecutor {
                 residenceEnabled = true;
                 getLogger().info("Residence support enabled");
             } catch (Exception e) {
-                getLogger().warning("Residence can't be hook, please report this to our GitHub: https://github.com/milkteamc/AutoTreeChop/issues");
+                getLogger()
+                        .warning(
+                                "Residence can't be hook, please report this to our GitHub: https://github.com/milkteamc/AutoTreeChop/issues");
                 residenceEnabled = false;
             }
         } else {
@@ -176,7 +188,9 @@ public class AutoTreeChop extends JavaPlugin implements CommandExecutor {
                 griefPreventionEnabled = true;
                 getLogger().info("GriefPrevention support enabled");
             } catch (Exception e) {
-                getLogger().warning("GriefPrevention can't be hook, please report this to our GitHub: https://github.com/milkteamc/AutoTreeChop/issues");
+                getLogger()
+                        .warning(
+                                "GriefPrevention can't be hook, please report this to our GitHub: https://github.com/milkteamc/AutoTreeChop/issues");
                 griefPreventionEnabled = false;
             }
         } else {
@@ -189,7 +203,9 @@ public class AutoTreeChop extends JavaPlugin implements CommandExecutor {
                 landsEnabled = true;
                 getLogger().info("Lands support enabled");
             } catch (Exception e) {
-                getLogger().warning("Lands can't be hook, please report this to our GitHub: https://github.com/milkteamc/AutoTreeChop/issues");
+                getLogger()
+                        .warning(
+                                "Lands can't be hook, please report this to our GitHub: https://github.com/milkteamc/AutoTreeChop/issues");
                 landsEnabled = false;
             }
         } else {
@@ -202,7 +218,9 @@ public class AutoTreeChop extends JavaPlugin implements CommandExecutor {
                 worldGuardEnabled = true;
                 getLogger().info("WorldGuard support enabled");
             } catch (NoClassDefFoundError e) {
-                getLogger().warning("WorldGuard can't be hook, please report this to our GitHub: https://github.com/milkteamc/AutoTreeChop/issues");
+                getLogger()
+                        .warning(
+                                "WorldGuard can't be hook, please report this to our GitHub: https://github.com/milkteamc/AutoTreeChop/issues");
                 worldGuardEnabled = false;
             }
         } else {
@@ -271,22 +289,16 @@ public class AutoTreeChop extends JavaPlugin implements CommandExecutor {
         if (playerConfig == null) {
             getLogger().warning("PlayerConfig not found for " + playerUUID + ", loading synchronously");
             try {
-                DatabaseManager.PlayerData data = databaseManager.loadPlayerDataAsync(
-                        playerUUID,
-                        config.getDefaultTreeChop()
-                ).get();
+                DatabaseManager.PlayerData data = databaseManager
+                        .loadPlayerDataAsync(playerUUID, config.getDefaultTreeChop())
+                        .get();
 
                 playerConfig = new PlayerConfig(playerUUID, data);
                 playerConfigs.put(playerUUID, playerConfig);
             } catch (Exception e) {
                 getLogger().warning("Failed to load player data: " + e.getMessage());
                 DatabaseManager.PlayerData defaultData = new DatabaseManager.PlayerData(
-                        playerUUID,
-                        config.getDefaultTreeChop(),
-                        0,
-                        0,
-                        java.time.LocalDate.now()
-                );
+                        playerUUID, config.getDefaultTreeChop(), 0, 0, java.time.LocalDate.now());
                 playerConfig = new PlayerConfig(playerUUID, defaultData);
                 playerConfigs.put(playerUUID, playerConfig);
             }

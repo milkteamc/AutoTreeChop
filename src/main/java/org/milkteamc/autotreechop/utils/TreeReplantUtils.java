@@ -18,12 +18,20 @@ import org.milkteamc.autotreechop.hooks.WorldGuardHook;
 
 public class TreeReplantUtils {
 
-    public static void scheduleReplant(Player player, Block brokenLogBlock, Material originalLogType,
-                                       AutoTreeChop plugin, Config config,
-                                       boolean worldGuardEnabled, boolean residenceEnabled,
-                                       boolean griefPreventionEnabled, boolean landsEnabled,
-                                       LandsHook landsHook, ResidenceHook residenceHook,
-                                       GriefPreventionHook griefPreventionHook, WorldGuardHook worldGuardHook) {
+    public static void scheduleReplant(
+            Player player,
+            Block brokenLogBlock,
+            Material originalLogType,
+            AutoTreeChop plugin,
+            Config config,
+            boolean worldGuardEnabled,
+            boolean residenceEnabled,
+            boolean griefPreventionEnabled,
+            boolean landsEnabled,
+            LandsHook landsHook,
+            ResidenceHook residenceHook,
+            GriefPreventionHook griefPreventionHook,
+            WorldGuardHook worldGuardHook) {
 
         if (!config.isAutoReplantEnabled()) {
             return;
@@ -43,9 +51,17 @@ public class TreeReplantUtils {
                 return;
             }
 
-            if (!hasReplantPermission(player, plantLocation, worldGuardEnabled, residenceEnabled,
-                    griefPreventionEnabled, landsEnabled, landsHook, residenceHook,
-                    griefPreventionHook, worldGuardHook)) {
+            if (!hasReplantPermission(
+                    player,
+                    plantLocation,
+                    worldGuardEnabled,
+                    residenceEnabled,
+                    griefPreventionEnabled,
+                    landsEnabled,
+                    landsHook,
+                    residenceHook,
+                    griefPreventionHook,
+                    worldGuardHook)) {
                 return;
             }
 
@@ -61,8 +77,9 @@ public class TreeReplantUtils {
         long delayTicks = config.getReplantDelayTicks();
 
         if (AutoTreeChop.isFolia()) {
-            plugin.getServer().getRegionScheduler().runDelayed(plugin, originalLocation,
-                    (task) -> replantTask.run(), delayTicks);
+            plugin.getServer()
+                    .getRegionScheduler()
+                    .runDelayed(plugin, originalLocation, (task) -> replantTask.run(), delayTicks);
         } else {
             Bukkit.getScheduler().runTaskLater(plugin, replantTask, delayTicks);
         }
@@ -114,17 +131,17 @@ public class TreeReplantUtils {
         }
 
         XMaterial xMat = XMaterial.matchXMaterial(material);
-        
-        return xMat == XMaterial.DIRT ||
-               xMat == XMaterial.GRASS_BLOCK ||
-               xMat == XMaterial.PODZOL ||
-               xMat == XMaterial.COARSE_DIRT ||
-               xMat == XMaterial.ROOTED_DIRT ||
-               xMat == XMaterial.MYCELIUM ||
-               xMat == XMaterial.FARMLAND ||
-               xMat == XMaterial.MOSS_BLOCK ||
-               xMat == XMaterial.MUD ||
-               xMat == XMaterial.MUDDY_MANGROVE_ROOTS;
+
+        return xMat == XMaterial.DIRT
+                || xMat == XMaterial.GRASS_BLOCK
+                || xMat == XMaterial.PODZOL
+                || xMat == XMaterial.COARSE_DIRT
+                || xMat == XMaterial.ROOTED_DIRT
+                || xMat == XMaterial.MYCELIUM
+                || xMat == XMaterial.FARMLAND
+                || xMat == XMaterial.MOSS_BLOCK
+                || xMat == XMaterial.MUD
+                || xMat == XMaterial.MUDDY_MANGROVE_ROOTS;
     }
 
     private static boolean isClearForSapling(Block block) {
@@ -175,15 +192,15 @@ public class TreeReplantUtils {
             case SNOW:
                 return true;
             default:
-                return matName.endsWith("_GRASS") ||
-                       matName.contains("FLOWER") ||
-                       matName.contains("SAPLING") ||
-                       matName.contains("LEAVES");
+                return matName.endsWith("_GRASS")
+                        || matName.contains("FLOWER")
+                        || matName.contains("SAPLING")
+                        || matName.contains("LEAVES");
         }
     }
 
-    private static boolean plantSapling(Player player, Location location, Material saplingType,
-                                        Config config, AutoTreeChop plugin) {
+    private static boolean plantSapling(
+            Player player, Location location, Material saplingType, Config config, AutoTreeChop plugin) {
 
         Block block = location.getBlock();
         Block below = block.getRelative(BlockFace.DOWN);
@@ -216,17 +233,23 @@ public class TreeReplantUtils {
         return false;
     }
 
-    private static boolean hasReplantPermission(Player player, Location location,
-                                                boolean worldGuardEnabled, boolean residenceEnabled,
-                                                boolean griefPreventionEnabled, boolean landsEnabled,
-                                                LandsHook landsHook, ResidenceHook residenceHook,
-                                                GriefPreventionHook griefPreventionHook,
-                                                WorldGuardHook worldGuardHook) {
+    private static boolean hasReplantPermission(
+            Player player,
+            Location location,
+            boolean worldGuardEnabled,
+            boolean residenceEnabled,
+            boolean griefPreventionEnabled,
+            boolean landsEnabled,
+            LandsHook landsHook,
+            ResidenceHook residenceHook,
+            GriefPreventionHook griefPreventionHook,
+            WorldGuardHook worldGuardHook) {
 
-        return ProtectionCheckUtils.checkResidence(player, location, residenceEnabled, residenceHook) &&
-                ProtectionCheckUtils.checkLands(player, location, landsEnabled, landsHook) &&
-                ProtectionCheckUtils.checkGriefPrevention(player, location, griefPreventionEnabled, griefPreventionHook) &&
-                ProtectionCheckUtils.checkWorldGuard(player, location, worldGuardEnabled, worldGuardHook);
+        return ProtectionCheckUtils.checkResidence(player, location, residenceEnabled, residenceHook)
+                && ProtectionCheckUtils.checkLands(player, location, landsEnabled, landsHook)
+                && ProtectionCheckUtils.checkGriefPrevention(
+                        player, location, griefPreventionEnabled, griefPreventionHook)
+                && ProtectionCheckUtils.checkWorldGuard(player, location, worldGuardEnabled, worldGuardHook);
     }
 
     public static boolean isReplantEnabledForPlayer(Player player, Config config) {

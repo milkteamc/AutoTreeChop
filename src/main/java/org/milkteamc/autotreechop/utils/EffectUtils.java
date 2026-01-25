@@ -1,22 +1,20 @@
 package org.milkteamc.autotreechop.utils;
 
-import com.cryptomorin.xseries.XMaterial;
-import com.cryptomorin.xseries.particles.ParticleDisplay;
-import com.cryptomorin.xseries.particles.XParticle;
-import org.bukkit.block.Block;
-import org.bukkit.entity.Player;
-
-import java.awt.Color;
-
 import static org.milkteamc.autotreechop.AutoTreeChop.HIT_MAX_BLOCK_MESSAGE;
 import static org.milkteamc.autotreechop.AutoTreeChop.sendMessage;
 
-public class EffectUtils {
+import com.cryptomorin.xseries.XMaterial;
+import com.cryptomorin.xseries.particles.ParticleDisplay;
+import com.cryptomorin.xseries.particles.XParticle;
+import java.awt.Color;
+import org.bukkit.block.Block;
+import org.bukkit.entity.Player;
 
+public class EffectUtils {
 
     public static void sendMaxBlockLimitReachedMessage(Player player, Block block) {
         sendMessage(player, HIT_MAX_BLOCK_MESSAGE);
-        
+
         ParticleDisplay.of(XParticle.DUST)
                 .withLocation(block.getLocation().add(0.5, 0.5, 0.5))
                 .withColor(Color.RED, 1.0f)
@@ -39,7 +37,7 @@ public class EffectUtils {
                 .withCount(20)
                 .offset(0.3, 0.3, 0.3)
                 .spawn();
-        
+
         // Add some bone meal-like particles for extra visual feedback
         if (XParticle.COMPOSTER.isSupported()) {
             ParticleDisplay.of(XParticle.COMPOSTER)
@@ -49,7 +47,7 @@ public class EffectUtils {
                     .withExtra(0.05)
                     .spawn();
         }
-        
+
         // Green dust particles to simulate plant growth
         ParticleDisplay.of(XParticle.DUST)
                 .withLocation(block.getLocation().add(0.5, 0.3, 0.5))
@@ -67,15 +65,15 @@ public class EffectUtils {
                 .withCount(15)
                 .offset(0.3, 0.3, 0.3)
                 .spawn();
-        
+
         // Falling leaf-like block particles
         if (XMaterial.supports(13)) {
             try {
                 XMaterial blockMaterial = XMaterial.matchXMaterial(block.getType());
-                if (blockMaterial != null && blockMaterial.parseMaterial() != null) {
+                if (blockMaterial != null && blockMaterial.get() != null) {
                     ParticleDisplay.of(XParticle.BLOCK)
                             .withLocation(block.getLocation().add(0.5, 0.8, 0.5))
-                            .withBlock(blockMaterial.parseMaterial().createBlockData())
+                            .withBlock(blockMaterial.get().createBlockData())
                             .withCount(10)
                             .offset(0.2, 0.1, 0.2)
                             .spawn();

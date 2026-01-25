@@ -1,21 +1,16 @@
 package org.milkteamc.autotreechop.utils;
 
+import java.util.HashMap;
+import java.util.UUID;
 import org.bukkit.entity.Player;
 import org.milkteamc.autotreechop.AutoTreeChop;
 import org.milkteamc.autotreechop.Config;
 
-import java.util.HashMap;
-import java.util.UUID;
-
 public class CooldownManager {
 
     private final HashMap<UUID, Long> cooldowns = new HashMap<>();
-    private final AutoTreeChop plugin;
 
-    public CooldownManager(AutoTreeChop plugin) {
-        this.plugin = plugin;
-    }
-
+    public CooldownManager(AutoTreeChop plugin) {}
 
     public void setCooldown(Player player, UUID playerUUID, Config config) {
         if (player.hasPermission("autotreechop.vip")) {

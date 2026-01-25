@@ -4,6 +4,7 @@ plugins {
     id 'com.gradleup.shadow' version '9.3.1'
     id 'xyz.jpenilla.run-paper' version '3.0.2'
     id 'com.modrinth.minotaur' version '2.+'
+    id 'com.diffplug.spotless' version '8.+'
 }
 
 group = 'org.milkteamc'
@@ -14,6 +15,23 @@ java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(21)
     }
+}
+
+spotless {
+  format 'misc', {
+    target '*.gradle', '.gitattributes', '.gitignore'
+
+    // define the steps to apply to those files
+    trimTrailingWhitespace()
+    leadingTabsToSpaces()
+    endWithNewline()
+  }
+  java {
+    removeUnusedImports()
+    formatAnnotations()
+
+    palantirJavaFormat()
+  }
 }
 
 repositories {
@@ -72,7 +90,7 @@ dependencies {
     compileOnly 'com.github.GriefPrevention:GriefPrevention:16.18.4'
 }
 
-compileJava { 
+compileJava {
     // Preserve parameter names in the bytecode
     options.compilerArgs += ["-parameters"]
     // options.compilerArgs += ["-Xlint:deprecation"]
@@ -165,16 +183,16 @@ modrinth {
     versionName = "v${fullVersion}"
     changelog = """
         🚨 **This is an ALPHA version - Use at your own risk!**
-        
-        **Branch:** `${gitBranch}`  
+
+        **Branch:** `${gitBranch}`
         **Commit:** `${gitHash}`
-        
+
         **Latest Changes:**
         > ${gitMessage}
-        
+
         ---
-        
-        📝 Report issues: [GitHub Issues](https://github.com/milkteamc/AutoTreeChop/issues)  
+
+        📝 Report issues: [GitHub Issues](https://github.com/milkteamc/AutoTreeChop/issues)
         💬 Get support: [Discord](https://discord.gg/uQ4UXANnP2)
     """.stripIndent().trim()
 
