@@ -52,6 +52,11 @@ public class AutoTreeChop extends JavaPlugin {
     public static final String CONSOLE_NAME = "consoleName";
     public static final String SNEAK_ENABLED_MESSAGE = "sneakEnabled";
     public static final String SNEAK_DISABLED_MESSAGE = "sneakDisabled";
+    public static final String ABOUT_HEADER = "aboutHeader";
+    public static final String ABOUT_LICENSE = "aboutLicense";
+    public static final String ABOUT_GITHUB = "aboutGithub";
+    public static final String ABOUT_DISCORD = "aboutDiscord";
+    public static final String ABOUT_MODRINTH = "aboutModrinth";
 
     private static final long SAVE_INTERVAL = 1200L; // 60s
     private static final int SAVE_THRESHOLD = 15;
