@@ -1,5 +1,5 @@
 # AutoTreeChop
-
+![atc-intro](https://github.com/user-attachments/assets/7b556970-7c4c-4271-9016-4a4612895379)  
 **AutoTreeChop** lets your players chop entire trees by breaking just one log.
 It’s async-friendly, lightweight, and fully customizable — with built-in support for MySQL(optional), CoreProtect, and popular protection plugins.
 
