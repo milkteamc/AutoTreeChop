@@ -46,8 +46,75 @@ public class TranslationManager {
         // Load styles first
         styleRegistry.loadStyles();
 
+        // Update translation files with missing keys
+        updateTranslationFiles();
+
         // Load all language files
         loadAllTranslations();
+    }
+
+    private void updateTranslationFiles() {
+        if (!langFolder.exists()) {
+            return;
+        }
+
+        File[] files =
+                langFolder.listFiles((dir, name) -> name.endsWith(".properties") && !name.equals("styles.properties"));
+
+        if (files == null || files.length == 0) {
+            return;
+        }
+
+        for (File userFile : files) {
+            String fileName = userFile.getName();
+
+            try (InputStream defaultStream = plugin.getResource("lang/" + fileName)) {
+                if (defaultStream == null) {
+                    continue;
+                }
+
+                Properties defaultProps = new Properties();
+                try (InputStreamReader reader = new InputStreamReader(defaultStream, StandardCharsets.UTF_8)) {
+                    defaultProps.load(reader);
+                }
+
+                Properties userProps = new Properties();
+                try (InputStreamReader reader =
+                        new InputStreamReader(new FileInputStream(userFile), StandardCharsets.UTF_8)) {
+                    userProps.load(reader);
+                }
+
+                Set<String> missingKeys = new HashSet<>(defaultProps.stringPropertyNames());
+                missingKeys.removeAll(userProps.stringPropertyNames());
+
+                if (!missingKeys.isEmpty()) {
+                    try (OutputStreamWriter writer =
+                            new OutputStreamWriter(new FileOutputStream(userFile, true), StandardCharsets.UTF_8)) {
+
+                        for (String key : missingKeys) {
+                            String value = defaultProps.getProperty(key);
+                            String escapedValue = escapePropertyValue(value);
+                            writer.write(key + "=" + escapedValue + "\n");
+                        }
+
+                        writer.flush();
+                    }
+                }
+
+            } catch (IOException e) {
+                plugin.getLogger().log(Level.WARNING, "Failed to update translation file: " + fileName, e);
+            }
+        }
+    }
+
+    private String escapePropertyValue(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replace("\\", "\\\\")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r")
+                .replace("\t", "\\t");
     }
 
     /**
@@ -212,6 +279,7 @@ public class TranslationManager {
         this.useClientLocale = useClientLocale;
 
         styleRegistry.reload();
+        updateTranslationFiles();
         loadAllTranslations();
         formatter.clearCache();
 
