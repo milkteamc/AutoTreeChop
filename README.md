@@ -62,7 +62,7 @@ It’s async-friendly, lightweight, and fully customizable — with built-in sup
 | `/atc` | Toggle AutoTreeChop |
 | `/atc usage` | Show daily usage |
 | `/atc reload` | Reload plugin config |
-| `/atc toggle <player/@a/@r/@p>` | Toggle for another player |
+| `/atc toggle <player>` | Toggle for another player |
 | `/atc enable <player/@a/@r/@p>` | Enable for another players |
 | `/atc disable <player/@a/@r/@p>` | Disable for another players |
 | `/atc about` | Plugin info |

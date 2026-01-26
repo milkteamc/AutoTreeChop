@@ -22,8 +22,8 @@ public class ToggleCommand {
 
     @Subcommand("toggle")
     @CommandPermission("autotreechop.use")
-    public void toggle(BukkitCommandActor actor, @Optional EntitySelector<Player> targetPlayers) {
-        if (targetPlayers == null) {
+    public void toggle(BukkitCommandActor actor, @Optional Player targetPlayer) {
+        if (targetPlayer == null) {
             if (!(actor.sender() instanceof Player)) {
                 AutoTreeChop.sendMessage(actor.sender(), AutoTreeChop.ONLY_PLAYERS_MESSAGE);
                 return;
@@ -47,55 +47,33 @@ public class ToggleCommand {
             return;
         }
 
-        int count = 0;
-        boolean lastState = false;
+        UUID targetUUID = targetPlayer.getUniqueId();
+        org.milkteamc.autotreechop.PlayerConfig playerConfig = plugin.getPlayerConfig(targetUUID);
+        boolean autoTreeChopEnabled = !playerConfig.isAutoTreeChopEnabled();
+        playerConfig.setAutoTreeChopEnabled(autoTreeChopEnabled);
 
-        for (Player targetPlayer : targetPlayers) {
-            UUID targetUUID = targetPlayer.getUniqueId();
-            org.milkteamc.autotreechop.PlayerConfig playerConfig = plugin.getPlayerConfig(targetUUID);
-            boolean autoTreeChopEnabled = !playerConfig.isAutoTreeChopEnabled();
-            playerConfig.setAutoTreeChopEnabled(autoTreeChopEnabled);
-            lastState = autoTreeChopEnabled;
-            count++;
-
-            if (autoTreeChopEnabled) {
-                AutoTreeChop.sendMessage(
-                        targetPlayer,
-                        AutoTreeChop.ENABLED_BY_OTHER_MESSAGE,
-                        Placeholder.parsed("player", actor.sender().getName()));
-            } else {
-                AutoTreeChop.sendMessage(
-                        targetPlayer,
-                        AutoTreeChop.DISABLED_BY_OTHER_MESSAGE,
-                        Placeholder.parsed("player", actor.sender().getName()));
-            }
+        if (autoTreeChopEnabled) {
+            AutoTreeChop.sendMessage(
+                    targetPlayer,
+                    AutoTreeChop.ENABLED_BY_OTHER_MESSAGE,
+                    Placeholder.parsed("player", actor.sender().getName()));
+        } else {
+            AutoTreeChop.sendMessage(
+                    targetPlayer,
+                    AutoTreeChop.DISABLED_BY_OTHER_MESSAGE,
+                    Placeholder.parsed("player", actor.sender().getName()));
         }
 
-        if (count == 1) {
-            Player firstPlayer = targetPlayers.iterator().next();
-            if (lastState) {
-                AutoTreeChop.sendMessage(
-                        actor.sender(),
-                        AutoTreeChop.ENABLED_FOR_OTHER_MESSAGE,
-                        Placeholder.parsed("player", firstPlayer.getName()));
-            } else {
-                AutoTreeChop.sendMessage(
-                        actor.sender(),
-                        AutoTreeChop.DISABLED_FOR_OTHER_MESSAGE,
-                        Placeholder.parsed("player", firstPlayer.getName()));
-            }
-        } else if (count > 1) {
-            if (lastState) {
-                AutoTreeChop.sendMessage(
-                        actor.sender(),
-                        AutoTreeChop.ENABLED_FOR_OTHER_MESSAGE,
-                        Placeholder.parsed("player", "everyone"));
-            } else {
-                AutoTreeChop.sendMessage(
-                        actor.sender(),
-                        AutoTreeChop.DISABLED_FOR_OTHER_MESSAGE,
-                        Placeholder.parsed("player", "everyone"));
-            }
+        if (autoTreeChopEnabled) {
+            AutoTreeChop.sendMessage(
+                    actor.sender(),
+                    AutoTreeChop.ENABLED_FOR_OTHER_MESSAGE,
+                    Placeholder.parsed("player", targetPlayer.getName()));
+        } else {
+            AutoTreeChop.sendMessage(
+                    actor.sender(),
+                    AutoTreeChop.DISABLED_FOR_OTHER_MESSAGE,
+                    Placeholder.parsed("player", targetPlayer.getName()));
         }
     }
 
