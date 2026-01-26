@@ -29,6 +29,7 @@ public class LandsHook {
             return true;
         }
 
-        return world.hasRoleFlag(landPlayer, location, me.angeschossen.lands.api.flags.type.Flags.BLOCK_BREAK, null, false);
+        return world.hasRoleFlag(
+                landPlayer, location, me.angeschossen.lands.api.flags.type.Flags.BLOCK_BREAK, null, false);
     }
-} 
+}

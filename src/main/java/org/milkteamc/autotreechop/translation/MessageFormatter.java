@@ -1,11 +1,10 @@
 package org.milkteamc.autotreechop.translation;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
-
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Handles MiniMessage parsing with placeholder support and caching
@@ -55,7 +54,7 @@ public class MessageFormatter {
      * @return Formatted Component
      */
     public Component format(String message, TagResolver resolver) {
-        return format(message, new TagResolver[]{resolver});
+        return format(message, new TagResolver[] {resolver});
     }
 
     /**

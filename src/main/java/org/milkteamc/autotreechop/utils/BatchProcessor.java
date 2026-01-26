@@ -1,18 +1,15 @@
 package org.milkteamc.autotreechop.utils;
 
+import java.util.List;
+import java.util.function.BiConsumer;
 import org.bukkit.Location;
 import org.milkteamc.autotreechop.AutoTreeChop;
 
-import java.util.List;
-import java.util.function.BiConsumer;
-
 public class BatchProcessor {
 
-    private final AutoTreeChop plugin;
     private final AsyncTaskScheduler scheduler;
 
     public BatchProcessor(AutoTreeChop plugin, AsyncTaskScheduler scheduler) {
-        this.plugin = plugin;
         this.scheduler = scheduler;
     }
 
@@ -102,9 +99,8 @@ public class BatchProcessor {
             } else {
                 // Schedule next batch at the next batch's first location
                 Location nextLocation = locations.get(endIndex);
-                Runnable nextBatch = () -> processBatchInternal(
-                        locations, endIndex, batchSize, processor, onComplete, delayTicks
-                );
+                Runnable nextBatch =
+                        () -> processBatchInternal(locations, endIndex, batchSize, processor, onComplete, delayTicks);
                 scheduler.runTaskLaterAtLocation(nextLocation, nextBatch, delayTicks);
             }
         };
@@ -166,9 +162,8 @@ public class BatchProcessor {
             } else {
                 Location nextLocation = locations.get(i);
                 int finalI = i;
-                Runnable nextBatch = () -> processBatchWithTermination(
-                        locations, finalI, batchSize, processor, onComplete
-                );
+                Runnable nextBatch =
+                        () -> processBatchWithTermination(locations, finalI, batchSize, processor, onComplete);
                 scheduler.runTaskLaterAtLocation(nextLocation, nextBatch, 1L);
             }
         };
