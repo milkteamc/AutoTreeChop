@@ -82,6 +82,7 @@ dependencies {
     implementation 'com.zaxxer:HikariCP:7.0.2'
     implementation 'org.bstats:bstats-bukkit:3.1.0'
     implementation 'com.github.cryptomorin:XSeries:13.6.0'
+    implementation 'dev.dejvokep:boosted-yaml:1.3.7'
 
     compileOnly 'me.clip:placeholderapi:2.11.7'
     compileOnly files('./libs/Residence5.1.4.3.jar')
@@ -154,6 +155,7 @@ tasks.shadowJar {
     relocate 'com.github.Anon8281.universalScheduler', 'org.milkteamc.autotreechop.libs.universalScheduler'
     relocate 'com.cryptomorin.xseries', 'org.milkteamc.autotreechop.libs.xseries'
     relocate 'revxrsal.commands', 'org.milkteamc.autotreechop.libs.lamp'
+    relocate 'dev.dejvokep.boostedyaml', 'org.milkteamc.autotreechop.libs.boostedyaml'
 
     from('LICENSE') {
         into 'META-INF'
