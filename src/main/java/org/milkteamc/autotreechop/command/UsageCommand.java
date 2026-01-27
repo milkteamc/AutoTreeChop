@@ -7,6 +7,7 @@ import org.milkteamc.autotreechop.Config;
 import revxrsal.commands.annotation.Command;
 import revxrsal.commands.annotation.Subcommand;
 import revxrsal.commands.bukkit.actor.BukkitCommandActor;
+import revxrsal.commands.bukkit.annotation.CommandPermission;
 
 @Command({"atc", "autotreechop"})
 public class UsageCommand {
@@ -20,6 +21,7 @@ public class UsageCommand {
     }
 
     @Subcommand("usage")
+    @CommandPermission("autotreechop.use")
     public void usage(BukkitCommandActor actor) {
         if (!actor.isPlayer()) {
             AutoTreeChop.sendMessage(actor.sender(), AutoTreeChop.ONLY_PLAYERS_MESSAGE);
