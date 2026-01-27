@@ -1,5 +1,6 @@
 package org.milkteamc.autotreechop.events;
 
+import java.util.UUID;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -17,10 +18,6 @@ import org.milkteamc.autotreechop.utils.EffectUtils;
 import org.milkteamc.autotreechop.utils.PermissionUtils;
 import org.milkteamc.autotreechop.utils.ProtectionCheckUtils.ProtectionHooks;
 import org.milkteamc.autotreechop.utils.SessionManager;
-
-import java.util.UUID;
-
-import static org.milkteamc.autotreechop.AutoTreeChop.*;
 
 public class BlockBreakListener implements Listener {
 
@@ -56,23 +53,26 @@ public class BlockBreakListener implements Listener {
 
             if (plugin.getCooldownManager().isInCooldown(playerUUID)) {
                 long remainingCooldown = plugin.getCooldownManager().getRemainingCooldown(playerUUID);
-                sendMessage(player, STILL_IN_COOLDOWN_MESSAGE,
-                        Placeholder.parsed("cooldown_time", String.valueOf(remainingCooldown))
-                );
+                AutoTreeChop.sendMessage(
+                        player,
+                        AutoTreeChop.STILL_IN_COOLDOWN_MESSAGE,
+                        Placeholder.parsed("cooldown_time", String.valueOf(remainingCooldown)));
                 event.setCancelled(true);
                 return;
             }
 
             if (!PermissionUtils.hasVipBlock(player, playerConfig, plugin.getPluginConfig())) {
-                if (playerConfig.getDailyBlocksBroken() >= plugin.getPluginConfig().getMaxBlocksPerDay()) {
+                if (playerConfig.getDailyBlocksBroken()
+                        >= plugin.getPluginConfig().getMaxBlocksPerDay()) {
                     EffectUtils.sendMaxBlockLimitReachedMessage(player, block);
                     event.setCancelled(true);
                     return;
                 }
             }
 
-            if (!PermissionUtils.hasVipUses(player, playerConfig, plugin.getPluginConfig()) && playerConfig.getDailyUses() >= plugin.getPluginConfig().getMaxUsesPerDay()) {
-                sendMessage(player, HIT_MAX_USAGE_MESSAGE);
+            if (!PermissionUtils.hasVipUses(player, playerConfig, plugin.getPluginConfig())
+                    && playerConfig.getDailyUses() >= plugin.getPluginConfig().getMaxUsesPerDay()) {
+                AutoTreeChop.sendMessage(player, AutoTreeChop.HIT_MAX_USAGE_MESSAGE);
                 return;
             }
 
@@ -87,16 +87,18 @@ public class BlockBreakListener implements Listener {
                     plugin.isWorldGuardEnabled(), plugin.getWorldGuardHook(),
                     plugin.isResidenceEnabled(), plugin.getResidenceHook(),
                     plugin.isGriefPreventionEnabled(), plugin.getGriefPreventionHook(),
-                    plugin.isLandsEnabled(), plugin.getLandsHook()
-            );
+                    plugin.isLandsEnabled(), plugin.getLandsHook());
 
-            plugin.getTreeChopUtils().chopTree(
-                    block, player,
-                    plugin.getPluginConfig().isStopChoppingIfNotConnected(),
-                    tool, location,
-                    plugin.getPluginConfig(), playerConfig,
-                    hooks
-            );
+            plugin.getTreeChopUtils()
+                    .chopTree(
+                            block,
+                            player,
+                            plugin.getPluginConfig().isStopChoppingIfNotConnected(),
+                            tool,
+                            location,
+                            plugin.getPluginConfig(),
+                            playerConfig,
+                            hooks);
         }
     }
 }

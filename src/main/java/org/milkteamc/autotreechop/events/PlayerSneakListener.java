@@ -1,15 +1,12 @@
 package org.milkteamc.autotreechop.events;
 
+import java.util.UUID;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerToggleSneakEvent;
 import org.milkteamc.autotreechop.AutoTreeChop;
 import org.milkteamc.autotreechop.PlayerConfig;
-
-import java.util.UUID;
-
-import static org.milkteamc.autotreechop.AutoTreeChop.*;
 
 public class PlayerSneakListener implements Listener {
 
@@ -33,12 +30,12 @@ public class PlayerSneakListener implements Listener {
         if (event.isSneaking()) {
             playerConfig.setAutoTreeChopEnabled(true);
             if (plugin.getPluginConfig().getSneakMessage()) {
-                sendMessage(player, SNEAK_ENABLED_MESSAGE);
+                AutoTreeChop.sendMessage(player, AutoTreeChop.SNEAK_ENABLED_MESSAGE);
             }
         } else {
             playerConfig.setAutoTreeChopEnabled(false);
             if (plugin.getPluginConfig().getSneakMessage()) {
-                sendMessage(player, SNEAK_DISABLED_MESSAGE);
+                AutoTreeChop.sendMessage(player, AutoTreeChop.SNEAK_DISABLED_MESSAGE);
             }
         }
     }
