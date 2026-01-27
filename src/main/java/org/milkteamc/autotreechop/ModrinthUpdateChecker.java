@@ -189,7 +189,7 @@ public class ModrinthUpdateChecker implements Listener {
             HttpClient client = HttpClient.newHttpClient();
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(API_URL.replace("{id}", projectId)))
-                    .header("User-Agent", "minecraft-plugin/" + plugin.getName() + "/" + currentVersion)
+                    .header("User-Agent", "Java-HttpClient " + plugin.getName() + "/" + currentVersion)
                     .GET()
                     .build();
 
@@ -245,7 +245,7 @@ public class ModrinthUpdateChecker implements Listener {
         return versions.asList().stream()
                 .map(JsonElement::getAsJsonObject)
                 .filter(version ->
-                        "release".equalsIgnoreCase(version.get("version_type").getAsString())) // ✅ 只取正式版
+                        "release".equalsIgnoreCase(version.get("version_type").getAsString()))
                 .filter(this::isVersionCompatible)
                 .map(version -> version.get("version_number").getAsString())
                 .map(ModrinthUpdateChecker::getRawVersion)
@@ -324,7 +324,7 @@ public class ModrinthUpdateChecker implements Listener {
         if (shouldNotify) {
             plugin.getServer()
                     .getScheduler()
-                    .runTaskLater(plugin, () -> printCheckResultToPlayer(player, false), 40L); // 2 second delay
+                    .runTaskLater(plugin, () -> printCheckResultToPlayer(player, false), 40L); // 2s
         }
     }
 
