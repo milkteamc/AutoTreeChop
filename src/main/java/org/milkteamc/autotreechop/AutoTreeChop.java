@@ -135,8 +135,8 @@ public class AutoTreeChop extends JavaPlugin {
         new ModrinthUpdateChecker(this, "autotreechop", "paper")
                 .checkEveryXHours(24)
                 .setDonationLink("https://ko-fi.com/maoyue")
-                .setChangelogLink("https://modrinth.com/plugin/autotreechop/")
-                .setDownloadLink("https://modrinth.com/plugin/autotreechop/")
+                .setChangelogLink("https://modrinth.com/plugin/autotreechop/changelog")
+                .setDownloadLink("https://modrinth.com/plugin/autotreechop/versions")
                 .setNotifyOpsOnJoin(true)
                 .setNotifyByPermissionOnJoin("autotreechop.updatechecker")
                 .checkNow();
