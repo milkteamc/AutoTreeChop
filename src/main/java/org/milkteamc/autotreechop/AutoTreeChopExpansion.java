@@ -1,10 +1,9 @@
 package org.milkteamc.autotreechop;
 
+import java.util.UUID;
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
-
-import java.util.UUID;
 
 public class AutoTreeChopExpansion extends PlaceholderExpansion {
 

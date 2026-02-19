@@ -62,9 +62,9 @@ It’s async-friendly, lightweight, and fully customizable — with built-in sup
 | `/atc` | Toggle AutoTreeChop |
 | `/atc usage` | Show daily usage |
 | `/atc reload` | Reload plugin config |
-| `/atc <player>` | Toggle for another player |
-| `/atc enable-all` | Enable for all players |
-| `/atc disable-all` | Disable for all players |
+| `/atc toggle <player>` | Toggle for another player |
+| `/atc enable <player/@a/@r/@p>` | Enable for another players |
+| `/atc disable <player/@a/@r/@p>` | Disable for another players |
 | `/atc about` | Plugin info |
 
 ---
@@ -78,6 +78,7 @@ It’s async-friendly, lightweight, and fully customizable — with built-in sup
 | `autotreechop.use` | Use `/atc` and `/atc usage` commands | Everyone |
 | `autotreechop.vip` | Ignore usage limits | OP |
 | `autotreechop.other` | Toggle others' ATC status | OP |
+| `autotreechop.reload` | Reload config file | OP |
 | `autotreechop.updatechecker` | Receive update notifications | OP |
 | `autotreechop.replant` | Enable auto replanting | Everyone |
 | `autotreechop.leaves` | Enable leaves removal | Everyone |

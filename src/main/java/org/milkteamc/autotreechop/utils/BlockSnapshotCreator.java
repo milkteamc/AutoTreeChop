@@ -1,11 +1,15 @@
 package org.milkteamc.autotreechop.utils;
 
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.Map;
+import java.util.Queue;
+import java.util.Set;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.milkteamc.autotreechop.Config;
-
-import java.util.*;
 
 /**
  * Creates block snapshots synchronously for async processing
@@ -24,10 +28,7 @@ public class BlockSnapshotCreator {
      * @return BlockSnapshot containing all scanned block data
      */
     public static BlockSnapshot captureTreeRegion(
-            Block startBlock,
-            Config config,
-            boolean connectedOnly,
-            int maxBlocks) {
+            Block startBlock, Config config, boolean connectedOnly, int maxBlocks) {
 
         Map<BlockSnapshot.LocationKey, Material> blockData = new HashMap<>();
         Queue<Block> queue = new LinkedList<>();
@@ -92,10 +93,7 @@ public class BlockSnapshotCreator {
      * @param config Plugin configuration
      * @return BlockSnapshot containing the spherical region
      */
-    public static BlockSnapshot captureLeafRegion(
-            Block centerBlock,
-            int radius,
-            Config config) {
+    public static BlockSnapshot captureLeafRegion(Block centerBlock, int radius, Config config) {
 
         Map<BlockSnapshot.LocationKey, Material> blockData = new HashMap<>();
         Location center = centerBlock.getLocation();

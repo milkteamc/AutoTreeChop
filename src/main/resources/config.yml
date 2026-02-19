@@ -160,3 +160,6 @@ valid-soil-types:
   - PODZOL
   - COARSE_DIRT
   - ROOTED_DIRT
+
+# Configuration file version - DO NOT MODIFY
+config-version: 1

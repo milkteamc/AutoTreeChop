@@ -20,12 +20,12 @@ public class ResidenceHook {
             return true;
         }
 
-        if (residence.getOwnerUUID().equals(player.getUniqueId()) ||
-                player.isOp() ||
-                player.hasPermission("autotreechop.op")) {
+        if (residence.getOwnerUUID().equals(player.getUniqueId())
+                || player.isOp()
+                || player.hasPermission("autotreechop.op")) {
             return true;
         }
 
         return residence.getPermissions().playerHas(player, Flags.valueOf(flagName.toLowerCase()), true);
     }
-} 
+}

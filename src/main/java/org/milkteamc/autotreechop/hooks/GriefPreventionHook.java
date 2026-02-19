@@ -20,12 +20,12 @@ public class GriefPreventionHook {
             return true;
         }
 
-        if (claim.getOwnerID().equals(player.getUniqueId()) ||
-                player.hasPermission("autotreechop.op") ||
-                player.isOp()) {
+        if (claim.getOwnerID().equals(player.getUniqueId())
+                || player.hasPermission("autotreechop.op")
+                || player.isOp()) {
             return true;
         }
 
         return claim.hasExplicitPermission(player, ClaimPermission.valueOf(flagName));
     }
-} 
+}
