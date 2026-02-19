@@ -57,7 +57,6 @@ public class BlockBreakListener implements Listener {
                         player,
                         AutoTreeChop.STILL_IN_COOLDOWN_MESSAGE,
                         Placeholder.parsed("cooldown_time", String.valueOf(remainingCooldown)));
-                event.setCancelled(true);
                 return;
             }
 
@@ -65,7 +64,6 @@ public class BlockBreakListener implements Listener {
                 if (playerConfig.getDailyBlocksBroken()
                         >= plugin.getPluginConfig().getMaxBlocksPerDay()) {
                     EffectUtils.sendMaxBlockLimitReachedMessage(player, block);
-                    event.setCancelled(true);
                     return;
                 }
             }
