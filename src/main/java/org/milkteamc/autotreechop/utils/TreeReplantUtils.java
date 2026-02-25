@@ -18,6 +18,8 @@ import org.milkteamc.autotreechop.hooks.WorldGuardHook;
 
 public class TreeReplantUtils {
 
+    private static final int[][] FORMATION_2X2 = {{0, 0}, {1, 0}, {0, 1}, {1, 1}};
+
     public static void scheduleReplant(
             Player player,
             Block brokenLogBlock,
@@ -43,32 +45,54 @@ public class TreeReplantUtils {
         }
 
         Location originalLocation = brokenLogBlock.getLocation().clone();
+        boolean needs2x2 = requires2x2Formation(originalLogType);
 
         Runnable replantTask = () -> {
-            Location plantLocation = findSuitablePlantLocation(originalLocation, config, plugin);
-
-            if (plantLocation == null) {
-                return;
-            }
-
-            if (!hasReplantPermission(
-                    player,
-                    plantLocation,
-                    worldGuardEnabled,
-                    residenceEnabled,
-                    griefPreventionEnabled,
-                    landsEnabled,
-                    landsHook,
-                    residenceHook,
-                    griefPreventionHook,
-                    worldGuardHook)) {
-                return;
-            }
-
-            boolean planted = plantSapling(player, plantLocation, saplingType, config, plugin);
-
-            if (planted) {
-                if (config.getReplantVisualEffect()) {
+            if (needs2x2) {
+                Location anchorLocation = find2x2PlantLocation(originalLocation, config);
+                if (anchorLocation == null) {
+                    return;
+                }
+                // Check permission at all four sapling positions
+                Block anchor = anchorLocation.getBlock();
+                for (int[] offset : FORMATION_2X2) {
+                    Location pos = anchor.getRelative(offset[0], 0, offset[1]).getLocation();
+                    if (!hasReplantPermission(
+                            player,
+                            pos,
+                            worldGuardEnabled,
+                            residenceEnabled,
+                            griefPreventionEnabled,
+                            landsEnabled,
+                            landsHook,
+                            residenceHook,
+                            griefPreventionHook,
+                            worldGuardHook)) {
+                        return;
+                    }
+                }
+                plant2x2Saplings(player, anchorLocation, saplingType, config);
+            } else {
+                Location plantLocation = findSuitablePlantLocation(originalLocation, config, plugin);
+                if (plantLocation == null) {
+                    return;
+                }
+                // Check permission at the actual plant location, not the original break point
+                if (!hasReplantPermission(
+                        player,
+                        plantLocation,
+                        worldGuardEnabled,
+                        residenceEnabled,
+                        griefPreventionEnabled,
+                        landsEnabled,
+                        landsHook,
+                        residenceHook,
+                        griefPreventionHook,
+                        worldGuardHook)) {
+                    return;
+                }
+                boolean planted = plantSapling(player, plantLocation, saplingType, config, plugin);
+                if (planted && config.getReplantVisualEffect()) {
                     EffectUtils.showReplantEffect(player, plantLocation.getBlock());
                 }
             }
@@ -82,6 +106,98 @@ public class TreeReplantUtils {
                     .runDelayed(plugin, originalLocation, (task) -> replantTask.run(), delayTicks);
         } else {
             Bukkit.getScheduler().runTaskLater(plugin, replantTask, delayTicks);
+        }
+    }
+
+    /**
+     * Returns true for tree types that require a 2x2 sapling formation to grow.
+     */
+    private static boolean requires2x2Formation(Material logType) {
+        String name = logType.toString();
+        return name.equals("DARK_OAK_LOG") || name.equals("PALE_OAK_LOG");
+    }
+
+    /**
+     * Finds an anchor location where all four blocks of a 2x2 formation are
+     * clear and sitting on valid soil. Returns null if no valid anchor is found.
+     */
+    private static Location find2x2PlantLocation(Location originalLocation, Config config) {
+        Block origin = originalLocation.getBlock();
+
+        // Try all four possible anchors that include the original position as a corner.
+        int[][] originInclusiveAnchors = {{0, 0}, {-1, 0}, {0, -1}, {-1, -1}};
+        for (int[] ao : originInclusiveAnchors) {
+            Block anchor = origin.getRelative(ao[0], 0, ao[1]);
+            if (is2x2FormationValid(anchor, config)) {
+                return anchor.getLocation();
+            }
+        }
+
+        // Widen search, skipping anchors already tested above
+        for (int x = -2; x <= 2; x++) {
+            for (int z = -2; z <= 2; z++) {
+                // Skip the four origin-inclusive anchors already tried
+                if ((x == 0 || x == -1) && (z == 0 || z == -1)) continue;
+
+                Block candidate = origin.getRelative(x, 0, z);
+                if (is2x2FormationValid(candidate, config)) {
+                    return candidate.getLocation();
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Checks whether all four blocks of a 2x2 formation starting at anchor are
+     * clear and sit on valid soil.
+     */
+    private static boolean is2x2FormationValid(Block anchor, Config config) {
+        for (int[] offset : FORMATION_2X2) {
+            Block target = anchor.getRelative(offset[0], 0, offset[1]);
+            Block below = target.getRelative(BlockFace.DOWN);
+            if (!isClearForSapling(target) || !isValidSoil(below.getType(), config)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Plants a full 2x2 sapling formation at the given anchor location.
+     * If require-sapling-in-inventory is true, all four saplings must be
+     * present before any are consumed or placed.
+     */
+    private static void plant2x2Saplings(Player player, Location anchorLocation, Material saplingType, Config config) {
+
+        Block anchor = anchorLocation.getBlock();
+
+        // Pre-check inventory has enough saplings before consuming any
+        if (config.getRequireSaplingInInventory()) {
+            int available = countSaplingsInInventory(player, saplingType);
+            if (available < 4) {
+                return;
+            }
+        }
+
+        for (int[] offset : FORMATION_2X2) {
+            Block target = anchor.getRelative(offset[0], 0, offset[1]);
+            Block below = target.getRelative(BlockFace.DOWN);
+
+            if (!isClearForSapling(target) || !isValidSoil(below.getType(), config)) {
+                continue;
+            }
+
+            if (config.getRequireSaplingInInventory()) {
+                consumeSaplingFromInventory(player, saplingType);
+            }
+
+            target.setType(saplingType);
+
+            if (config.getReplantVisualEffect()) {
+                EffectUtils.showReplantEffect(player, target);
+            }
         }
     }
 
@@ -220,6 +336,19 @@ public class TreeReplantUtils {
         }
 
         return true;
+    }
+
+    /**
+     * Returns how many of the given sapling type the player currently holds.
+     */
+    private static int countSaplingsInInventory(Player player, Material saplingType) {
+        int count = 0;
+        for (ItemStack item : player.getInventory().getStorageContents()) {
+            if (item != null && item.getType() == saplingType) {
+                count += item.getAmount();
+            }
+        }
+        return count;
     }
 
     private static boolean consumeSaplingFromInventory(Player player, Material saplingType) {
