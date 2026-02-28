@@ -77,6 +77,11 @@ public class Config {
     private boolean leafRemovalCountsTowardsLimit;
     private String leafRemovalMode;
     private Set<Material> leafTypes;
+    private int idleTimeoutSeconds;
+    private int confirmationWindowSeconds;
+    private boolean noLeavesConfirmationEnabled;
+    private boolean enableIdleConfirmation;
+    private int noLeavesDetectionRadius;
     private int chopBatchSize;
     private int maxTreeSize;
     private int maxDiscoveryBlocks;
@@ -188,6 +193,12 @@ public class Config {
         leafRemovalBatchSize = config.getInt("leaf-removal-batch-size", 20);
         leafRemovalCountsTowardsLimit = config.getBoolean("leaf-removal-counts-towards-limit", false);
         leafRemovalMode = config.getString("leaf-removal-mode", "smart");
+
+        idleTimeoutSeconds = config.getInt("idle-timeout", 300);
+        confirmationWindowSeconds = config.getInt("confirmation-window", 10);
+        noLeavesConfirmationEnabled = config.getBoolean("enable-no-leaves-confirmation", true);
+        enableIdleConfirmation = config.getBoolean("enable-idle-confirmation", true);
+        noLeavesDetectionRadius = config.getInt("no-leaves-detection-radius", 6);
 
         String localeStr = config.getString("locale", "en");
         try {
@@ -483,5 +494,34 @@ public class Config {
 
     public boolean isCallBlockBreakEvent() {
         return callBlockBreakEvent;
+    }
+
+    /**
+     * Seconds of tree-chop inactivity before a confirmation is required.
+     */
+    public int getIdleTimeoutSeconds() {
+        return idleTimeoutSeconds;
+    }
+
+    /**
+     * Seconds the player has to re-chop a log (or run /atc confirm) after the warning.
+     */
+    public int getConfirmationWindowSeconds() {
+        return confirmationWindowSeconds;
+    }
+
+    /**
+     * Whether a confirmation is required when the target log has no nearby leaves.
+     */
+    public boolean isNoLeavesConfirmationEnabled() {
+        return noLeavesConfirmationEnabled;
+    }
+
+    public boolean isIdleConfirmationEnabled() {
+        return enableIdleConfirmation;
+    }
+
+    public int getNoLeavesDetectionRadius() {
+        return noLeavesDetectionRadius;
     }
 }

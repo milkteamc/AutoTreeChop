@@ -12,6 +12,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.milkteamc.autotreechop.command.AboutCommand;
+import org.milkteamc.autotreechop.command.ConfirmCommand;
 import org.milkteamc.autotreechop.command.MainCommand;
 import org.milkteamc.autotreechop.command.ReloadCommand;
 import org.milkteamc.autotreechop.command.ToggleCommand;
@@ -27,6 +28,7 @@ import org.milkteamc.autotreechop.hooks.ResidenceHook;
 import org.milkteamc.autotreechop.hooks.WorldGuardHook;
 import org.milkteamc.autotreechop.tasks.PlayerDataSaveTask;
 import org.milkteamc.autotreechop.translation.TranslationManager;
+import org.milkteamc.autotreechop.utils.ConfirmationManager;
 import org.milkteamc.autotreechop.utils.CooldownManager;
 import org.milkteamc.autotreechop.utils.SessionManager;
 import org.milkteamc.autotreechop.utils.TreeChopUtils;
@@ -52,6 +54,11 @@ public class AutoTreeChop extends JavaPlugin {
     public static final String CONSOLE_NAME = "consoleName";
     public static final String SNEAK_ENABLED_MESSAGE = "sneakEnabled";
     public static final String SNEAK_DISABLED_MESSAGE = "sneakDisabled";
+    public static final String CONFIRMATION_REQUIRED_IDLE_MESSAGE = "confirmationRequiredIdle";
+    public static final String CONFIRMATION_REQUIRED_NO_LEAVES_MESSAGE = "confirmationRequiredNoLeaves";
+    public static final String CONFIRMATION_REQUIRED_BOTH_MESSAGE = "confirmationRequiredBoth";
+    public static final String CONFIRMATION_SUCCESS_MESSAGE = "confirmationSuccess";
+    public static final String NO_PENDING_CONFIRMATION_MESSAGE = "noPendingConfirmation";
     public static final String ABOUT_HEADER = "aboutHeader";
     public static final String ABOUT_LICENSE = "aboutLicense";
     public static final String ABOUT_GITHUB = "aboutGithub";
@@ -68,6 +75,7 @@ public class AutoTreeChop extends JavaPlugin {
     private Map<UUID, PlayerConfig> playerConfigs = new ConcurrentHashMap<>();
     private Metrics metrics;
     private TranslationManager translationManager;
+    private ConfirmationManager confirmationManager;
 
     private boolean worldGuardEnabled = false;
     private boolean residenceEnabled = false;
@@ -122,6 +130,7 @@ public class AutoTreeChop extends JavaPlugin {
         lamp.register(new ToggleCommand(this));
         lamp.register(new MainCommand(this));
         lamp.register(new UsageCommand(this, config));
+        lamp.register(new ConfirmCommand(this));
 
         // Initialize translation system
         translationManager = new TranslationManager(this);
@@ -158,6 +167,8 @@ public class AutoTreeChop extends JavaPlugin {
         initializeHooks();
 
         cooldownManager = new CooldownManager(this);
+
+        confirmationManager = new ConfirmationManager(this);
 
         this.treeChopUtils = new TreeChopUtils(this);
 
@@ -263,6 +274,7 @@ public class AutoTreeChop extends JavaPlugin {
         }
 
         for (Map.Entry<UUID, PlayerConfig> entry : playerConfigs.entrySet()) {
+            confirmationManager.clearPlayer(entry.getKey());
             if (entry.getValue().isDirty()) {
                 databaseManager.savePlayerDataSync(entry.getValue().getData());
             }
@@ -346,6 +358,10 @@ public class AutoTreeChop extends JavaPlugin {
 
     public TranslationManager getTranslationManager() {
         return translationManager;
+    }
+
+    public ConfirmationManager getConfirmationManager() {
+        return confirmationManager;
     }
 
     public boolean isWorldGuardEnabled() {

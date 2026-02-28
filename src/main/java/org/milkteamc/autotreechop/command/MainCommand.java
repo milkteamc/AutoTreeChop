@@ -1,6 +1,9 @@
 package org.milkteamc.autotreechop.command;
 
+import java.util.UUID;
+import org.bukkit.entity.Player;
 import org.milkteamc.autotreechop.AutoTreeChop;
+import org.milkteamc.autotreechop.PlayerConfig;
 import revxrsal.commands.annotation.Command;
 import revxrsal.commands.bukkit.actor.BukkitCommandActor;
 import revxrsal.commands.bukkit.annotation.CommandPermission;
@@ -17,19 +20,22 @@ public class MainCommand {
     @Command({"atc", "autotreechop"})
     @CommandPermission("autotreechop.use")
     public void main(BukkitCommandActor actor) {
-
-        if (actor.isPlayer()) {
-            org.milkteamc.autotreechop.PlayerConfig playerConfig = plugin.getPlayerConfig(actor.uniqueId());
-            boolean autoTreeChopEnabled = !playerConfig.isAutoTreeChopEnabled();
-            playerConfig.setAutoTreeChopEnabled(autoTreeChopEnabled);
-
-            if (autoTreeChopEnabled) {
-                AutoTreeChop.sendMessage(actor.asPlayer(), AutoTreeChop.ENABLED_MESSAGE);
-            } else {
-                AutoTreeChop.sendMessage(actor.asPlayer(), AutoTreeChop.DISABLED_MESSAGE);
-            }
-        } else {
+        if (!actor.isPlayer()) {
             AutoTreeChop.sendMessage(actor.sender(), AutoTreeChop.ONLY_PLAYERS_MESSAGE);
+            return;
+        }
+
+        Player player = actor.asPlayer();
+        UUID playerUUID = player.getUniqueId();
+        PlayerConfig playerConfig = plugin.getPlayerConfig(playerUUID);
+        boolean autoTreeChopEnabled = !playerConfig.isAutoTreeChopEnabled();
+        playerConfig.setAutoTreeChopEnabled(autoTreeChopEnabled);
+
+        if (autoTreeChopEnabled) {
+            AutoTreeChop.sendMessage(player, AutoTreeChop.ENABLED_MESSAGE);
+        } else {
+            plugin.getConfirmationManager().clearPlayer(playerUUID);
+            AutoTreeChop.sendMessage(player, AutoTreeChop.DISABLED_MESSAGE);
         }
     }
 }

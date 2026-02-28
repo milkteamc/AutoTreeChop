@@ -27,13 +27,21 @@ public class PlayerJoinListener implements Listener {
                 .thenAccept(data -> {
                     PlayerConfig playerConfig = new PlayerConfig(playerUUID, data);
                     plugin.getAllPlayerConfigs().put(playerUUID, playerConfig);
+
+                    // markRejoin must be called here, after playerConfig is loaded,
+                    // so we know whether ATC was enabled for this player.
+                    if (playerConfig.isAutoTreeChopEnabled()) {
+                        plugin.getConfirmationManager().markRejoin(playerUUID);
+                    }
                 })
                 .exceptionally(ex -> {
                     plugin.getLogger()
                             .warning("Failed to load data for player " + player.getName() + ": " + ex.getMessage());
                     DatabaseManager.PlayerData defaultData = new DatabaseManager.PlayerData(
                             playerUUID, plugin.getPluginConfig().getDefaultTreeChop(), 0, 0, java.time.LocalDate.now());
-                    plugin.getAllPlayerConfigs().put(playerUUID, new PlayerConfig(playerUUID, defaultData));
+                    PlayerConfig fallback = new PlayerConfig(playerUUID, defaultData);
+                    plugin.getAllPlayerConfigs().put(playerUUID, fallback);
+                    // Default is disabled, so no markRejoin needed here.
                     return null;
                 });
     }
