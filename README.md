@@ -1,7 +1,7 @@
 # AutoTreeChop
 ![atc-intro](https://github.com/user-attachments/assets/7b556970-7c4c-4271-9016-4a4612895379)  
 **AutoTreeChop** lets your players chop entire trees by breaking just one log.
-It’s async-friendly, lightweight, and fully customizable — with built-in support for MySQL(optional), CoreProtect, and popular protection plugins.
+It's async-friendly, lightweight, and fully customizable — with built-in support for MySQL(optional), CoreProtect, and popular protection plugins.
 
 - 🌐 [Discord Support Server](https://discord.gg/uQ4UXANnP2)
 - 🌱 [Modrinth Page](https://modrinth.com/plugin/autotreechop)
@@ -37,7 +37,7 @@ It’s async-friendly, lightweight, and fully customizable — with built-in sup
 
 ### 🌐 Multi-Language & Locale Support
 - Translations included: `en`, `zh`, `ja`, `de`, `es`, `fr`, `ru`, etc.
-- Automatically switches to player’s locale if enabled
+- Automatically switches to player's locale if enabled
 
 ### 🗄️ MySQL & SQLite Support
 - Scale with MySQL or keep it simple with SQLite (default)
@@ -60,6 +60,7 @@ It’s async-friendly, lightweight, and fully customizable — with built-in sup
 | Command | Description |
 |--------|-------------|
 | `/atc` | Toggle AutoTreeChop |
+| `/atc confirm` | Confirm a pending chop (idle / no-leaves warning) |
 | `/atc usage` | Show daily usage |
 | `/atc reload` | Reload plugin config |
 | `/atc toggle <player>` | Toggle for another player |
@@ -75,7 +76,7 @@ It’s async-friendly, lightweight, and fully customizable — with built-in sup
 
 | Permission | Description | Default |
 |------------|-------------|-------------|
-| `autotreechop.use` | Use `/atc` and `/atc usage` commands | Everyone |
+| `autotreechop.use` | Use `/atc`, `/atc confirm`, and `/atc usage` commands | Everyone |
 | `autotreechop.vip` | Ignore usage limits | OP |
 | `autotreechop.other` | Toggle others' ATC status | OP |
 | `autotreechop.reload` | Reload config file | OP |
