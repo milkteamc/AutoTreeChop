@@ -174,4 +174,4 @@ valid-soil-types:
   - ROOTED_DIRT
 
 # Configuration file version - DO NOT MODIFY
-config-version: 1
+config-version: 2
