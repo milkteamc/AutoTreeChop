@@ -1,7 +1,10 @@
 package org.milkteamc.autotreechop.events;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
+import org.bukkit.ChunkSnapshot;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
@@ -148,12 +151,17 @@ public class BlockBreakListener implements Listener {
      * Returns {@code true} if there is at least one leaf block within the
      * configured detection radius centred on the given log.
      *
-     * <p>Uses the same {@code BlockDiscoveryUtils.isLeafBlock} and leaf-type set
-     * that the rest of the plugin uses, so "what counts as a leaf" stays
-     * consistent across all features.
+     * <p>Uses {@link ChunkSnapshot} so that each chunk's block data is read once
+     * into a fast array-backed snapshot rather than issuing a separate
+     * {@code world.getBlockAt()} call per coordinate. At radius 6 up to ~2 197
+     * blocks are checked; without snapshots every call is a full world-access on
+     * the main thread. With snapshots only a handful of chunks need to be
+     * snapshotted, and subsequent reads within the same chunk are O(1) array
+     * lookups. Unloaded chunks are skipped — a player breaking a block can only
+     * ever be in a loaded chunk, and adjacent chunks within view-distance are
+     * always loaded too.
      *
-     * <p>The radius comes from {@code Config#getNoLeavesDetectionRadius()}.
-     * Short-circuits on the first leaf found for performance.
+     * <p>Short-circuits on the first leaf found for performance.
      */
     private static boolean hasNearbyLeaves(Block log, Config config) {
         int radius = config.getNoLeavesDetectionRadius();
@@ -161,12 +169,34 @@ public class BlockBreakListener implements Listener {
         int cx = log.getX();
         int cy = log.getY();
         int cz = log.getZ();
+        int minY = world.getMinHeight();
+        int maxY = world.getMaxHeight();
+
+        // Cache one ChunkSnapshot per chunk — each snapshot is created once and
+        // subsequent block reads from it are pure array lookups.
+        Map<Long, ChunkSnapshot> chunkCache = new HashMap<>();
 
         for (int dx = -radius; dx <= radius; dx++) {
             for (int dy = -radius; dy <= radius; dy++) {
                 for (int dz = -radius; dz <= radius; dz++) {
-                    if (BlockDiscoveryUtils.isLeafBlock(
-                            world.getBlockAt(cx + dx, cy + dy, cz + dz).getType(), config)) {
+                    int x = cx + dx;
+                    int y = cy + dy;
+                    int z = cz + dz;
+
+                    if (y < minY || y >= maxY) continue;
+
+                    int chunkX = x >> 4;
+                    int chunkZ = z >> 4;
+
+                    // Skip unloaded chunks rather than forcing a load.
+                    if (!world.isChunkLoaded(chunkX, chunkZ)) continue;
+
+                    long chunkKey = ((long) chunkX << 32) | (chunkZ & 0xFFFFFFFFL);
+                    ChunkSnapshot snapshot = chunkCache.computeIfAbsent(
+                            chunkKey, k -> world.getChunkAt(chunkX, chunkZ).getChunkSnapshot(false, false, false));
+
+                    Material type = snapshot.getBlockType(x & 15, y, z & 15);
+                    if (BlockDiscoveryUtils.isLeafBlock(type, config)) {
                         return true;
                     }
                 }
