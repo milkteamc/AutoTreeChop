@@ -84,7 +84,9 @@ public class TranslationManager {
                     userProps.load(reader);
                 }
 
-                Set<String> missingKeys = new HashSet<>(defaultProps.stringPropertyNames());
+                // Use TreeSet so missing keys are appended in alphabetical order,
+                // making the generated file consistent across server restarts.
+                Set<String> missingKeys = new TreeSet<>(defaultProps.stringPropertyNames());
                 missingKeys.removeAll(userProps.stringPropertyNames());
 
                 if (!missingKeys.isEmpty()) {

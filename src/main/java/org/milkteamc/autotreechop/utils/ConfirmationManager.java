@@ -39,6 +39,13 @@ public class ConfirmationManager {
      * Expiry timestamp (ms) of the no-leaves grace window.
      * While active, the no-leaves check is suppressed so the player can chop
      * a whole bare trunk without repeated confirmations.
+     *
+     * <p>Uses {@code idle-timeout} as its duration (not {@code confirmation-window})
+     * so the grace period is long enough to cover an entire bare trunk. A 10-second
+     * {@code confirmation-window} would expire mid-chop on any trunk taller than a
+     * few logs, forcing repeated confirmations. {@code idle-timeout} (default 300 s)
+     * gives the player a full session's worth of uninterrupted chopping before the
+     * safety prompt reappears.
      */
     private final Map<UUID, Long> noLeavesGraceExpiry = new ConcurrentHashMap<>();
 
@@ -81,11 +88,10 @@ public class ConfirmationManager {
      * it — removing the expiry and reason in a single operation — and returns
      * the reason.
      *
-     * Use this instead of calling {@link #isConfirmationPending} followed by
-     * {@link #getPendingReason}, which has a TOCTOU race: the window could expire
-     * in the nanoseconds between the two calls, causing {@code getPendingReason}
-     * to return {@code null} even though {@code isConfirmationPending} returned
-     * {@code true}.
+     * <p>This is the only correct way to read-and-clear a pending confirmation.
+     * Splitting the check and the clear into two calls introduces a TOCTOU race:
+     * the window could expire between the two calls, causing the second call to
+     * return {@code null} even though the first returned {@code true}.
      *
      * @param uuid the player
      * @return the {@link ConfirmReason} that was pending, or {@code null} if no
@@ -113,6 +119,8 @@ public class ConfirmationManager {
      *
      * <p>If the confirmed reason involved NO_LEAVES (or BOTH), a no-leaves grace
      * window is opened so the player can finish the bare trunk uninterrupted.
+     * The grace window uses {@code idle-timeout} (not {@code confirmation-window})
+     * so the window is long enough to cover an entire trunk without re-prompting.
      * Otherwise any stale no-leaves grace is cleared (they moved to a leafy tree).
      *
      * @param uuid            the player
@@ -128,9 +136,11 @@ public class ConfirmationManager {
         pendingReason.remove(uuid);
 
         if (confirmedReason == ConfirmReason.NO_LEAVES || confirmedReason == ConfirmReason.BOTH) {
-            // Grant a grace window so the entire bare trunk can be chopped without re-confirming
-            long windowMs = plugin.getPluginConfig().getConfirmationWindowSeconds() * 1000L;
-            noLeavesGraceExpiry.put(uuid, System.currentTimeMillis() + windowMs);
+            // Use idle-timeout for the grace window duration, not confirmation-window.
+            // confirmation-window (default 10 s) is too short to chop an entire bare
+            // trunk; idle-timeout (default 300 s) matches the natural session length.
+            long graceMs = plugin.getPluginConfig().getIdleTimeoutSeconds() * 1000L;
+            noLeavesGraceExpiry.put(uuid, System.currentTimeMillis() + graceMs);
         } else {
             // Player moved to a leafy tree — stale no-leaves grace is irrelevant
             noLeavesGraceExpiry.remove(uuid);
@@ -170,26 +180,6 @@ public class ConfirmationManager {
         if (idleOrRejoin) return ConfirmReason.IDLE_OR_REJOIN;
         if (noLeaves) return ConfirmReason.NO_LEAVES;
         return null;
-    }
-
-    /**
-     * Returns {@code true} if the player is currently inside an active confirmation
-     * window (i.e. they were shown a warning and have not yet confirmed or timed out).
-     *
-     * Prefer {@link #consumePendingConfirmation} over calling this followed by
-     * {@link #getPendingReason} to avoid a TOCTOU race condition.
-     */
-    public boolean isConfirmationPending(UUID uuid) {
-        Long expiry = pendingConfirmationExpiry.get(uuid);
-        if (expiry == null) return false;
-
-        if (System.currentTimeMillis() > expiry) {
-            // Window expired — clean up so the next chop triggers a fresh warning
-            pendingConfirmationExpiry.remove(uuid);
-            pendingReason.remove(uuid);
-            return false;
-        }
-        return true;
     }
 
     /**
