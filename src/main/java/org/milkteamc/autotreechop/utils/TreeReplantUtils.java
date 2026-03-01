@@ -166,12 +166,31 @@ public class TreeReplantUtils {
 
     /**
      * Plants a full 2x2 sapling formation at the given anchor location.
-     * If require-sapling-in-inventory is true, all four saplings must be
-     * present before any are consumed or placed.
+     *
+     * <p>All four positions are re-validated before any sapling is placed. If any
+     * position became occupied between the time the anchor was chosen and now (race
+     * condition — another player placed a block), the entire formation is aborted
+     * rather than planting a partial 2x2, which would be useless for dark oak growth.
+     *
+     * <p>If require-sapling-in-inventory is true, all four saplings must be present
+     * before any are consumed.
      */
     private static void plant2x2Saplings(Player player, Location anchorLocation, Material saplingType, Config config) {
 
         Block anchor = anchorLocation.getBlock();
+
+        // Re-validate all four positions atomically before touching any of them.
+        // The world may have changed since find2x2PlantLocation ran (another player
+        // could have placed a block in one of the slots during the replant delay).
+        // Using continue instead of return here would produce a 1-, 2- or 3-sapling
+        // partial formation that can never grow into a dark oak — so we abort entirely.
+        for (int[] offset : FORMATION_2X2) {
+            Block target = anchor.getRelative(offset[0], 0, offset[1]);
+            Block below = target.getRelative(BlockFace.DOWN);
+            if (!isClearForSapling(target) || !isValidSoil(below.getType(), config)) {
+                return; // Abort — formation is no longer fully clear
+            }
+        }
 
         // Pre-check inventory has enough saplings before consuming any
         if (config.getRequireSaplingInInventory()) {
@@ -181,13 +200,9 @@ public class TreeReplantUtils {
             }
         }
 
+        // All checks passed — place all four saplings
         for (int[] offset : FORMATION_2X2) {
             Block target = anchor.getRelative(offset[0], 0, offset[1]);
-            Block below = target.getRelative(BlockFace.DOWN);
-
-            if (!isClearForSapling(target) || !isValidSoil(below.getType(), config)) {
-                continue;
-            }
 
             if (config.getRequireSaplingInInventory()) {
                 consumeSaplingFromInventory(player, saplingType);

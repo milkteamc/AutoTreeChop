@@ -7,14 +7,16 @@ import com.cryptomorin.xseries.XMaterial;
 import com.cryptomorin.xseries.particles.ParticleDisplay;
 import com.cryptomorin.xseries.particles.XParticle;
 import java.awt.Color;
+import java.util.logging.Logger;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 
 public class EffectUtils {
 
+    private static final Logger LOGGER = Logger.getLogger("AutoTreeChop");
+
     public static void sendMaxBlockLimitReachedMessage(Player player, Block block) {
         sendMessage(player, HIT_MAX_BLOCK_MESSAGE);
-
         ParticleDisplay.of(XParticle.DUST)
                 .withLocation(block.getLocation().add(0.5, 0.5, 0.5))
                 .withColor(Color.RED, 1.0f)
@@ -61,7 +63,7 @@ public class EffectUtils {
         // Brown/orange dust particles to represent decaying leaves
         ParticleDisplay.of(XParticle.DUST)
                 .withLocation(block.getLocation().add(0.5, 0.5, 0.5))
-                .withColor(new Color(139, 69, 19), 0.8f) // Brown color
+                .withColor(new Color(139, 69, 19), 0.8f)
                 .withCount(15)
                 .offset(0.3, 0.3, 0.3)
                 .spawn();
@@ -79,6 +81,12 @@ public class EffectUtils {
                             .spawn();
                 }
             } catch (NoSuchMethodError | UnsupportedOperationException e) {
+                // The BLOCK particle API changed between MC versions; XSeries could not
+                // provide a compatible implementation on this server.  The visual is
+                // purely cosmetic so we degrade gracefully, but log at FINE so server
+                // admins can diagnose version-compatibility issues if needed.
+                LOGGER.fine(
+                        "BLOCK particle unavailable for leaf removal effect on this server version: " + e.getMessage());
             }
         }
     }

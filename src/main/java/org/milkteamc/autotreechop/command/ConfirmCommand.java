@@ -3,7 +3,6 @@ package org.milkteamc.autotreechop.command;
 import java.util.UUID;
 import org.bukkit.entity.Player;
 import org.milkteamc.autotreechop.AutoTreeChop;
-import org.milkteamc.autotreechop.utils.ConfirmationManager;
 import org.milkteamc.autotreechop.utils.ConfirmationManager.ConfirmReason;
 import revxrsal.commands.annotation.Command;
 import revxrsal.commands.annotation.Subcommand;
@@ -28,15 +27,19 @@ public class ConfirmCommand {
         }
 
         UUID uuid = player.getUniqueId();
-        ConfirmationManager confirmationManager = plugin.getConfirmationManager();
 
-        if (!confirmationManager.isConfirmationPending(uuid)) {
+        // consumePendingConfirmation atomically reads and removes the pending reason in
+        // one step, avoiding the TOCTOU race that would exist if isConfirmationPending()
+        // and getPendingReason() were called separately (the window could expire between
+        // the two calls, causing getPendingReason to return null).
+        ConfirmReason reason = plugin.getConfirmationManager().consumePendingConfirmation(uuid);
+
+        if (reason == null) {
             AutoTreeChop.sendMessage(player, AutoTreeChop.NO_PENDING_CONFIRMATION_MESSAGE);
             return;
         }
 
-        ConfirmReason reason = confirmationManager.getPendingReason(uuid);
-        confirmationManager.recordSuccessfulChop(uuid, reason);
+        plugin.getConfirmationManager().recordSuccessfulChop(uuid, reason);
         AutoTreeChop.sendMessage(player, AutoTreeChop.CONFIRMATION_SUCCESS_MESSAGE);
     }
 }

@@ -60,10 +60,14 @@ public class BlockBreakListener implements Listener {
         ConfirmationManager confirmationManager = plugin.getConfirmationManager();
         String timeoutStr = String.valueOf(config.getConfirmationWindowSeconds());
 
-        if (confirmationManager.isConfirmationPending(playerUUID)) {
+        // consumePendingConfirmation is a single atomic read-and-remove, eliminating
+        // the TOCTOU race that existed when isConfirmationPending() and getPendingReason()
+        // were called separately.
+        ConfirmReason pendingReason = confirmationManager.consumePendingConfirmation(playerUUID);
+
+        if (pendingReason != null) {
             // Player is inside the confirmation window and just broke a log — confirmed!
-            ConfirmReason confirmedReason = confirmationManager.getPendingReason(playerUUID);
-            confirmationManager.recordSuccessfulChop(playerUUID, confirmedReason);
+            confirmationManager.recordSuccessfulChop(playerUUID, pendingReason);
             AutoTreeChop.sendMessage(player, AutoTreeChop.CONFIRMATION_SUCCESS_MESSAGE);
             // Fall through to normal ATC processing below.
 
@@ -148,9 +152,7 @@ public class BlockBreakListener implements Listener {
      * that the rest of the plugin uses, so "what counts as a leaf" stays
      * consistent across all features.
      *
-     * <p>The radius comes from {@code Config#getNoLeavesDetectionRadius()} — a
-     * dedicated setting separate from the leaf-<em>removal</em> radius so that
-     * changing removal behaviour doesn't accidentally break detection.
+     * <p>The radius comes from {@code Config#getNoLeavesDetectionRadius()}.
      * Short-circuits on the first leaf found for performance.
      */
     private static boolean hasNearbyLeaves(Block log, Config config) {

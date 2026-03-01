@@ -77,6 +77,37 @@ public class ConfirmationManager {
     }
 
     /**
+     * Atomically checks whether a confirmation is pending, and if so consumes
+     * it — removing the expiry and reason in a single operation — and returns
+     * the reason.
+     *
+     * Use this instead of calling {@link #isConfirmationPending} followed by
+     * {@link #getPendingReason}, which has a TOCTOU race: the window could expire
+     * in the nanoseconds between the two calls, causing {@code getPendingReason}
+     * to return {@code null} even though {@code isConfirmationPending} returned
+     * {@code true}.
+     *
+     * @param uuid the player
+     * @return the {@link ConfirmReason} that was pending, or {@code null} if no
+     *         confirmation was pending or the window had already expired
+     */
+    public ConfirmReason consumePendingConfirmation(UUID uuid) {
+        Long expiry = pendingConfirmationExpiry.get(uuid);
+        if (expiry == null) return null;
+
+        if (System.currentTimeMillis() > expiry) {
+            // Window expired — clean up so the next chop triggers a fresh warning
+            pendingConfirmationExpiry.remove(uuid);
+            pendingReason.remove(uuid);
+            return null;
+        }
+
+        // Atomically consume both entries
+        pendingConfirmationExpiry.remove(uuid);
+        return pendingReason.remove(uuid);
+    }
+
+    /**
      * Records a successful chop confirmation, resets the idle timer, and clears
      * all idle/rejoin pending state.
      *
@@ -91,6 +122,8 @@ public class ConfirmationManager {
     public void recordSuccessfulChop(UUID uuid, ConfirmReason confirmedReason) {
         lastChopTime.put(uuid, System.currentTimeMillis());
         rejoinPending.remove(uuid);
+        // pendingConfirmation is already consumed by consumePendingConfirmation before
+        // this is called, but defensively clear in case the path skipped that step.
         pendingConfirmationExpiry.remove(uuid);
         pendingReason.remove(uuid);
 
@@ -142,6 +175,9 @@ public class ConfirmationManager {
     /**
      * Returns {@code true} if the player is currently inside an active confirmation
      * window (i.e. they were shown a warning and have not yet confirmed or timed out).
+     *
+     * Prefer {@link #consumePendingConfirmation} over calling this followed by
+     * {@link #getPendingReason} to avoid a TOCTOU race condition.
      */
     public boolean isConfirmationPending(UUID uuid) {
         Long expiry = pendingConfirmationExpiry.get(uuid);
@@ -154,15 +190,6 @@ public class ConfirmationManager {
             return false;
         }
         return true;
-    }
-
-    /**
-     * Returns the {@link ConfirmReason} that opened the currently pending window,
-     * or {@code null} if there is no active pending window.
-     */
-    public ConfirmReason getPendingReason(UUID uuid) {
-        if (!isConfirmationPending(uuid)) return null;
-        return pendingReason.get(uuid);
     }
 
     /**
