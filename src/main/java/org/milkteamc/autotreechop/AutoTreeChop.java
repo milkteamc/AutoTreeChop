@@ -166,7 +166,7 @@ public class AutoTreeChop extends JavaPlugin {
         playerConfigs = new ConcurrentHashMap<>();
         initializeHooks();
 
-        cooldownManager = new CooldownManager(this);
+        cooldownManager = new CooldownManager();
 
         confirmationManager = new ConfirmationManager(this);
 
