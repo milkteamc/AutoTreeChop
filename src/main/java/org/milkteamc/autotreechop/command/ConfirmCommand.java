@@ -39,7 +39,7 @@ public class ConfirmCommand {
             return;
         }
 
-        plugin.getConfirmationManager().recordSuccessfulChop(uuid, reason);
+        plugin.getConfirmationManager().recordSuccessfulChop(uuid, reason, false);
         AutoTreeChop.sendMessage(player, AutoTreeChop.CONFIRMATION_SUCCESS_MESSAGE);
     }
 }

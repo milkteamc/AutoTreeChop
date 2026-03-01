@@ -114,20 +114,28 @@ public class ConfirmationManager {
     }
 
     /**
-     * Records a successful chop confirmation, resets the idle timer, and clears
-     * all idle/rejoin pending state.
+     * Records a successful chop, resets the idle timer, and updates the
+     * no-leaves grace window according to whether the chop had nearby leaves.
      *
-     * <p>If the confirmed reason involved NO_LEAVES (or BOTH), a no-leaves grace
-     * window is opened so the player can finish the bare trunk uninterrupted.
-     * The grace window uses {@code idle-timeout} (not {@code confirmation-window})
-     * so the window is long enough to cover an entire trunk without re-prompting.
-     * Otherwise any stale no-leaves grace is cleared (they moved to a leafy tree).
+     * <p>Grace window rules:
+     * <ul>
+     *   <li>If {@code confirmedReason} is NO_LEAVES or BOTH → open a new grace window
+     *       so the player can finish the bare trunk uninterrupted.</li>
+     *   <li>If {@code hasLeaves} is {@code true} → close any existing grace window
+     *       (player has moved to a leafy tree).</li>
+     *   <li>Otherwise (bare log, grace already active, or confirmation disabled) →
+     *       leave the grace window as-is. Clearing it here would end the grace mid-trunk
+     *       every time the player incidentally breaks a non-leaf, non-confirmed block.</li>
+     * </ul>
      *
      * @param uuid            the player
      * @param confirmedReason the reason that was pending when they confirmed;
      *                        pass {@code null} for a normal non-confirmation chop
+     * @param hasLeaves       whether the log that was just broken had nearby leaf blocks;
+     *                        pass {@code false} when the leaf state is unknown (e.g. the
+     *                        player confirmed via {@code /atc confirm} or by re-breaking)
      */
-    public void recordSuccessfulChop(UUID uuid, ConfirmReason confirmedReason) {
+    public void recordSuccessfulChop(UUID uuid, ConfirmReason confirmedReason, boolean hasLeaves) {
         lastChopTime.put(uuid, System.currentTimeMillis());
         rejoinPending.remove(uuid);
         // pendingConfirmation is already consumed by consumePendingConfirmation before
@@ -141,10 +149,17 @@ public class ConfirmationManager {
             // trunk; idle-timeout (default 300 s) matches the natural session length.
             long graceMs = plugin.getPluginConfig().getIdleTimeoutSeconds() * 1000L;
             noLeavesGraceExpiry.put(uuid, System.currentTimeMillis() + graceMs);
-        } else {
-            // Player moved to a leafy tree — stale no-leaves grace is irrelevant
+        } else if (hasLeaves) {
+            // Player demonstrably moved to a leafy tree — stale no-leaves grace is
+            // now irrelevant and can be cleared.
+            //
+            // Critically, we only clear when hasLeaves is *true*. If the player breaks a
+            // bare log while the grace window is active (hasLeaves=false, confirmedReason=null),
+            // clearing here would kill the grace mid-trunk, forcing re-confirmation on
+            // every subsequent bare log for the rest of the trunk.
             noLeavesGraceExpiry.remove(uuid);
         }
+        // hasLeaves=false, confirmedReason=null (or IDLE_OR_REJOIN): grace is unchanged.
     }
 
     /**
