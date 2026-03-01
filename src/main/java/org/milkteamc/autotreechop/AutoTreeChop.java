@@ -13,7 +13,6 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.milkteamc.autotreechop.command.AboutCommand;
 import org.milkteamc.autotreechop.command.ConfirmCommand;
-import org.milkteamc.autotreechop.command.MainCommand;
 import org.milkteamc.autotreechop.command.ReloadCommand;
 import org.milkteamc.autotreechop.command.ToggleCommand;
 import org.milkteamc.autotreechop.command.UsageCommand;
@@ -128,7 +127,6 @@ public class AutoTreeChop extends JavaPlugin {
         lamp.register(new ReloadCommand(this, config));
         lamp.register(new AboutCommand(this));
         lamp.register(new ToggleCommand(this));
-        lamp.register(new MainCommand(this));
         lamp.register(new UsageCommand(this, config));
         lamp.register(new ConfirmCommand(this));
 

@@ -21,31 +21,17 @@ public class ToggleCommand {
         this.plugin = plugin;
     }
 
+    @Command({"atc", "autotreechop"})
+    @CommandPermission("autotreechop.use")
+    public void root(BukkitCommandActor actor) {
+        performSelfToggle(actor);
+    }
+
     @Subcommand("toggle")
     @CommandPermission("autotreechop.use")
     public void toggle(BukkitCommandActor actor, @Optional Player targetPlayer) {
         if (targetPlayer == null) {
-            if (!(actor.sender() instanceof Player player)) {
-                AutoTreeChop.sendMessage(actor.sender(), AutoTreeChop.ONLY_PLAYERS_MESSAGE);
-                return;
-            }
-
-            if (!plugin.getPluginConfig().getCommandToggle()) {
-                AutoTreeChop.sendMessage(actor.sender(), AutoTreeChop.NO_PERMISSION_MESSAGE);
-                return;
-            }
-
-            UUID playerUUID = player.getUniqueId();
-            PlayerConfig playerConfig = plugin.getPlayerConfig(playerUUID);
-            boolean autoTreeChopEnabled = !playerConfig.isAutoTreeChopEnabled();
-            playerConfig.setAutoTreeChopEnabled(autoTreeChopEnabled);
-
-            if (autoTreeChopEnabled) {
-                AutoTreeChop.sendMessage(player, AutoTreeChop.ENABLED_MESSAGE);
-            } else {
-                plugin.getConfirmationManager().clearPlayer(playerUUID);
-                AutoTreeChop.sendMessage(player, AutoTreeChop.DISABLED_MESSAGE);
-            }
+            performSelfToggle(actor);
             return;
         }
 
@@ -86,7 +72,6 @@ public class ToggleCommand {
     @Subcommand("enable")
     public void enable(BukkitCommandActor actor, @Optional EntitySelector<Player> targetPlayers) {
         if (targetPlayers == null) {
-            // Self-use path
             if (!actor.sender().hasPermission("autotreechop.use")) {
                 AutoTreeChop.sendMessage(actor.sender(), AutoTreeChop.NO_PERMISSION_MESSAGE);
                 return;
@@ -104,7 +89,6 @@ public class ToggleCommand {
             return;
         }
 
-        // Targeting others — commandToggle does not apply here (admin action)
         if (!actor.sender().hasPermission("autotreechop.other")) {
             AutoTreeChop.sendMessage(actor.sender(), AutoTreeChop.NO_PERMISSION_MESSAGE);
             return;
@@ -135,7 +119,6 @@ public class ToggleCommand {
     @Subcommand("disable")
     public void disable(BukkitCommandActor actor, @Optional EntitySelector<Player> targetPlayers) {
         if (targetPlayers == null) {
-            // Self-use path
             if (!actor.sender().hasPermission("autotreechop.use")) {
                 AutoTreeChop.sendMessage(actor.sender(), AutoTreeChop.NO_PERMISSION_MESSAGE);
                 return;
@@ -180,6 +163,30 @@ public class ToggleCommand {
         } else if (count > 1) {
             AutoTreeChop.sendMessage(
                     actor.sender(), AutoTreeChop.DISABLED_FOR_OTHER_MESSAGE, Placeholder.parsed("player", "everyone"));
+        }
+    }
+
+    private void performSelfToggle(BukkitCommandActor actor) {
+        if (!(actor.sender() instanceof Player player)) {
+            AutoTreeChop.sendMessage(actor.sender(), AutoTreeChop.ONLY_PLAYERS_MESSAGE);
+            return;
+        }
+
+        if (!plugin.getPluginConfig().getCommandToggle()) {
+            AutoTreeChop.sendMessage(actor.sender(), AutoTreeChop.NO_PERMISSION_MESSAGE);
+            return;
+        }
+
+        UUID playerUUID = player.getUniqueId();
+        PlayerConfig playerConfig = plugin.getPlayerConfig(playerUUID);
+        boolean autoTreeChopEnabled = !playerConfig.isAutoTreeChopEnabled();
+        playerConfig.setAutoTreeChopEnabled(autoTreeChopEnabled);
+
+        if (autoTreeChopEnabled) {
+            AutoTreeChop.sendMessage(player, AutoTreeChop.ENABLED_MESSAGE);
+        } else {
+            plugin.getConfirmationManager().clearPlayer(playerUUID);
+            AutoTreeChop.sendMessage(player, AutoTreeChop.DISABLED_MESSAGE);
         }
     }
 }
