@@ -48,6 +48,18 @@ visual-effect: true
 toolDamage: true
 # How much durability should be decrease when player brock one block.
 toolDamageDecrease: 1
+# Seconds of tree-chop inactivity before the player must re-confirm their intent.
+idle-timeout: 300
+# Seconds the player has to chop any log (or run /atc confirm) after seeing the warning.
+confirmation-window: 10
+# Require confirmation when the broken log has no leaf blocks nearby.
+# Helps prevent accidentally chopping placed or stripped logs.
+enable-no-leaves-confirmation: true
+# Require confirmation after the player has been idle or rejoined with ATC enabled.
+enable-idle-confirmation: true
+# Radius (blocks) used to check whether a log has nearby leaves.
+# Increase if large custom trees are falsely flagged. Default 6 covers all vanilla trees.
+no-leaves-detection-radius: 6
 # Enable this if you want players must hold tools to use AutoTreeChop
 mustUseTool: false
 # Set the default AutoTreeChop state for new players.
@@ -160,3 +172,6 @@ valid-soil-types:
   - PODZOL
   - COARSE_DIRT
   - ROOTED_DIRT
+
+# Configuration file version - DO NOT MODIFY
+config-version: 2

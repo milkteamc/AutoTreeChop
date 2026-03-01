@@ -1,13 +1,15 @@
 package org.milkteamc.autotreechop.translation;
 
-import org.milkteamc.autotreechop.AutoTreeChop;
-
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
+import org.milkteamc.autotreechop.AutoTreeChop;
 
 /**
  * Manages custom style tags from styles.properties and converts them to MiniMessage format
@@ -37,8 +39,8 @@ public class StyleRegistry {
         }
 
         Properties properties = new Properties();
-        try (InputStreamReader reader = new InputStreamReader(
-                new FileInputStream(stylesFile), StandardCharsets.UTF_8)) {
+        try (InputStreamReader reader =
+                new InputStreamReader(new FileInputStream(stylesFile), StandardCharsets.UTF_8)) {
             properties.load(reader);
 
             for (String key : properties.stringPropertyNames()) {
@@ -187,7 +189,9 @@ public class StyleRegistry {
                 String innerContent = processedContent.substring(startIdx + openTag.length(), endIdx);
                 String styledInner = applyStyleToContent(nestedStyle, innerContent);
 
-                processedContent = processedContent.substring(0, startIdx) + styledInner + processedContent.substring(endIdx + closeTag.length());
+                processedContent = processedContent.substring(0, startIdx)
+                        + styledInner
+                        + processedContent.substring(endIdx + closeTag.length());
             }
         }
 

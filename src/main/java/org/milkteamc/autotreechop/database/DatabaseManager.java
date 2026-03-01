@@ -2,8 +2,6 @@ package org.milkteamc.autotreechop.database;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
-import org.bukkit.plugin.Plugin;
-
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -12,21 +10,28 @@ import java.time.LocalDate;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import org.bukkit.plugin.Plugin;
 
 public class DatabaseManager {
 
     private final Plugin plugin;
     private final HikariDataSource dataSource;
 
-    public DatabaseManager(Plugin plugin, boolean useMysql, String hostname, int port,
-                           String database, String username, String password) {
+    public DatabaseManager(
+            Plugin plugin,
+            boolean useMysql,
+            String hostname,
+            int port,
+            String database,
+            String username,
+            String password) {
         this.plugin = plugin;
         this.dataSource = initializeDataSource(useMysql, hostname, port, database, username, password);
         createTable();
     }
 
-    private HikariDataSource initializeDataSource(boolean useMysql, String hostname, int port,
-                                                  String database, String username, String password) {
+    private HikariDataSource initializeDataSource(
+            boolean useMysql, String hostname, int port, String database, String username, String password) {
         HikariConfig config = new HikariConfig();
 
         if (useMysql) {
@@ -48,13 +53,12 @@ public class DatabaseManager {
 
     private void createTable() {
         try (Connection conn = dataSource.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(
-                     "CREATE TABLE IF NOT EXISTS player_data (" +
-                             "uuid VARCHAR(36) PRIMARY KEY," +
-                             "autoTreeChopEnabled BOOLEAN," +
-                             "dailyUses INT," +
-                             "dailyBlocksBroken INT," +
-                             "lastUseDate VARCHAR(10))")) {
+                PreparedStatement stmt = conn.prepareStatement(
+                        "CREATE TABLE IF NOT EXISTS player_data (" + "uuid VARCHAR(36) PRIMARY KEY,"
+                                + "autoTreeChopEnabled BOOLEAN,"
+                                + "dailyUses INT,"
+                                + "dailyBlocksBroken INT,"
+                                + "lastUseDate VARCHAR(10))")) {
             stmt.executeUpdate();
         } catch (SQLException e) {
             plugin.getLogger().warning("Error creating database table: " + e.getMessage());
@@ -64,8 +68,7 @@ public class DatabaseManager {
     public CompletableFuture<PlayerData> loadPlayerDataAsync(UUID playerUUID, boolean defaultTreeChop) {
         return CompletableFuture.supplyAsync(() -> {
             try (Connection conn = dataSource.getConnection();
-                 PreparedStatement stmt = conn.prepareStatement(
-                         "SELECT * FROM player_data WHERE uuid = ?")) {
+                    PreparedStatement stmt = conn.prepareStatement("SELECT * FROM player_data WHERE uuid = ?")) {
 
                 stmt.setString(1, playerUUID.toString());
                 ResultSet rs = stmt.executeQuery();
@@ -76,16 +79,9 @@ public class DatabaseManager {
                             rs.getBoolean("autoTreeChopEnabled"),
                             rs.getInt("dailyUses"),
                             rs.getInt("dailyBlocksBroken"),
-                            LocalDate.parse(rs.getString("lastUseDate"))
-                    );
+                            LocalDate.parse(rs.getString("lastUseDate")));
                 } else {
-                    PlayerData data = new PlayerData(
-                            playerUUID,
-                            defaultTreeChop,
-                            0,
-                            0,
-                            LocalDate.now()
-                    );
+                    PlayerData data = new PlayerData(playerUUID, defaultTreeChop, 0, 0, LocalDate.now());
                     insertPlayerData(data);
                     return data;
                 }
@@ -98,9 +94,9 @@ public class DatabaseManager {
 
     public void savePlayerDataSync(PlayerData data) {
         try (Connection conn = dataSource.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(
-                     "UPDATE player_data SET autoTreeChopEnabled = ?, dailyUses = ?, " +
-                             "dailyBlocksBroken = ?, lastUseDate = ? WHERE uuid = ?")) {
+                PreparedStatement stmt =
+                        conn.prepareStatement("UPDATE player_data SET autoTreeChopEnabled = ?, dailyUses = ?, "
+                                + "dailyBlocksBroken = ?, lastUseDate = ? WHERE uuid = ?")) {
 
             stmt.setBoolean(1, data.isAutoTreeChopEnabled());
             stmt.setInt(2, data.getDailyUses());
@@ -124,9 +120,9 @@ public class DatabaseManager {
             try (Connection conn = dataSource.getConnection()) {
                 conn.setAutoCommit(false);
 
-                try (PreparedStatement stmt = conn.prepareStatement(
-                        "UPDATE player_data SET autoTreeChopEnabled = ?, dailyUses = ?, " +
-                                "dailyBlocksBroken = ?, lastUseDate = ? WHERE uuid = ?")) {
+                try (PreparedStatement stmt =
+                        conn.prepareStatement("UPDATE player_data SET autoTreeChopEnabled = ?, dailyUses = ?, "
+                                + "dailyBlocksBroken = ?, lastUseDate = ? WHERE uuid = ?")) {
 
                     for (PlayerData data : dataMap.values()) {
                         stmt.setBoolean(1, data.isAutoTreeChopEnabled());
@@ -151,9 +147,9 @@ public class DatabaseManager {
 
     private void insertPlayerData(PlayerData data) throws SQLException {
         try (Connection conn = dataSource.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(
-                     "INSERT INTO player_data (uuid, autoTreeChopEnabled, dailyUses, " +
-                             "dailyBlocksBroken, lastUseDate) VALUES (?, ?, ?, ?, ?)")) {
+                PreparedStatement stmt =
+                        conn.prepareStatement("INSERT INTO player_data (uuid, autoTreeChopEnabled, dailyUses, "
+                                + "dailyBlocksBroken, lastUseDate) VALUES (?, ?, ?, ?, ?)")) {
 
             stmt.setString(1, data.getPlayerUUID().toString());
             stmt.setBoolean(2, data.isAutoTreeChopEnabled());
@@ -177,8 +173,12 @@ public class DatabaseManager {
         private int dailyBlocksBroken;
         private LocalDate lastUseDate;
 
-        public PlayerData(UUID playerUUID, boolean autoTreeChopEnabled, int dailyUses,
-                          int dailyBlocksBroken, LocalDate lastUseDate) {
+        public PlayerData(
+                UUID playerUUID,
+                boolean autoTreeChopEnabled,
+                int dailyUses,
+                int dailyBlocksBroken,
+                LocalDate lastUseDate) {
             this.playerUUID = playerUUID;
             this.autoTreeChopEnabled = autoTreeChopEnabled;
             this.dailyUses = dailyUses;

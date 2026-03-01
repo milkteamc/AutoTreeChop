@@ -1,11 +1,13 @@
 package org.milkteamc.autotreechop.utils;
 
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.Queue;
+import java.util.Set;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.milkteamc.autotreechop.Config;
-
-import java.util.*;
 
 /**
  * Refactored BlockDiscoveryUtils - All methods work with BlockSnapshot
@@ -24,11 +26,7 @@ public class BlockDiscoveryUtils {
      * @return Set of locations that are part of the tree
      */
     public static Set<Location> discoverTreeBFS(
-            BlockSnapshot snapshot,
-            Location startLocation,
-            Config config,
-            boolean connectedOnly,
-            int maxBlocks) {
+            BlockSnapshot snapshot, Location startLocation, Config config, boolean connectedOnly, int maxBlocks) {
 
         Set<Location> treeBlocks = new HashSet<>();
         Queue<BlockSnapshot.LocationKey> queue = new LinkedList<>();
@@ -76,11 +74,7 @@ public class BlockDiscoveryUtils {
      * @return Set of leaf blocks that should be removed
      */
     public static Set<Location> discoverLeavesBFS(
-            BlockSnapshot snapshot,
-            Location centerLocation,
-            int radius,
-            Config config,
-            Set<Location> removedLogs) {
+            BlockSnapshot snapshot, Location centerLocation, int radius, Config config, Set<Location> removedLogs) {
 
         Set<Location> leaves = new HashSet<>();
         Set<BlockSnapshot.LocationKey> visited = new HashSet<>();
@@ -114,13 +108,7 @@ public class BlockDiscoveryUtils {
 
             // If it's a leaf, check if should be removed
             if (isLeafBlock(type, config)) {
-                boolean shouldRemove = shouldRemoveLeaf(
-                        snapshot,
-                        currentKey,
-                        mode,
-                        config,
-                        removedLogKeys
-                );
+                boolean shouldRemove = shouldRemoveLeaf(snapshot, currentKey, mode, config, removedLogKeys);
                 if (shouldRemove) {
                     leaves.add(loc);
                 }
@@ -146,11 +134,7 @@ public class BlockDiscoveryUtils {
      * Discover leaves using radial scan (ASYNC-SAFE, faster for small areas)
      */
     public static Set<Location> discoverLeavesRadial(
-            BlockSnapshot snapshot,
-            Location centerLocation,
-            int radius,
-            Config config,
-            Set<Location> removedLogs) {
+            BlockSnapshot snapshot, Location centerLocation, int radius, Config config, Set<Location> removedLogs) {
 
         Set<Location> leaves = new HashSet<>();
         World world = snapshot.getWorld();
@@ -174,21 +158,12 @@ public class BlockDiscoveryUtils {
                     }
 
                     BlockSnapshot.LocationKey key = new BlockSnapshot.LocationKey(
-                            centerKey.getX() + x,
-                            centerKey.getY() + y,
-                            centerKey.getZ() + z
-                    );
+                            centerKey.getX() + x, centerKey.getY() + y, centerKey.getZ() + z);
 
                     Material type = snapshot.getBlockType(key.getX(), key.getY(), key.getZ());
 
                     if (isLeafBlock(type, config)) {
-                        boolean shouldRemove = shouldRemoveLeaf(
-                                snapshot,
-                                key,
-                                mode,
-                                config,
-                                removedLogKeys
-                        );
+                        boolean shouldRemove = shouldRemoveLeaf(snapshot, key, mode, config, removedLogKeys);
                         if (shouldRemove) {
                             leaves.add(key.toLocation(world));
                         }
@@ -248,11 +223,8 @@ public class BlockDiscoveryUtils {
                 for (int z = -checkRadius; z <= checkRadius; z++) {
                     if (x == 0 && y == 0 && z == 0) continue;
 
-                    BlockSnapshot.LocationKey checkKey = new BlockSnapshot.LocationKey(
-                            leafKey.getX() + x,
-                            leafKey.getY() + y,
-                            leafKey.getZ() + z
-                    );
+                    BlockSnapshot.LocationKey checkKey =
+                            new BlockSnapshot.LocationKey(leafKey.getX() + x, leafKey.getY() + y, leafKey.getZ() + z);
 
                     Material type = snapshot.getBlockType(checkKey.getX(), checkKey.getY(), checkKey.getZ());
 
@@ -288,10 +260,7 @@ public class BlockDiscoveryUtils {
                     if (x == 0 && y == 0 && z == 0) continue;
 
                     BlockSnapshot.LocationKey checkKey = new BlockSnapshot.LocationKey(
-                            startKey.getX() + x,
-                            startKey.getY() + y,
-                            startKey.getZ() + z
-                    );
+                            startKey.getX() + x, startKey.getY() + y, startKey.getZ() + z);
 
                     Material type = snapshot.getBlockType(checkKey.getX(), checkKey.getY(), checkKey.getZ());
 
@@ -322,11 +291,8 @@ public class BlockDiscoveryUtils {
                 for (int z = -1; z <= 1; z++) {
                     if (x == 0 && y == 0 && z == 0) continue;
 
-                    BlockSnapshot.LocationKey neighborKey = new BlockSnapshot.LocationKey(
-                            current.getX() + x,
-                            current.getY() + y,
-                            current.getZ() + z
-                    );
+                    BlockSnapshot.LocationKey neighborKey =
+                            new BlockSnapshot.LocationKey(current.getX() + x, current.getY() + y, current.getZ() + z);
 
                     if (visited.contains(neighborKey)) continue;
 
@@ -359,11 +325,8 @@ public class BlockDiscoveryUtils {
                 for (int z = -1; z <= 1; z++) {
                     if (x == 0 && y == 0 && z == 0) continue;
 
-                    BlockSnapshot.LocationKey neighborKey = new BlockSnapshot.LocationKey(
-                            current.getX() + x,
-                            current.getY() + y,
-                            current.getZ() + z
-                    );
+                    BlockSnapshot.LocationKey neighborKey =
+                            new BlockSnapshot.LocationKey(current.getX() + x, current.getY() + y, current.getZ() + z);
 
                     if (visited.contains(neighborKey)) continue;
                     if (getDistanceSquared(neighborKey, center) > radiusSquared) continue;

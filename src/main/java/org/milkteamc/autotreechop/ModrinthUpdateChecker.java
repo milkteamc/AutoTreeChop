@@ -1,6 +1,16 @@
 package org.milkteamc.autotreechop;
 
+import com.github.Anon8281.universalScheduler.UniversalScheduler;
 import com.google.gson.*;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.stream.Stream;
 import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.ComponentBuilder;
 import net.md_5.bungee.api.chat.HoverEvent;
@@ -13,17 +23,6 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import com.github.Anon8281.universalScheduler.UniversalScheduler;
-
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.logging.Level;
-import java.util.stream.Stream;
 
 public class ModrinthUpdateChecker implements Listener {
 
@@ -34,12 +33,23 @@ public class ModrinthUpdateChecker implements Listener {
     private final String currentVersion;
     private final String loader;
 
-    @Nullable private String minecraftVersion;
-    @Nullable private String latestVersion;
-    @Nullable private String downloadLink;
-    @Nullable private String changelogLink;
-    @Nullable private String donationLink;
-    @Nullable private String supportLink;
+    @Nullable
+    private String minecraftVersion;
+
+    @Nullable
+    private String latestVersion;
+
+    @Nullable
+    private String downloadLink;
+
+    @Nullable
+    private String changelogLink;
+
+    @Nullable
+    private String donationLink;
+
+    @Nullable
+    private String supportLink;
 
     private boolean notifyOps = false;
     private String notifyPermission = null;
@@ -167,7 +177,9 @@ public class ModrinthUpdateChecker implements Listener {
         checkNow();
 
         long intervalTicks = checkIntervalHours * 60 * 60 * 20L; // hours to ticks
-        plugin.getServer().getScheduler().runTaskTimerAsynchronously(plugin, this::performCheck, intervalTicks, intervalTicks);
+        plugin.getServer()
+                .getScheduler()
+                .runTaskTimerAsynchronously(plugin, this::performCheck, intervalTicks, intervalTicks);
 
         return this;
     }
@@ -177,7 +189,7 @@ public class ModrinthUpdateChecker implements Listener {
             HttpClient client = HttpClient.newHttpClient();
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(API_URL.replace("{id}", projectId)))
-                    .header("User-Agent", "minecraft-plugin/" + plugin.getName() + "/" + currentVersion)
+                    .header("User-Agent", "Java-HttpClient " + plugin.getName() + "/" + currentVersion)
                     .GET()
                     .build();
 
@@ -185,12 +197,14 @@ public class ModrinthUpdateChecker implements Listener {
                     .thenAcceptAsync(response -> {
                         if (response.statusCode() != 200) {
                             lastResult = UpdateCheckResult.UNKNOWN;
-                            plugin.getLogger().warning("Failed to check for updates (HTTP " + response.statusCode() + ")");
+                            plugin.getLogger()
+                                    .warning("Failed to check for updates (HTTP " + response.statusCode() + ")");
                             return;
                         }
 
                         try {
-                            JsonArray versionsArray = JsonParser.parseString(response.body()).getAsJsonArray();
+                            JsonArray versionsArray =
+                                    JsonParser.parseString(response.body()).getAsJsonArray();
                             String latest = getLatestVersion(versionsArray);
 
                             if (latest == null) {
@@ -230,7 +244,8 @@ public class ModrinthUpdateChecker implements Listener {
     private String getLatestVersion(JsonArray versions) {
         return versions.asList().stream()
                 .map(JsonElement::getAsJsonObject)
-                .filter(version -> "release".equalsIgnoreCase(version.get("version_type").getAsString())) // ✅ 只取正式版
+                .filter(version ->
+                        "release".equalsIgnoreCase(version.get("version_type").getAsString()))
                 .filter(this::isVersionCompatible)
                 .map(version -> version.get("version_number").getAsString())
                 .map(ModrinthUpdateChecker::getRawVersion)
@@ -280,7 +295,6 @@ public class ModrinthUpdateChecker implements Listener {
         return 0;
     }
 
-
     private static int parseVersionPart(String part) {
         try {
             return Integer.parseInt(part.replaceAll("[^0-9]", ""));
@@ -308,8 +322,9 @@ public class ModrinthUpdateChecker implements Listener {
         }
 
         if (shouldNotify) {
-            plugin.getServer().getScheduler().runTaskLater(plugin, () ->
-                    printCheckResultToPlayer(player, false), 40L); // 2 second delay
+            plugin.getServer()
+                    .getScheduler()
+                    .runTaskLater(plugin, () -> printCheckResultToPlayer(player, false), 40L); // 2s
         }
     }
 
@@ -356,16 +371,18 @@ public class ModrinthUpdateChecker implements Listener {
 
     private void printCheckResultToPlayer(Player player, boolean showMessageWhenLatestVersion) {
         if (lastResult == UpdateCheckResult.NEW_VERSION_AVAILABLE) {
-            player.sendMessage(ChatColor.GRAY + "There is a new version of " + ChatColor.GOLD + plugin.getName() + ChatColor.GRAY + " available.");
+            player.sendMessage(ChatColor.GRAY + "There is a new version of " + ChatColor.GOLD + plugin.getName()
+                    + ChatColor.GRAY + " available.");
             sendLinks(player);
-            player.sendMessage(ChatColor.DARK_GRAY + "Latest version: " + ChatColor.GREEN + latestVersion +
-                    ChatColor.DARK_GRAY + " | Your version: " + ChatColor.RED + currentVersion);
+            player.sendMessage(ChatColor.DARK_GRAY + "Latest version: " + ChatColor.GREEN + latestVersion
+                    + ChatColor.DARK_GRAY + " | Your version: " + ChatColor.RED + currentVersion);
             player.sendMessage("");
         } else if (lastResult == UpdateCheckResult.UNKNOWN) {
             player.sendMessage(ChatColor.GOLD + plugin.getName() + ChatColor.RED + " could not check for updates.");
         } else {
             if (showMessageWhenLatestVersion) {
-                player.sendMessage(ChatColor.GREEN + "You are running the latest version of " + ChatColor.GOLD + plugin.getName());
+                player.sendMessage(
+                        ChatColor.GREEN + "You are running the latest version of " + ChatColor.GOLD + plugin.getName());
             }
         }
     }
@@ -422,10 +439,8 @@ public class ModrinthUpdateChecker implements Listener {
 
     @NotNull
     private static TextComponent createLink(@NotNull String text, @NotNull String link) {
-        ComponentBuilder lore = new ComponentBuilder("Link: ")
-                .bold(true)
-                .append(link)
-                .bold(false);
+        ComponentBuilder lore =
+                new ComponentBuilder("Link: ").bold(true).append(link).bold(false);
 
         TextComponent component = new TextComponent(text);
         component.setBold(true);
