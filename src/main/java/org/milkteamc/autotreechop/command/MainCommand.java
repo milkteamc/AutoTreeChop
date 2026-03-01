@@ -25,6 +25,11 @@ public class MainCommand {
             return;
         }
 
+        if (!plugin.getPluginConfig().getCommandToggle()) {
+            AutoTreeChop.sendMessage(actor.sender(), AutoTreeChop.NO_PERMISSION_MESSAGE);
+            return;
+        }
+
         Player player = actor.asPlayer();
         UUID playerUUID = player.getUniqueId();
         PlayerConfig playerConfig = plugin.getPlayerConfig(playerUUID);

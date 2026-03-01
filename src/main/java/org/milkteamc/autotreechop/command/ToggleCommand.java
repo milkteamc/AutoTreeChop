@@ -29,6 +29,12 @@ public class ToggleCommand {
                 AutoTreeChop.sendMessage(actor.sender(), AutoTreeChop.ONLY_PLAYERS_MESSAGE);
                 return;
             }
+
+            if (!plugin.getPluginConfig().getCommandToggle()) {
+                AutoTreeChop.sendMessage(actor.sender(), AutoTreeChop.NO_PERMISSION_MESSAGE);
+                return;
+            }
+
             UUID playerUUID = player.getUniqueId();
             PlayerConfig playerConfig = plugin.getPlayerConfig(playerUUID);
             boolean autoTreeChopEnabled = !playerConfig.isAutoTreeChopEnabled();
@@ -77,14 +83,15 @@ public class ToggleCommand {
 
     // NOTE: No @CommandPermission here — permission is checked manually below so that
     // self-use requires autotreechop.use while targeting others requires autotreechop.other.
-    // Applying @CommandPermission("autotreechop.use") at the framework level would silently
-    // let anyone with that permission reach the manual other-check, producing a confusing
-    // "no permission" response for a command they were apparently allowed to invoke.
     @Subcommand("enable")
     public void enable(BukkitCommandActor actor, @Optional EntitySelector<Player> targetPlayers) {
         if (targetPlayers == null) {
             // Self-use path
             if (!actor.sender().hasPermission("autotreechop.use")) {
+                AutoTreeChop.sendMessage(actor.sender(), AutoTreeChop.NO_PERMISSION_MESSAGE);
+                return;
+            }
+            if (!plugin.getPluginConfig().getCommandToggle()) {
                 AutoTreeChop.sendMessage(actor.sender(), AutoTreeChop.NO_PERMISSION_MESSAGE);
                 return;
             }
@@ -97,16 +104,13 @@ public class ToggleCommand {
             return;
         }
 
-        // Targeting others
+        // Targeting others — commandToggle does not apply here (admin action)
         if (!actor.sender().hasPermission("autotreechop.other")) {
             AutoTreeChop.sendMessage(actor.sender(), AutoTreeChop.NO_PERMISSION_MESSAGE);
             return;
         }
 
         int count = 0;
-        // Capture the last processed player's name during the loop so we don't need to
-        // re-iterate via targetPlayers.iterator().next() after the loop (the iterator
-        // is not guaranteed to return elements in a stable order after exhaustion).
         String lastName = null;
         for (Player targetPlayer : targetPlayers) {
             plugin.getPlayerConfig(targetPlayer.getUniqueId()).setAutoTreeChopEnabled(true);
@@ -136,6 +140,10 @@ public class ToggleCommand {
                 AutoTreeChop.sendMessage(actor.sender(), AutoTreeChop.NO_PERMISSION_MESSAGE);
                 return;
             }
+            if (!plugin.getPluginConfig().getCommandToggle()) {
+                AutoTreeChop.sendMessage(actor.sender(), AutoTreeChop.NO_PERMISSION_MESSAGE);
+                return;
+            }
             if (!(actor.sender() instanceof Player player)) {
                 AutoTreeChop.sendMessage(actor.sender(), AutoTreeChop.ONLY_PLAYERS_MESSAGE);
                 return;
@@ -147,14 +155,12 @@ public class ToggleCommand {
             return;
         }
 
-        // Targeting others
         if (!actor.sender().hasPermission("autotreechop.other")) {
             AutoTreeChop.sendMessage(actor.sender(), AutoTreeChop.NO_PERMISSION_MESSAGE);
             return;
         }
 
         int count = 0;
-        // Capture name during iteration — same reason as enable above.
         String lastName = null;
         for (Player targetPlayer : targetPlayers) {
             UUID targetUUID = targetPlayer.getUniqueId();
