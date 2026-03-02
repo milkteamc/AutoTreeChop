@@ -21,7 +21,6 @@ public class ToggleCommand {
         this.plugin = plugin;
     }
 
-    @Command({"atc", "autotreechop"})
     @CommandPermission("autotreechop.use")
     public void root(BukkitCommandActor actor) {
         performSelfToggle(actor);
