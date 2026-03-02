@@ -63,23 +63,10 @@ public class BlockBreakListener implements Listener {
             return;
         }
 
-        ConfirmationManager confirmationManager = plugin.getConfirmationManager();
-        ConfirmReason pendingReason = confirmationManager.consumePendingConfirmation(playerUUID);
-
         // Cancel the event now — from this point we own the block break.
         // chopTree handles the actual breaking itself via breakNaturally().
         event.setCancelled(true);
 
-        if (pendingReason != null) {
-            // Player confirmed by breaking a log within the confirmation window.
-            // Skip the leaf check entirely; grace is determined by the original reason.
-            confirmationManager.recordSuccessfulChop(playerUUID, pendingReason, false);
-            AutoTreeChop.sendMessage(player, AutoTreeChop.CONFIRMATION_SUCCESS_MESSAGE);
-            dispatchChop(player, playerConfig, block, tool, location, config);
-            return;
-        }
-
-        // Run cheap synchronous guards before doing any async work.
         if (plugin.getCooldownManager().isInCooldown(playerUUID)) {
             long remaining = plugin.getCooldownManager().getRemainingCooldown(playerUUID);
             AutoTreeChop.sendMessage(
@@ -98,6 +85,19 @@ public class BlockBreakListener implements Listener {
         if (!PermissionUtils.hasVipUses(player, playerConfig, config)
                 && playerConfig.getDailyUses() >= config.getMaxUsesPerDay()) {
             AutoTreeChop.sendMessage(player, AutoTreeChop.HIT_MAX_USAGE_MESSAGE);
+            return;
+        }
+
+        // Limits cleared — now check for a pending confirmation.
+        ConfirmationManager confirmationManager = plugin.getConfirmationManager();
+        ConfirmReason pendingReason = confirmationManager.consumePendingConfirmation(playerUUID);
+
+        if (pendingReason != null) {
+            // Player confirmed by breaking a log within the confirmation window.
+            // Skip the leaf check entirely; grace is determined by the original reason.
+            confirmationManager.recordSuccessfulChop(playerUUID, pendingReason, false);
+            AutoTreeChop.sendMessage(player, AutoTreeChop.CONFIRMATION_SUCCESS_MESSAGE);
+            dispatchChop(player, playerConfig, block, tool, location, config);
             return;
         }
 
