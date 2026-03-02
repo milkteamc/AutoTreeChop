@@ -67,7 +67,6 @@ public class ProtectionCheckUtils {
     /**
      * Individual check methods (for backwards compatibility or specific use cases)
      */
-
     public static boolean checkWorldGuard(Player player, Location location, boolean enabled, WorldGuardHook hook) {
         return !enabled || hook.checkBuild(player, location);
     }
@@ -76,7 +75,8 @@ public class ProtectionCheckUtils {
         return !enabled || hook.checkBuild(player, location);
     }
 
-    public static boolean checkGriefPrevention(Player player, Location location, boolean enabled, GriefPreventionHook hook) {
+    public static boolean checkGriefPrevention(
+            Player player, Location location, boolean enabled, GriefPreventionHook hook) {
         return !enabled || hook.checkBuild(player, location);
     }
 
@@ -96,10 +96,14 @@ public class ProtectionCheckUtils {
         public final LandsHook lands;
 
         public ProtectionHooks(
-                boolean worldGuardEnabled, WorldGuardHook worldGuard,
-                boolean residenceEnabled, ResidenceHook residence,
-                boolean griefPreventionEnabled, GriefPreventionHook griefPrevention,
-                boolean landsEnabled, LandsHook lands) {
+                boolean worldGuardEnabled,
+                WorldGuardHook worldGuard,
+                boolean residenceEnabled,
+                ResidenceHook residence,
+                boolean griefPreventionEnabled,
+                GriefPreventionHook griefPrevention,
+                boolean landsEnabled,
+                LandsHook lands) {
             this.worldGuardEnabled = worldGuardEnabled;
             this.worldGuard = worldGuard;
             this.residenceEnabled = residenceEnabled;

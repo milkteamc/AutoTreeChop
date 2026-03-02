@@ -1,9 +1,8 @@
 package org.milkteamc.autotreechop;
 
-import org.milkteamc.autotreechop.database.DatabaseManager;
-
 import java.time.LocalDate;
 import java.util.UUID;
+import org.milkteamc.autotreechop.database.DatabaseManager;
 
 public class PlayerConfig {
 

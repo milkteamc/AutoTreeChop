@@ -1,8 +1,7 @@
 package org.milkteamc.autotreechop;
 
-import org.bukkit.entity.Player;
-
 import java.util.UUID;
+import org.bukkit.entity.Player;
 
 public class AutoTreeChopAPI {
 

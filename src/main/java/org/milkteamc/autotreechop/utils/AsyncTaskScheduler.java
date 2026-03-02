@@ -7,14 +7,10 @@ import org.milkteamc.autotreechop.AutoTreeChop;
 
 public class AsyncTaskScheduler {
 
-    private final AutoTreeChop plugin;
     private final TaskScheduler scheduler;
-    private final boolean isFolia;
 
     public AsyncTaskScheduler(AutoTreeChop plugin) {
-        this.plugin = plugin;
         this.scheduler = UniversalScheduler.getScheduler(plugin);
-        this.isFolia = AutoTreeChop.isFolia();
     }
 
     /**

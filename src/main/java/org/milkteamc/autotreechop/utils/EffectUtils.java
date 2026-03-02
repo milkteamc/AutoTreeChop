@@ -1,50 +1,93 @@
 package org.milkteamc.autotreechop.utils;
 
-import org.bukkit.Color;
-import org.bukkit.Particle;
-import org.bukkit.block.Block;
-import org.bukkit.entity.Player;
-
 import static org.milkteamc.autotreechop.AutoTreeChop.HIT_MAX_BLOCK_MESSAGE;
 import static org.milkteamc.autotreechop.AutoTreeChop.sendMessage;
 
+import com.cryptomorin.xseries.XMaterial;
+import com.cryptomorin.xseries.particles.ParticleDisplay;
+import com.cryptomorin.xseries.particles.XParticle;
+import java.awt.Color;
+import java.util.logging.Logger;
+import org.bukkit.block.Block;
+import org.bukkit.entity.Player;
+
 public class EffectUtils {
 
-    // Sends a message to the player and shows a red particle effect indicating the block limit has been reached
+    private static final Logger LOGGER = Logger.getLogger("AutoTreeChop");
+
     public static void sendMaxBlockLimitReachedMessage(Player player, Block block) {
         sendMessage(player, HIT_MAX_BLOCK_MESSAGE);
-        player.getWorld().spawnParticle(Particle.DUST, block.getLocation().add(0.5, 0.5, 0.5), 50, 0.5, 0.5, 0.5, 0, new Particle.DustOptions(Color.RED, 1));
+        ParticleDisplay.of(XParticle.DUST)
+                .withLocation(block.getLocation().add(0.5, 0.5, 0.5))
+                .withColor(Color.RED, 1.0f)
+                .withCount(50)
+                .offset(0.5, 0.5, 0.5)
+                .spawn();
     }
 
-    // Shows a green particle effect indicating the block has been chopped
     public static void showChopEffect(Player player, Block block) {
-        player.getWorld().spawnParticle(Particle.HAPPY_VILLAGER, block.getLocation().add(0.5, 0.5, 0.5), 50, 0.5, 0.5, 0.5, 0);
+        ParticleDisplay.of(XParticle.HAPPY_VILLAGER)
+                .withLocation(block.getLocation().add(0.5, 0.5, 0.5))
+                .withCount(50)
+                .offset(0.5, 0.5, 0.5)
+                .spawn();
     }
 
-    // Shows a green particle effect with growth particles indicating a sapling has been replanted
     public static void showReplantEffect(Player player, Block block) {
-        // Show green particles with a slight upward motion to indicate growth/planting
-        player.getWorld().spawnParticle(Particle.HAPPY_VILLAGER, block.getLocation().add(0.5, 0.5, 0.5), 20, 0.3, 0.3, 0.3, 0);
+        ParticleDisplay.of(XParticle.HAPPY_VILLAGER)
+                .withLocation(block.getLocation().add(0.5, 0.5, 0.5))
+                .withCount(20)
+                .offset(0.3, 0.3, 0.3)
+                .spawn();
 
         // Add some bone meal-like particles for extra visual feedback
-        player.getWorld().spawnParticle(Particle.COMPOSTER, block.getLocation().add(0.5, 0.2, 0.5), 15, 0.2, 0.1, 0.2, 0.05);
+        if (XParticle.COMPOSTER.isSupported()) {
+            ParticleDisplay.of(XParticle.COMPOSTER)
+                    .withLocation(block.getLocation().add(0.5, 0.2, 0.5))
+                    .withCount(15)
+                    .offset(0.2, 0.1, 0.2)
+                    .withExtra(0.05)
+                    .spawn();
+        }
 
-        // Optional: Add some green dust particles to simulate plant growth
-        player.getWorld().spawnParticle(Particle.DUST, block.getLocation().add(0.5, 0.3, 0.5), 10, 0.2, 0.2, 0.2, 0, new Particle.DustOptions(Color.GREEN, 0.8f));
+        // Green dust particles to simulate plant growth
+        ParticleDisplay.of(XParticle.DUST)
+                .withLocation(block.getLocation().add(0.5, 0.3, 0.5))
+                .withColor(Color.GREEN, 0.8f)
+                .withCount(10)
+                .offset(0.2, 0.2, 0.2)
+                .spawn();
     }
 
     public static void showLeafRemovalEffect(Player player, Block block) {
-        // Show brown/orange particles to represent decaying leaves
-        player.getWorld().spawnParticle(Particle.DUST, block.getLocation().add(0.5, 0.5, 0.5),
-                15, 0.3, 0.3, 0.3, 0, new Particle.DustOptions(Color.fromRGB(139, 69, 19), 0.8f));
+        // Brown/orange dust particles to represent decaying leaves
+        ParticleDisplay.of(XParticle.DUST)
+                .withLocation(block.getLocation().add(0.5, 0.5, 0.5))
+                .withColor(new Color(139, 69, 19), 0.8f)
+                .withCount(15)
+                .offset(0.3, 0.3, 0.3)
+                .spawn();
 
-        // Add some falling leaf-like particles
-        player.getWorld().spawnParticle(
-                Particle.BLOCK,
-                block.getLocation().add(0.5, 0.8, 0.5),
-                10,
-                0.2, 0.1, 0.2,
-                block.getBlockData()
-        );
+        // Falling leaf-like block particles
+        if (XMaterial.supports(13)) {
+            try {
+                XMaterial blockMaterial = XMaterial.matchXMaterial(block.getType());
+                if (blockMaterial != null && blockMaterial.get() != null) {
+                    ParticleDisplay.of(XParticle.BLOCK)
+                            .withLocation(block.getLocation().add(0.5, 0.8, 0.5))
+                            .withBlock(blockMaterial.get().createBlockData())
+                            .withCount(10)
+                            .offset(0.2, 0.1, 0.2)
+                            .spawn();
+                }
+            } catch (NoSuchMethodError | UnsupportedOperationException e) {
+                // The BLOCK particle API changed between MC versions; XSeries could not
+                // provide a compatible implementation on this server.  The visual is
+                // purely cosmetic so we degrade gracefully, but log at FINE so server
+                // admins can diagnose version-compatibility issues if needed.
+                LOGGER.fine(
+                        "BLOCK particle unavailable for leaf removal effect on this server version: " + e.getMessage());
+            }
+        }
     }
 }
