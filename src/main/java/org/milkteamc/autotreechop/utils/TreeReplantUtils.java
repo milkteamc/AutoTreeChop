@@ -113,8 +113,8 @@ public class TreeReplantUtils {
      * Returns true for tree types that require a 2x2 sapling formation to grow.
      */
     private static boolean requires2x2Formation(Material logType) {
-        String name = logType.toString();
-        return name.equals("DARK_OAK_LOG") || name.equals("PALE_OAK_LOG");
+        XMaterial xMat = XMaterial.matchXMaterial(logType);
+        return xMat == XMaterial.DARK_OAK_LOG || xMat == XMaterial.PALE_OAK_LOG;
     }
 
     /**
@@ -179,11 +179,6 @@ public class TreeReplantUtils {
 
         Block anchor = anchorLocation.getBlock();
 
-        // Re-validate all four positions atomically before touching any of them.
-        // The world may have changed since find2x2PlantLocation ran (another player
-        // could have placed a block in one of the slots during the replant delay).
-        // Using continue instead of return here would produce a 1-, 2- or 3-sapling
-        // partial formation that can never grow into a dark oak — so we abort entirely.
         for (int[] offset : FORMATION_2X2) {
             Block target = anchor.getRelative(offset[0], 0, offset[1]);
             Block below = target.getRelative(BlockFace.DOWN);
