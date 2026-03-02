@@ -4,6 +4,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import org.bukkit.Location;
+import org.bukkit.inventory.ItemStack;
 import org.milkteamc.autotreechop.AutoTreeChop;
 
 public class ConfirmationManager {
@@ -18,7 +20,16 @@ public class ConfirmationManager {
         BOTH
     }
 
-    private record PendingConfirmation(long expiryMs, ConfirmReason reason) {}
+    /**
+     * Returned by {@link #consumePendingConfirmation}: carries both the reason that
+     * triggered the confirmation and the chop parameters that were saved at that time.
+     * {@code blockLocation} and {@code tool} are used by {@code /atc confirm} to fire
+     * the chop without requiring the player to physically re-break the log.
+     */
+    public record ChopData(ConfirmReason reason, Location blockLocation, ItemStack tool) {}
+
+    // Internal record — not exposed; callers receive ChopData instead.
+    private record PendingConfirmation(long expiryMs, ConfirmReason reason, Location blockLocation, ItemStack tool) {}
 
     private final AutoTreeChop plugin;
 
@@ -27,7 +38,7 @@ public class ConfirmationManager {
 
     /**
      * Active confirmation window per player.
-     * A single entry per player holds both the expiry timestamp and the reason,
+     * A single entry per player holds the expiry timestamp, reason, and chop parameters,
      * allowing atomic read-and-remove via {@link ConcurrentHashMap#compute}.
      */
     private final Map<UUID, PendingConfirmation> pendingConfirmations = new ConcurrentHashMap<>();
@@ -38,11 +49,7 @@ public class ConfirmationManager {
      * a whole bare trunk without repeated confirmations.
      *
      * <p>Uses {@code idle-timeout} as its duration (not {@code confirmation-window})
-     * so the grace period is long enough to cover an entire bare trunk. A 10-second
-     * {@code confirmation-window} would expire mid-chop on any trunk taller than a
-     * few logs, forcing repeated confirmations. {@code idle-timeout} (default 300 s)
-     * gives the player a full session's worth of uninterrupted chopping before the
-     * safety prompt reappears.
+     * so the grace period is long enough to cover an entire bare trunk.
      */
     private final Map<UUID, Long> noLeavesGraceExpiry = new ConcurrentHashMap<>();
 
@@ -69,36 +76,33 @@ public class ConfirmationManager {
 
     /**
      * Opens a time-limited confirmation window for the given reason.
-     * The window duration is driven by {@code Config#getConfirmationWindowSeconds()}.
+     * Stores {@code blockLocation} and {@code tool} so that {@code /atc confirm}
+     * can dispatch the chop without a second physical block break.
      *
-     * @param uuid   the player
-     * @param reason the reason that triggered the confirmation requirement
+     * @param uuid          the player
+     * @param reason        the reason that triggered the confirmation requirement
+     * @param blockLocation location of the log that was blocked (cloned by caller)
+     * @param tool          the tool held at break time (cloned by caller)
      */
-    public void setPendingConfirmation(UUID uuid, ConfirmReason reason) {
+    public void setPendingConfirmation(UUID uuid, ConfirmReason reason, Location blockLocation, ItemStack tool) {
         long expiryMs = System.currentTimeMillis() + plugin.getPluginConfig().getConfirmationWindowSeconds() * 1000L;
-        pendingConfirmations.put(uuid, new PendingConfirmation(expiryMs, reason));
+        pendingConfirmations.put(uuid, new PendingConfirmation(expiryMs, reason, blockLocation, tool));
     }
 
     /**
      * Atomically checks whether a confirmation is pending, consumes it if valid,
-     * and returns the reason — all in a single {@link ConcurrentHashMap#compute}
-     * call so no other thread can observe a half-cleared state.
+     * and returns a {@link ChopData} containing the reason and saved chop parameters.
      *
-     * <p>Using two separate maps with individual {@code get}/{@code remove} calls
-     * introduced a TOCTOU race: the expiry entry could be removed by a concurrent
-     * call between the check and the reason lookup, causing the reason to be
-     * {@code null} even though the expiry check had passed. Merging both fields
-     * into {@link PendingConfirmation} and operating on a single map entry
-     * eliminates that window.
+     * <p>The read-expiry-check-and-remove is performed inside a single
+     * {@link ConcurrentHashMap#compute} call, eliminating the TOCTOU race that
+     * separate {@code get}/{@code remove} calls would introduce.
      *
      * @param uuid the player
-     * @return the {@link ConfirmReason} that was pending, or {@code null} if no
-     *         confirmation was pending or the window had already expired
+     * @return a {@link ChopData} if a valid confirmation was pending, or {@code null}
+     *         if nothing was pending or the window had already expired
      */
-    public ConfirmReason consumePendingConfirmation(UUID uuid) {
-        // compute() holds the bucket lock for the duration of the lambda, making
-        // the read-expiry-check-and-remove sequence fully atomic.
-        ConfirmReason[] result = {null};
+    public ChopData consumePendingConfirmation(UUID uuid) {
+        ChopData[] result = {null};
         pendingConfirmations.compute(uuid, (k, existing) -> {
             if (existing == null) {
                 return null; // nothing pending — leave absent
@@ -106,7 +110,8 @@ public class ConfirmationManager {
             if (System.currentTimeMillis() > existing.expiryMs()) {
                 return null; // expired — remove and return null to caller
             }
-            result[0] = existing.reason(); // valid — capture reason and remove
+            // valid — capture data and remove the entry
+            result[0] = new ChopData(existing.reason(), existing.blockLocation(), existing.tool());
             return null;
         });
         return result[0];
@@ -116,48 +121,22 @@ public class ConfirmationManager {
      * Records a successful chop, resets the idle timer, and updates the
      * no-leaves grace window according to whether the chop had nearby leaves.
      *
-     * <p>Grace window rules:
-     * <ul>
-     *   <li>If {@code confirmedReason} is NO_LEAVES or BOTH → open a new grace window
-     *       so the player can finish the bare trunk uninterrupted.</li>
-     *   <li>If {@code hasLeaves} is {@code true} → close any existing grace window
-     *       (player has moved to a leafy tree).</li>
-     *   <li>Otherwise (bare log, grace already active, or confirmation disabled) →
-     *       leave the grace window as-is. Clearing it here would end the grace mid-trunk
-     *       every time the player incidentally breaks a non-leaf, non-confirmed block.</li>
-     * </ul>
-     *
      * @param uuid            the player
      * @param confirmedReason the reason that was pending when they confirmed;
      *                        pass {@code null} for a normal non-confirmation chop
-     * @param hasLeaves       whether the log that was just broken had nearby leaf blocks;
-     *                        pass {@code false} when the leaf state is unknown (e.g. the
-     *                        player confirmed via {@code /atc confirm} or by re-breaking)
+     * @param hasLeaves       whether the log that was just broken had nearby leaf blocks
      */
     public void recordSuccessfulChop(UUID uuid, ConfirmReason confirmedReason, boolean hasLeaves) {
         lastChopTime.put(uuid, System.currentTimeMillis());
         rejoinPending.remove(uuid);
-        // pendingConfirmation is already consumed by consumePendingConfirmation before
-        // this is called, but defensively clear in case the path skipped that step.
         pendingConfirmations.remove(uuid);
 
         if (confirmedReason == ConfirmReason.NO_LEAVES || confirmedReason == ConfirmReason.BOTH) {
-            // Use idle-timeout for the grace window duration, not confirmation-window.
-            // confirmation-window (default 10 s) is too short to chop an entire bare
-            // trunk; idle-timeout (default 300 s) matches the natural session length.
             long graceMs = plugin.getPluginConfig().getIdleTimeoutSeconds() * 1000L;
             noLeavesGraceExpiry.put(uuid, System.currentTimeMillis() + graceMs);
         } else if (hasLeaves) {
-            // Player demonstrably moved to a leafy tree — stale no-leaves grace is
-            // now irrelevant and can be cleared.
-            //
-            // Critically, we only clear when hasLeaves is *true*. If the player breaks a
-            // bare log while the grace window is active (hasLeaves=false, confirmedReason=null),
-            // clearing here would kill the grace mid-trunk, forcing re-confirmation on
-            // every subsequent bare log for the rest of the trunk.
             noLeavesGraceExpiry.remove(uuid);
         }
-        // hasLeaves=false, confirmedReason=null (or IDLE_OR_REJOIN): grace is unchanged.
     }
 
     /**
@@ -174,9 +153,6 @@ public class ConfirmationManager {
     /**
      * Determines whether confirmation is required before ATC may process the
      * player's next chop, and if so returns <em>why</em>.
-     *
-     * <p>Each trigger is independently gated by its own config flag, so either
-     * or both can be disabled without affecting the other.
      *
      * @param uuid      the player
      * @param hasLeaves whether the log block being broken has leaf blocks nearby

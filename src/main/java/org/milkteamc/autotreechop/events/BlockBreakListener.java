@@ -2,7 +2,9 @@ package org.milkteamc.autotreechop.events;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import org.bukkit.ChunkSnapshot;
 import org.bukkit.Location;
@@ -21,6 +23,7 @@ import org.milkteamc.autotreechop.PlayerConfig;
 import org.milkteamc.autotreechop.utils.AsyncTaskScheduler;
 import org.milkteamc.autotreechop.utils.BlockDiscoveryUtils;
 import org.milkteamc.autotreechop.utils.ConfirmationManager;
+import org.milkteamc.autotreechop.utils.ConfirmationManager.ChopData;
 import org.milkteamc.autotreechop.utils.ConfirmationManager.ConfirmReason;
 import org.milkteamc.autotreechop.utils.EffectUtils;
 import org.milkteamc.autotreechop.utils.PermissionUtils;
@@ -31,6 +34,18 @@ public class BlockBreakListener implements Listener {
 
     private final AutoTreeChop plugin;
     private final AsyncTaskScheduler scheduler;
+
+    /**
+     * Players who currently have an async leaf-check in flight.
+     * Guards against the race where the player breaks a second log before the
+     * first async check completes, which would start two concurrent chop pipelines
+     * for the same player before either has registered with SessionManager.
+     *
+     * <p>A player is added just before the async task is submitted and removed
+     * (via try-finally) when the sync callback finishes, whether it dispatches a
+     * chop, sets a pending confirmation, or discards the event (player offline).
+     */
+    private final Set<UUID> leafCheckInProgress = ConcurrentHashMap.newKeySet();
 
     public BlockBreakListener(AutoTreeChop plugin) {
         this.plugin = plugin;
@@ -90,14 +105,21 @@ public class BlockBreakListener implements Listener {
 
         // Limits cleared — now check for a pending confirmation.
         ConfirmationManager confirmationManager = plugin.getConfirmationManager();
-        ConfirmReason pendingReason = confirmationManager.consumePendingConfirmation(playerUUID);
+        ChopData pending = confirmationManager.consumePendingConfirmation(playerUUID);
 
-        if (pendingReason != null) {
+        if (pending != null) {
             // Player confirmed by breaking a log within the confirmation window.
             // Skip the leaf check entirely; grace is determined by the original reason.
-            confirmationManager.recordSuccessfulChop(playerUUID, pendingReason, false);
+            confirmationManager.recordSuccessfulChop(playerUUID, pending.reason(), false);
             AutoTreeChop.sendMessage(player, AutoTreeChop.CONFIRMATION_SUCCESS_MESSAGE);
             dispatchChop(player, playerConfig, block, tool, location, config);
+            return;
+        }
+
+        // Guard against concurrent leaf checks for the same player.
+        // If a check is already in flight we simply eat this break — the log is
+        // still present (event was cancelled) so the player can try again.
+        if (!leafCheckInProgress.add(playerUUID)) {
             return;
         }
 
@@ -105,35 +127,48 @@ public class BlockBreakListener implements Listener {
         // here), then read them on an async thread (snapshots are immutable — thread-safe).
         Map<Long, ChunkSnapshot> snapshots = captureLeafCheckSnapshots(block, config);
 
+        // Clone location and tool now so we have stable values if the async path
+        // later needs them (block reference is live world state — not safe async).
+        Location frozenLocation = location.clone();
+        ItemStack frozenTool = tool.clone();
+
         plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
             boolean hasLeaves = hasNearbyLeaves(block, config, snapshots);
 
             // Return to the main/region thread to act on the result.
-            scheduler.runTaskAtLocation(location, () -> {
-                if (!player.isOnline()) return;
+            scheduler.runTaskAtLocation(frozenLocation, () -> {
+                // try-finally guarantees leafCheckInProgress is cleared on every exit path.
+                try {
+                    if (!player.isOnline()) return;
 
-                ConfirmReason reason = confirmationManager.getConfirmationReason(playerUUID, hasLeaves);
+                    ConfirmReason reason = confirmationManager.getConfirmationReason(playerUUID, hasLeaves);
 
-                if (reason != null) {
-                    confirmationManager.setPendingConfirmation(playerUUID, reason);
-                    String timeoutStr = String.valueOf(config.getConfirmationWindowSeconds());
-                    String messageKey =
-                            switch (reason) {
-                                case IDLE_OR_REJOIN -> AutoTreeChop.CONFIRMATION_REQUIRED_IDLE_MESSAGE;
-                                case NO_LEAVES -> AutoTreeChop.CONFIRMATION_REQUIRED_NO_LEAVES_MESSAGE;
-                                case BOTH -> AutoTreeChop.CONFIRMATION_REQUIRED_BOTH_MESSAGE;
-                            };
-                    AutoTreeChop.sendMessage(player, messageKey, Placeholder.parsed("timeout", timeoutStr));
-                    return;
+                    if (reason != null) {
+                        // Store the chop parameters so /atc confirm can fire the chop
+                        // without requiring the player to physically re-break the log.
+                        confirmationManager.setPendingConfirmation(playerUUID, reason, frozenLocation, frozenTool);
+
+                        String timeoutStr = String.valueOf(config.getConfirmationWindowSeconds());
+                        String messageKey =
+                                switch (reason) {
+                                    case IDLE_OR_REJOIN -> AutoTreeChop.CONFIRMATION_REQUIRED_IDLE_MESSAGE;
+                                    case NO_LEAVES -> AutoTreeChop.CONFIRMATION_REQUIRED_NO_LEAVES_MESSAGE;
+                                    case BOTH -> AutoTreeChop.CONFIRMATION_REQUIRED_BOTH_MESSAGE;
+                                };
+                        AutoTreeChop.sendMessage(player, messageKey, Placeholder.parsed("timeout", timeoutStr));
+                        return;
+                    }
+
+                    confirmationManager.recordSuccessfulChop(playerUUID, null, hasLeaves);
+                    dispatchChop(player, playerConfig, block, frozenTool, frozenLocation, config);
+                } finally {
+                    leafCheckInProgress.remove(playerUUID);
                 }
-
-                confirmationManager.recordSuccessfulChop(playerUUID, null, hasLeaves);
-                dispatchChop(player, playerConfig, block, tool, location, config);
             });
         });
     }
 
-    private void dispatchChop(
+    void dispatchChop(
             Player player, PlayerConfig playerConfig, Block block, ItemStack tool, Location location, Config config) {
 
         if (config.isVisualEffect()) {
@@ -175,8 +210,6 @@ public class BlockBreakListener implements Listener {
         int cz = log.getZ();
         Map<Long, ChunkSnapshot> snapshots = new HashMap<>();
 
-        // Only the horizontal extent determines which chunks to capture;
-        // a single snapshot covers the full vertical column of a chunk.
         for (int dx = -radius; dx <= radius; dx++) {
             for (int dz = -radius; dz <= radius; dz++) {
                 int chunkX = (cx + dx) >> 4;

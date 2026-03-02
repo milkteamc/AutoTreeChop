@@ -121,14 +121,69 @@ public class TranslationManager {
         }
     }
 
+    /**
+     * Escapes a property value for safe writing to a {@code .properties} file.
+     *
+     * <p>Handles all characters that {@link Properties#load} treats specially:
+     * <ul>
+     *   <li>{@code \} → {@code \\}</li>
+     *   <li>newline / carriage-return / tab → {@code \n} / {@code \r} / {@code \t}</li>
+     *   <li>Leading spaces and form-feeds — prefixed with {@code \} so that
+     *       {@code Properties.load()} does not strip them as whitespace before
+     *       the value.</li>
+     * </ul>
+     *
+     * <p>Note: {@code #} and {@code !} do <em>not</em> need escaping when they appear
+     * in a value written as {@code key=value}, because {@code Properties.load()} only
+     * treats them as comment starters at the very beginning of a line (i.e. as a key).
+     */
     private String escapePropertyValue(String value) {
         if (value == null) {
             return "";
         }
-        return value.replace("\\", "\\\\")
-                .replace("\n", "\\n")
-                .replace("\r", "\\r")
-                .replace("\t", "\\t");
+
+        StringBuilder sb = new StringBuilder(value.length());
+        boolean leadingWhitespace = true;
+
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            switch (c) {
+                case '\\':
+                    sb.append("\\\\");
+                    leadingWhitespace = false;
+                    break;
+                case '\n':
+                    sb.append("\\n");
+                    leadingWhitespace = false;
+                    break;
+                case '\r':
+                    sb.append("\\r");
+                    leadingWhitespace = false;
+                    break;
+                case '\t':
+                    // Tabs are always escaped regardless of position so the round-trip
+                    // is lossless (Properties.load strips leading whitespace including tabs).
+                    sb.append("\\t");
+                    // A tab does not end the leading-whitespace region for spaces,
+                    // but since we escape it unconditionally the flag is moot here.
+                    break;
+                case ' ':
+                case '\f':
+                    if (leadingWhitespace) {
+                        // Prefix with backslash so Properties.load() preserves the space.
+                        sb.append('\\').append(c);
+                    } else {
+                        sb.append(c);
+                    }
+                    break;
+                default:
+                    sb.append(c);
+                    leadingWhitespace = false;
+                    break;
+            }
+        }
+
+        return sb.toString();
     }
 
     /**
