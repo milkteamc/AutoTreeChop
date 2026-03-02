@@ -90,8 +90,20 @@ public class TranslationManager {
                 missingKeys.removeAll(userProps.stringPropertyNames());
 
                 if (!missingKeys.isEmpty()) {
+                    boolean needsLeadingNewline = false;
+                    if (userFile.length() > 0) {
+                        try (RandomAccessFile raf = new RandomAccessFile(userFile, "r")) {
+                            raf.seek(userFile.length() - 1);
+                            needsLeadingNewline = raf.readByte() != '\n';
+                        }
+                    }
+
                     try (OutputStreamWriter writer =
                             new OutputStreamWriter(new FileOutputStream(userFile, true), StandardCharsets.UTF_8)) {
+
+                        if (needsLeadingNewline) {
+                            writer.write("\n");
+                        }
 
                         for (String key : missingKeys) {
                             String value = defaultProps.getProperty(key);
@@ -205,9 +217,18 @@ public class TranslationManager {
     }
 
     /**
-     * Gets a translated message for a specific locale
+     * Gets a translated message for a specific locale.
+     *
+     * <p>Fallback priority:
+     * <ol>
+     *   <li>Requested locale</li>
+     *   <li>English ({@link Locale#ENGLISH}) — always the canonical reference translation</li>
+     *   <li>The configured default locale (if different from English)</li>
+     *   <li>Any loaded locale that contains the key</li>
+     * </ol>
      */
     public String getMessage(String key, Locale locale) {
+        // 1. Requested locale
         Properties props = translations.get(locale);
         if (props != null) {
             String message = props.getProperty(key);
@@ -216,8 +237,21 @@ public class TranslationManager {
             }
         }
 
-        // Fallback to default locale
-        if (!locale.equals(defaultLocale)) {
+        // 2. English — highest-priority fallback because en.properties is always
+        //    kept complete and is the canonical source for new keys.
+        Locale english = Locale.ENGLISH;
+        if (!locale.equals(english)) {
+            props = translations.get(english);
+            if (props != null) {
+                String message = props.getProperty(key);
+                if (message != null) {
+                    return message;
+                }
+            }
+        }
+
+        // 3. Configured default locale (skip if it is English — already tried above)
+        if (!locale.equals(defaultLocale) && !defaultLocale.equals(english)) {
             props = translations.get(defaultLocale);
             if (props != null) {
                 String message = props.getProperty(key);
@@ -227,7 +261,7 @@ public class TranslationManager {
             }
         }
 
-        // Fallback to any available locale that has the key
+        // 4. Last resort: any loaded locale that has the key
         for (Properties p : translations.values()) {
             String message = p.getProperty(key);
             if (message != null) {
@@ -235,7 +269,7 @@ public class TranslationManager {
             }
         }
 
-        // Return key if not found
+        // Key genuinely missing from every loaded file
         plugin.getLogger().warning("Translation key not found: " + key + " for locale: " + locale);
         return "[Missing: " + key + "]";
     }
