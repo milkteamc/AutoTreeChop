@@ -18,22 +18,19 @@ public class ConfirmationManager {
         BOTH
     }
 
+    private record PendingConfirmation(long expiryMs, ConfirmReason reason) {}
+
     private final AutoTreeChop plugin;
 
     /** Timestamp (ms) of the last successful ATC chop per player within the current session. */
     private final Map<UUID, Long> lastChopTime = new ConcurrentHashMap<>();
 
     /**
-     * Expiry timestamp (ms) of an active confirmation window.
-     * Present only while the player is in the "pending confirmation" state.
+     * Active confirmation window per player.
+     * A single entry per player holds both the expiry timestamp and the reason,
+     * allowing atomic read-and-remove via {@link ConcurrentHashMap#compute}.
      */
-    private final Map<UUID, Long> pendingConfirmationExpiry = new ConcurrentHashMap<>();
-
-    /**
-     * The reason that opened the currently pending confirmation window.
-     * Cleared together with {@link #pendingConfirmationExpiry}.
-     */
-    private final Map<UUID, ConfirmReason> pendingReason = new ConcurrentHashMap<>();
+    private final Map<UUID, PendingConfirmation> pendingConfirmations = new ConcurrentHashMap<>();
 
     /**
      * Expiry timestamp (ms) of the no-leaves grace window.
@@ -78,39 +75,41 @@ public class ConfirmationManager {
      * @param reason the reason that triggered the confirmation requirement
      */
     public void setPendingConfirmation(UUID uuid, ConfirmReason reason) {
-        long windowMs = plugin.getPluginConfig().getConfirmationWindowSeconds() * 1000L;
-        pendingConfirmationExpiry.put(uuid, System.currentTimeMillis() + windowMs);
-        pendingReason.put(uuid, reason);
+        long expiryMs = System.currentTimeMillis() + plugin.getPluginConfig().getConfirmationWindowSeconds() * 1000L;
+        pendingConfirmations.put(uuid, new PendingConfirmation(expiryMs, reason));
     }
 
     /**
-     * Atomically checks whether a confirmation is pending, and if so consumes
-     * it — removing the expiry and reason in a single operation — and returns
-     * the reason.
+     * Atomically checks whether a confirmation is pending, consumes it if valid,
+     * and returns the reason — all in a single {@link ConcurrentHashMap#compute}
+     * call so no other thread can observe a half-cleared state.
      *
-     * <p>This is the only correct way to read-and-clear a pending confirmation.
-     * Splitting the check and the clear into two calls introduces a TOCTOU race:
-     * the window could expire between the two calls, causing the second call to
-     * return {@code null} even though the first returned {@code true}.
+     * <p>Using two separate maps with individual {@code get}/{@code remove} calls
+     * introduced a TOCTOU race: the expiry entry could be removed by a concurrent
+     * call between the check and the reason lookup, causing the reason to be
+     * {@code null} even though the expiry check had passed. Merging both fields
+     * into {@link PendingConfirmation} and operating on a single map entry
+     * eliminates that window.
      *
      * @param uuid the player
      * @return the {@link ConfirmReason} that was pending, or {@code null} if no
      *         confirmation was pending or the window had already expired
      */
     public ConfirmReason consumePendingConfirmation(UUID uuid) {
-        Long expiry = pendingConfirmationExpiry.get(uuid);
-        if (expiry == null) return null;
-
-        if (System.currentTimeMillis() > expiry) {
-            // Window expired — clean up so the next chop triggers a fresh warning
-            pendingConfirmationExpiry.remove(uuid);
-            pendingReason.remove(uuid);
+        // compute() holds the bucket lock for the duration of the lambda, making
+        // the read-expiry-check-and-remove sequence fully atomic.
+        ConfirmReason[] result = {null};
+        pendingConfirmations.compute(uuid, (k, existing) -> {
+            if (existing == null) {
+                return null; // nothing pending — leave absent
+            }
+            if (System.currentTimeMillis() > existing.expiryMs()) {
+                return null; // expired — remove and return null to caller
+            }
+            result[0] = existing.reason(); // valid — capture reason and remove
             return null;
-        }
-
-        // Atomically consume both entries
-        pendingConfirmationExpiry.remove(uuid);
-        return pendingReason.remove(uuid);
+        });
+        return result[0];
     }
 
     /**
@@ -140,8 +139,7 @@ public class ConfirmationManager {
         rejoinPending.remove(uuid);
         // pendingConfirmation is already consumed by consumePendingConfirmation before
         // this is called, but defensively clear in case the path skipped that step.
-        pendingConfirmationExpiry.remove(uuid);
-        pendingReason.remove(uuid);
+        pendingConfirmations.remove(uuid);
 
         if (confirmedReason == ConfirmReason.NO_LEAVES || confirmedReason == ConfirmReason.BOTH) {
             // Use idle-timeout for the grace window duration, not confirmation-window.
@@ -168,8 +166,7 @@ public class ConfirmationManager {
      */
     public void clearPlayer(UUID uuid) {
         lastChopTime.remove(uuid);
-        pendingConfirmationExpiry.remove(uuid);
-        pendingReason.remove(uuid);
+        pendingConfirmations.remove(uuid);
         noLeavesGraceExpiry.remove(uuid);
         rejoinPending.remove(uuid);
     }
