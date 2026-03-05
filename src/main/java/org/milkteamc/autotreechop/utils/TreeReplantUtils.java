@@ -1,9 +1,11 @@
 package org.milkteamc.autotreechop.utils;
 
 import com.cryptomorin.xseries.XMaterial;
+import java.util.Set;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Player;
@@ -33,7 +35,8 @@ public class TreeReplantUtils {
             LandsHook landsHook,
             ResidenceHook residenceHook,
             GriefPreventionHook griefPreventionHook,
-            WorldGuardHook worldGuardHook) {
+            WorldGuardHook worldGuardHook,
+            Set<Location> choppedLogs) {
 
         if (!config.isAutoReplantEnabled()) {
             return;
@@ -45,7 +48,7 @@ public class TreeReplantUtils {
         }
 
         Location originalLocation = brokenLogBlock.getLocation().clone();
-        boolean needs2x2 = requires2x2Formation(originalLogType);
+        boolean needs2x2 = isLikely2x2Tree(originalLogType, originalLocation, choppedLogs);
 
         Runnable replantTask = () -> {
             if (needs2x2) {
@@ -110,11 +113,67 @@ public class TreeReplantUtils {
     }
 
     /**
-     * Returns true for tree types that require a 2x2 sapling formation to grow.
+     * Determines whether the chopped tree should be replanted as a 2x2 sapling
+     * formation.
+     *
+     * <p>Dark Oak and Pale Oak are always 2x2. Spruce and Jungle are 2x2 only when
+     * the base of the chopped tree contained four logs arranged in a 2x2 square —
+     * detected by scanning the chopped-log set for a matching pattern at the Y
+     * level of the lowest broken log. All other tree types are always single.
      */
-    private static boolean requires2x2Formation(Material logType) {
+    private static boolean isLikely2x2Tree(Material logType, Location lowestLogLocation, Set<Location> choppedLogs) {
+
         XMaterial xMat = XMaterial.matchXMaterial(logType);
-        return xMat == XMaterial.DARK_OAK_LOG || xMat == XMaterial.PALE_OAK_LOG;
+
+        // Dark Oak and Pale Oak are always planted as 2x2
+        if (xMat == XMaterial.DARK_OAK_LOG || xMat == XMaterial.PALE_OAK_LOG) {
+            return true;
+        }
+
+        // Only Spruce and Jungle can be big (2x2) trees — everything else is always single
+        if (xMat != XMaterial.SPRUCE_LOG && xMat != XMaterial.JUNGLE_LOG) {
+            return false;
+        }
+
+        // Detect 2x2 by checking whether four logs of this type form a square at
+        // the base Y level among the actually-chopped blocks.
+        int baseY = lowestLogLocation.getBlockY();
+        int baseX = lowestLogLocation.getBlockX();
+        int baseZ = lowestLogLocation.getBlockZ();
+        World world = lowestLogLocation.getWorld();
+
+        // Try all four possible 2x2 anchors that include the base-log position as a corner
+        int[][] candidateAnchors = {{0, 0}, {-1, 0}, {0, -1}, {-1, -1}};
+        for (int[] ao : candidateAnchors) {
+            int ax = baseX + ao[0];
+            int az = baseZ + ao[1];
+            boolean all4Present = true;
+            for (int[] offset : FORMATION_2X2) {
+                if (!containsBlockLocation(choppedLogs, world, ax + offset[0], baseY, az + offset[1])) {
+                    all4Present = false;
+                    break;
+                }
+            }
+            if (all4Present) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Returns {@code true} if {@code locations} contains a block-coordinate match
+     * for the given world and integer coordinates. Uses integer comparison to avoid
+     * floating-point or yaw/pitch equality issues.
+     */
+    private static boolean containsBlockLocation(Set<Location> locations, World world, int x, int y, int z) {
+        for (Location loc : locations) {
+            if (loc.getWorld() == world && loc.getBlockX() == x && loc.getBlockY() == y && loc.getBlockZ() == z) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

@@ -360,7 +360,8 @@ public class TreeChopUtils {
                                     hooks.lands,
                                     hooks.residence,
                                     hooks.griefPrevention,
-                                    hooks.worldGuard);
+                                    hooks.worldGuard,
+                                    actuallyRemovedLogs);
                         }
                     }
 
