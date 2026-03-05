@@ -122,6 +122,10 @@ public class AutoTreeChop extends JavaPlugin {
         // Register event listeners
         registerEvents();
 
+        // Initialize translation system
+        translationManager = new TranslationManager(this);
+        loadLocale();
+
         // Register commands
         var lamp = BukkitLamp.builder(this).build();
         lamp.register(new ReloadCommand(this, config));
@@ -129,10 +133,6 @@ public class AutoTreeChop extends JavaPlugin {
         lamp.register(new ToggleCommand(this));
         lamp.register(new UsageCommand(this, config));
         lamp.register(new ConfirmCommand(this));
-
-        // Initialize translation system
-        translationManager = new TranslationManager(this);
-        loadLocale();
 
         if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
             new AutoTreeChopExpansion(this).register();
