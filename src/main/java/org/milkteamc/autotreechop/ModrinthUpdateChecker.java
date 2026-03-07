@@ -177,9 +177,8 @@ public class ModrinthUpdateChecker implements Listener {
         checkNow();
 
         long intervalTicks = checkIntervalHours * 60 * 60 * 20L; // hours to ticks
-        plugin.getServer()
-                .getScheduler()
-                .runTaskTimerAsynchronously(plugin, this::performCheck, intervalTicks, intervalTicks);
+        UniversalScheduler.getScheduler(plugin)
+                .runTaskTimerAsynchronously(this::performCheck, intervalTicks, intervalTicks);
 
         return this;
     }
@@ -322,9 +321,8 @@ public class ModrinthUpdateChecker implements Listener {
         }
 
         if (shouldNotify) {
-            plugin.getServer()
-                    .getScheduler()
-                    .runTaskLater(plugin, () -> printCheckResultToPlayer(player, false), 40L); // 2s
+            UniversalScheduler.getScheduler(plugin)
+                    .runTaskLater(() -> printCheckResultToPlayer(player, false), 40L); // 2s
         }
     }
 

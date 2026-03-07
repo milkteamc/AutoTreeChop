@@ -132,7 +132,7 @@ public class BlockBreakListener implements Listener {
         Location frozenLocation = location.clone();
         ItemStack frozenTool = tool.clone();
 
-        plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
+        scheduler.runTaskAsync(() -> {
             boolean hasLeaves = hasNearbyLeaves(block, config, snapshots);
 
             // Return to the main/region thread to act on the result.

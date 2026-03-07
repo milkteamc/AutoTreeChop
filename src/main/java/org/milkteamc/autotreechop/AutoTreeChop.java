@@ -1,5 +1,6 @@
 package org.milkteamc.autotreechop;
 
+import com.github.Anon8281.universalScheduler.UniversalScheduler;
 import java.io.File;
 import java.util.HashSet;
 import java.util.Locale;
@@ -158,8 +159,7 @@ public class AutoTreeChop extends JavaPlugin {
                 config.getPassword());
 
         saveTask = new PlayerDataSaveTask(this, SAVE_THRESHOLD);
-        saveTask.runTaskTimerAsynchronously(this, SAVE_INTERVAL, SAVE_INTERVAL);
-
+        UniversalScheduler.getScheduler(this).runTaskTimerAsynchronously(saveTask, SAVE_INTERVAL, SAVE_INTERVAL);
         autoTreeChopAPI = new AutoTreeChopAPI(this);
         playerConfigs = new ConcurrentHashMap<>();
         initializeHooks();
@@ -268,7 +268,11 @@ public class AutoTreeChop extends JavaPlugin {
         getLogger().info("Saving all player data before shutdown...");
 
         if (saveTask != null) {
-            saveTask.cancel();
+            try {
+                saveTask.cancel();
+            } catch (IllegalStateException ignored) {
+                // Task was never scheduled or already cancelled (e.g. Folia shutdown)
+            }
         }
 
         for (Map.Entry<UUID, PlayerConfig> entry : playerConfigs.entrySet()) {
