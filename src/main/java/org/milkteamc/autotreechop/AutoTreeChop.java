@@ -275,29 +275,34 @@ public class AutoTreeChop extends JavaPlugin {
             }
         }
 
-        for (Map.Entry<UUID, PlayerConfig> entry : playerConfigs.entrySet()) {
-            confirmationManager.clearPlayer(entry.getKey());
-            if (entry.getValue().isDirty()) {
-                databaseManager.savePlayerDataSync(entry.getValue().getData());
+        if (confirmationManager != null && playerConfigs != null) {
+            for (Map.Entry<UUID, PlayerConfig> entry : playerConfigs.entrySet()) {
+                confirmationManager.clearPlayer(entry.getKey());
+                if (entry.getValue().isDirty()) {
+                    databaseManager.savePlayerDataSync(entry.getValue().getData());
+                }
             }
+            playerConfigs.clear();
         }
-
-        playerConfigs.clear();
 
         if (databaseManager != null) {
             databaseManager.close();
         }
 
-        SessionManager sessionManager = SessionManager.getInstance();
-        for (UUID uuid : new HashSet<>(playerConfigs.keySet())) {
-            sessionManager.clearAllPlayerSessions(uuid);
+        if (playerConfigs != null) {
+            SessionManager sessionManager = SessionManager.getInstance();
+            for (UUID uuid : new HashSet<>(playerConfigs.keySet())) {
+                sessionManager.clearAllPlayerSessions(uuid);
+            }
         }
 
         if (translationManager != null) {
             translationManager.close();
         }
 
-        metrics.shutdown();
+        if (metrics != null) {
+            metrics.shutdown();
+        }
 
         getLogger().info("AutoTreeChop disabled!");
     }
