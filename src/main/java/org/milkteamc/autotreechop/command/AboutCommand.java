@@ -27,7 +27,6 @@ public class AboutCommand {
 
         AutoTreeChop.sendMessage(sender, AutoTreeChop.ABOUT_LICENSE);
         AutoTreeChop.sendMessage(sender, AutoTreeChop.ABOUT_GITHUB);
-        AutoTreeChop.sendMessage(sender, AutoTreeChop.ABOUT_DISCORD);
         AutoTreeChop.sendMessage(sender, AutoTreeChop.ABOUT_MODRINTH);
     }
 }

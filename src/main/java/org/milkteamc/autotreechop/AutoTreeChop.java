@@ -62,7 +62,6 @@ public class AutoTreeChop extends JavaPlugin {
     public static final String ABOUT_HEADER = "aboutHeader";
     public static final String ABOUT_LICENSE = "aboutLicense";
     public static final String ABOUT_GITHUB = "aboutGithub";
-    public static final String ABOUT_DISCORD = "aboutDiscord";
     public static final String ABOUT_MODRINTH = "aboutModrinth";
 
     private static final long SAVE_INTERVAL = 1200L; // 60s

@@ -3,7 +3,7 @@
 **AutoTreeChop** lets your players chop entire trees by breaking just one log.
 It's async-friendly, lightweight, and fully customizable — with built-in support for MySQL(optional), CoreProtect, and popular protection plugins.
 
-- 🌐 [Discord Support Server](https://discord.gg/uQ4UXANnP2)
+- 🌐 [Matrix Support Chat](https://matrix.to/#/#maoyue-dev:matrix.org)
 - 🌱 [Modrinth Page](https://modrinth.com/plugin/autotreechop)
 - 💻 [Source Code (GitHub)](https://github.com/milkteamc/AutoTreeChop)
 - ⚙️ [Default Config](https://github.com/milkteamc/AutoTreeChop/blob/master/src/main/resources/config.yml)
@@ -100,7 +100,7 @@ It's async-friendly, lightweight, and fully customizable — with built-in suppo
 
 ## Support & Contribute
 
-- Need help? Join our [Discord](https://discord.gg/uQ4UXANnP2)
+- Need help? Join our [Matrix](https://matrix.to/#/#maoyue-dev:matrix.org)
 - Found a bug? Open an issue on [GitHub](https://github.com/milkteamc/AutoTreeChop/issues)
 - Want to help translate? Get started [here](https://translate.codeberg.org/projects/autotreechop/autotreechop)
 - Love the plugin? Give it a ⭐️ on [GitHub](https://github.com/milkteamc/AutoTreeChop)
