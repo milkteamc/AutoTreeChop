@@ -212,6 +212,11 @@ public class TreeChopUtils {
 
         UUID playerUUID = player.getUniqueId();
 
+        if (!player.hasPermission("autotreechop.use")) {
+            sessionManager.clearTreeChopSession(playerUUID);
+            return;
+        }
+
         // Validation checks
         if (treeBlocks.isEmpty()) {
             sessionManager.clearTreeChopSession(playerUUID);
