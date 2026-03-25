@@ -136,6 +136,11 @@ public class TreeChopUtils {
             PlayerConfig playerConfig,
             ProtectionCheckUtils.ProtectionHooks hooks) {
 
+        if (!player.hasPermission("autotreechop.use")) {
+            playerConfig.setAutoTreeChopEnabled(false);
+            return;
+        }
+
         // Initial protection check
         if (!ProtectionCheckUtils.canModifyBlock(player, location, hooks)) {
             return;
