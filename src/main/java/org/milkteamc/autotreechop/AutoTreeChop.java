@@ -1,5 +1,23 @@
+/*
+ * Copyright (C) 2026 MilkTeaMC and contributors
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+ 
 package org.milkteamc.autotreechop;
 
+import com.github.Anon8281.universalScheduler.UniversalScheduler;
 import java.io.File;
 import java.util.HashSet;
 import java.util.Locale;
@@ -61,7 +79,6 @@ public class AutoTreeChop extends JavaPlugin {
     public static final String ABOUT_HEADER = "aboutHeader";
     public static final String ABOUT_LICENSE = "aboutLicense";
     public static final String ABOUT_GITHUB = "aboutGithub";
-    public static final String ABOUT_DISCORD = "aboutDiscord";
     public static final String ABOUT_MODRINTH = "aboutModrinth";
 
     private static final long SAVE_INTERVAL = 1200L; // 60s
@@ -122,6 +139,10 @@ public class AutoTreeChop extends JavaPlugin {
         // Register event listeners
         registerEvents();
 
+        // Initialize translation system
+        translationManager = new TranslationManager(this);
+        loadLocale();
+
         // Register commands
         var lamp = BukkitLamp.builder(this).build();
         lamp.register(new ReloadCommand(this, config));
@@ -129,10 +150,6 @@ public class AutoTreeChop extends JavaPlugin {
         lamp.register(new ToggleCommand(this));
         lamp.register(new UsageCommand(this, config));
         lamp.register(new ConfirmCommand(this));
-
-        // Initialize translation system
-        translationManager = new TranslationManager(this);
-        loadLocale();
 
         if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
             new AutoTreeChopExpansion(this).register();
@@ -158,8 +175,7 @@ public class AutoTreeChop extends JavaPlugin {
                 config.getPassword());
 
         saveTask = new PlayerDataSaveTask(this, SAVE_THRESHOLD);
-        saveTask.runTaskTimerAsynchronously(this, SAVE_INTERVAL, SAVE_INTERVAL);
-
+        UniversalScheduler.getScheduler(this).runTaskTimerAsynchronously(saveTask, SAVE_INTERVAL, SAVE_INTERVAL);
         autoTreeChopAPI = new AutoTreeChopAPI(this);
         playerConfigs = new ConcurrentHashMap<>();
         initializeHooks();
@@ -268,32 +284,41 @@ public class AutoTreeChop extends JavaPlugin {
         getLogger().info("Saving all player data before shutdown...");
 
         if (saveTask != null) {
-            saveTask.cancel();
-        }
-
-        for (Map.Entry<UUID, PlayerConfig> entry : playerConfigs.entrySet()) {
-            confirmationManager.clearPlayer(entry.getKey());
-            if (entry.getValue().isDirty()) {
-                databaseManager.savePlayerDataSync(entry.getValue().getData());
+            try {
+                saveTask.cancel();
+            } catch (IllegalStateException ignored) {
+                // Task was never scheduled or already cancelled (e.g. Folia shutdown)
             }
         }
 
-        playerConfigs.clear();
+        if (confirmationManager != null && playerConfigs != null) {
+            for (Map.Entry<UUID, PlayerConfig> entry : playerConfigs.entrySet()) {
+                confirmationManager.clearPlayer(entry.getKey());
+                if (entry.getValue().isDirty()) {
+                    databaseManager.savePlayerDataSync(entry.getValue().getData());
+                }
+            }
+            playerConfigs.clear();
+        }
 
         if (databaseManager != null) {
             databaseManager.close();
         }
 
-        SessionManager sessionManager = SessionManager.getInstance();
-        for (UUID uuid : new HashSet<>(playerConfigs.keySet())) {
-            sessionManager.clearAllPlayerSessions(uuid);
+        if (playerConfigs != null) {
+            SessionManager sessionManager = SessionManager.getInstance();
+            for (UUID uuid : new HashSet<>(playerConfigs.keySet())) {
+                sessionManager.clearAllPlayerSessions(uuid);
+            }
         }
 
         if (translationManager != null) {
             translationManager.close();
         }
 
-        metrics.shutdown();
+        if (metrics != null) {
+            metrics.shutdown();
+        }
 
         getLogger().info("AutoTreeChop disabled!");
     }

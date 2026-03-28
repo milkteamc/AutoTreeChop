@@ -8,7 +8,7 @@ plugins {
 }
 
 group = 'org.milkteamc'
-version = '1.7.3'
+version = '1.7.4'
 
 // Java Configuration
 java {
@@ -29,8 +29,9 @@ spotless {
   java {
     removeUnusedImports()
     formatAnnotations()
-
     palantirJavaFormat()
+
+    licenseHeaderFile(rootProject.file('spotless/HEADER'))
   }
 }
 
@@ -75,8 +76,8 @@ dependencies {
     implementation 'net.kyori:adventure-platform-bukkit:4.4.1'
     implementation 'net.kyori:adventure-text-minimessage:4.26.1'
 
-    implementation 'io.github.revxrsal:lamp.common:4.0.0-rc.14'
-    implementation 'io.github.revxrsal:lamp.bukkit:4.0.0-rc.14'
+    implementation 'io.github.revxrsal:lamp.common:4.0.0-rc.16'
+    implementation 'io.github.revxrsal:lamp.bukkit:4.0.0-rc.16'
 
     implementation 'com.github.Anon8281:UniversalScheduler:0.1.7'
     implementation 'com.zaxxer:HikariCP:7.0.2'
@@ -195,7 +196,7 @@ modrinth {
         ---
 
         📝 Report issues: [GitHub Issues](https://github.com/milkteamc/AutoTreeChop/issues)
-        💬 Get support: [Discord](https://discord.gg/uQ4UXANnP2)
+        💬 Get support: [Matrix](https://matrix.to/#/#maoyue-dev:matrix.org)
     """.stripIndent().trim()
 
     uploadFile = tasks.shadowJar.archiveFile

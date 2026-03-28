@@ -3,7 +3,7 @@
 **AutoTreeChop** lets your players chop entire trees by breaking just one log.
 It's async-friendly, lightweight, and fully customizable — with built-in support for MySQL(optional), CoreProtect, and popular protection plugins.
 
-- 🌐 [Discord Support Server](https://discord.gg/uQ4UXANnP2)
+- 🌐 [Matrix Support Chat](https://matrix.to/#/#maoyue-dev:matrix.org)
 - 🌱 [Modrinth Page](https://modrinth.com/plugin/autotreechop)
 - 💻 [Source Code (GitHub)](https://github.com/milkteamc/AutoTreeChop)
 - ⚙️ [Default Config](https://github.com/milkteamc/AutoTreeChop/blob/master/src/main/resources/config.yml)
@@ -64,8 +64,8 @@ It's async-friendly, lightweight, and fully customizable — with built-in suppo
 | `/atc usage` | Show daily usage |
 | `/atc reload` | Reload plugin config |
 | `/atc toggle <player>` | Toggle for another player |
-| `/atc enable <player/@a/@r/@p>` | Enable for another players |
-| `/atc disable <player/@a/@r/@p>` | Disable for another players |
+| `/atc enable <player/@a/@r/@p>` | Enable for other players |
+| `/atc disable <player/@a/@r/@p>` | Disable for other players |
 | `/atc about` | Plugin info |
 
 ---
@@ -100,7 +100,7 @@ It's async-friendly, lightweight, and fully customizable — with built-in suppo
 
 ## Support & Contribute
 
-- Need help? Join our [Discord](https://discord.gg/uQ4UXANnP2)
+- Need help? Join our [Matrix](https://matrix.to/#/#maoyue-dev:matrix.org)
 - Found a bug? Open an issue on [GitHub](https://github.com/milkteamc/AutoTreeChop/issues)
 - Want to help translate? Get started [here](https://translate.codeberg.org/projects/autotreechop/autotreechop)
 - Love the plugin? Give it a ⭐️ on [GitHub](https://github.com/milkteamc/AutoTreeChop)
@@ -114,3 +114,23 @@ If you prefer not to participate, you can disable it anytime in:
 `/plugins/bStats/config.yml`
 
 [![bstats](https://bstats.org/signatures/bukkit/AutoTreeChop.svg)](https://bstats.org/plugin/bukkit/AutoTreeChop/20053)
+
+---
+
+## License
+```
+    Copyright (C) 2026 MilkTeaMC and contributors
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+```

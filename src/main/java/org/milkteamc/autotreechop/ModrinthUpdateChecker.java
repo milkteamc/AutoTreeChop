@@ -1,3 +1,20 @@
+/*
+ * Copyright (C) 2026 MilkTeaMC and contributors
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+ 
 package org.milkteamc.autotreechop;
 
 import com.github.Anon8281.universalScheduler.UniversalScheduler;
@@ -177,9 +194,8 @@ public class ModrinthUpdateChecker implements Listener {
         checkNow();
 
         long intervalTicks = checkIntervalHours * 60 * 60 * 20L; // hours to ticks
-        plugin.getServer()
-                .getScheduler()
-                .runTaskTimerAsynchronously(plugin, this::performCheck, intervalTicks, intervalTicks);
+        UniversalScheduler.getScheduler(plugin)
+                .runTaskTimerAsynchronously(this::performCheck, intervalTicks, intervalTicks);
 
         return this;
     }
@@ -322,9 +338,8 @@ public class ModrinthUpdateChecker implements Listener {
         }
 
         if (shouldNotify) {
-            plugin.getServer()
-                    .getScheduler()
-                    .runTaskLater(plugin, () -> printCheckResultToPlayer(player, false), 40L); // 2s
+            UniversalScheduler.getScheduler(plugin)
+                    .runTaskLater(() -> printCheckResultToPlayer(player, false), 40L); // 2s
         }
     }
 
