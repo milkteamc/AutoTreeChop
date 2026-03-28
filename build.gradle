@@ -196,7 +196,7 @@ modrinth {
         ---
 
         📝 Report issues: [GitHub Issues](https://github.com/milkteamc/AutoTreeChop/issues)
-        💬 Get support: [Discord](https://discord.gg/uQ4UXANnP2)
+        💬 Get support: [Matrix](https://matrix.to/#/#maoyue-dev:matrix.org)
     """.stripIndent().trim()
 
     uploadFile = tasks.shadowJar.archiveFile
