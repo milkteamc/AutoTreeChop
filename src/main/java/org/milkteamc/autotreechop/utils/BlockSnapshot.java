@@ -1,12 +1,29 @@
+/*
+ * Copyright (C) 2026 MilkTeaMC and contributors
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+ 
 package org.milkteamc.autotreechop.utils;
 
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.World;
-
+import com.cryptomorin.xseries.XMaterial;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.World;
 
 /**
  * Immutable snapshot of block data captured synchronously for async processing
@@ -15,6 +32,7 @@ public class BlockSnapshot {
     private final Map<LocationKey, Material> blockData;
     private final World world;
     private final Location centerLocation;
+    private static final Material AIR_MATERIAL = XMaterial.AIR.get() != null ? XMaterial.AIR.get() : Material.AIR;
 
     public BlockSnapshot(Map<LocationKey, Material> blockData, World world, Location centerLocation) {
         this.blockData = new HashMap<>(blockData);
@@ -23,11 +41,11 @@ public class BlockSnapshot {
     }
 
     public Material getBlockType(Location loc) {
-        return blockData.getOrDefault(new LocationKey(loc), Material.AIR);
+        return blockData.getOrDefault(new LocationKey(loc), AIR_MATERIAL);
     }
 
     public Material getBlockType(int x, int y, int z) {
-        return blockData.getOrDefault(new LocationKey(x, y, z), Material.AIR);
+        return blockData.getOrDefault(new LocationKey(x, y, z), AIR_MATERIAL);
     }
 
     public boolean hasBlock(Location loc) {
@@ -80,9 +98,17 @@ public class BlockSnapshot {
             return new Location(world, x, y, z);
         }
 
-        public int getX() { return x; }
-        public int getY() { return y; }
-        public int getZ() { return z; }
+        public int getX() {
+            return x;
+        }
+
+        public int getY() {
+            return y;
+        }
+
+        public int getZ() {
+            return z;
+        }
 
         @Override
         public boolean equals(Object o) {

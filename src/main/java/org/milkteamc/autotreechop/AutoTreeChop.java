@@ -1,25 +1,57 @@
+/*
+ * Copyright (C) 2026 MilkTeaMC and contributors
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+ 
 package org.milkteamc.autotreechop;
 
+import com.github.Anon8281.universalScheduler.UniversalScheduler;
+import java.io.File;
+import java.util.HashSet;
+import java.util.Locale;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import org.bstats.bukkit.Metrics;
 import org.bukkit.Bukkit;
-import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.milkteamc.autotreechop.command.AboutCommand;
+import org.milkteamc.autotreechop.command.ConfirmCommand;
+import org.milkteamc.autotreechop.command.ReloadCommand;
+import org.milkteamc.autotreechop.command.ToggleCommand;
+import org.milkteamc.autotreechop.command.UsageCommand;
 import org.milkteamc.autotreechop.database.DatabaseManager;
-import org.milkteamc.autotreechop.events.*;
-import org.milkteamc.autotreechop.hooks.*;
+import org.milkteamc.autotreechop.events.BlockBreakListener;
+import org.milkteamc.autotreechop.events.PlayerJoinListener;
+import org.milkteamc.autotreechop.events.PlayerQuitListener;
+import org.milkteamc.autotreechop.events.PlayerSneakListener;
+import org.milkteamc.autotreechop.hooks.GriefPreventionHook;
+import org.milkteamc.autotreechop.hooks.LandsHook;
+import org.milkteamc.autotreechop.hooks.ResidenceHook;
+import org.milkteamc.autotreechop.hooks.WorldGuardHook;
 import org.milkteamc.autotreechop.tasks.PlayerDataSaveTask;
 import org.milkteamc.autotreechop.translation.TranslationManager;
+import org.milkteamc.autotreechop.utils.ConfirmationManager;
 import org.milkteamc.autotreechop.utils.CooldownManager;
 import org.milkteamc.autotreechop.utils.SessionManager;
 import org.milkteamc.autotreechop.utils.TreeChopUtils;
+import revxrsal.commands.bukkit.BukkitLamp;
 
-import java.io.File;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-
-public class AutoTreeChop extends JavaPlugin implements CommandExecutor {
+public class AutoTreeChop extends JavaPlugin {
 
     // Message keys (replacing old Message objects)
     public static final String NO_RESIDENCE_PERMISSIONS = "noResidencePermissions";
@@ -39,6 +71,15 @@ public class AutoTreeChop extends JavaPlugin implements CommandExecutor {
     public static final String CONSOLE_NAME = "consoleName";
     public static final String SNEAK_ENABLED_MESSAGE = "sneakEnabled";
     public static final String SNEAK_DISABLED_MESSAGE = "sneakDisabled";
+    public static final String CONFIRMATION_REQUIRED_IDLE_MESSAGE = "confirmationRequiredIdle";
+    public static final String CONFIRMATION_REQUIRED_NO_LEAVES_MESSAGE = "confirmationRequiredNoLeaves";
+    public static final String CONFIRMATION_REQUIRED_BOTH_MESSAGE = "confirmationRequiredBoth";
+    public static final String CONFIRMATION_SUCCESS_MESSAGE = "confirmationSuccess";
+    public static final String NO_PENDING_CONFIRMATION_MESSAGE = "noPendingConfirmation";
+    public static final String ABOUT_HEADER = "aboutHeader";
+    public static final String ABOUT_LICENSE = "aboutLicense";
+    public static final String ABOUT_GITHUB = "aboutGithub";
+    public static final String ABOUT_MODRINTH = "aboutModrinth";
 
     private static final long SAVE_INTERVAL = 1200L; // 60s
     private static final int SAVE_THRESHOLD = 15;
@@ -50,6 +91,7 @@ public class AutoTreeChop extends JavaPlugin implements CommandExecutor {
     private Map<UUID, PlayerConfig> playerConfigs = new ConcurrentHashMap<>();
     private Metrics metrics;
     private TranslationManager translationManager;
+    private ConfirmationManager confirmationManager;
 
     private boolean worldGuardEnabled = false;
     private boolean residenceEnabled = false;
@@ -84,15 +126,6 @@ public class AutoTreeChop extends JavaPlugin implements CommandExecutor {
             return false;
         }
     }
-    
-    public static boolean isPaper() {
-        try {
-            Class.forName("com.destroystokyo.paper.ParticleBuilder");
-            return true;
-        } catch (ClassNotFoundException e) {
-            return false;
-        }
-    }
 
     @Override
     public void onEnable() {
@@ -106,29 +139,28 @@ public class AutoTreeChop extends JavaPlugin implements CommandExecutor {
         // Register event listeners
         registerEvents();
 
-        // Register command and tab completer
-        org.milkteamc.autotreechop.command.Command command = new org.milkteamc.autotreechop.command.Command(this);
-        Objects.requireNonNull(getCommand("autotreechop")).setExecutor(command);
-        Objects.requireNonNull(getCommand("atc")).setExecutor(command);
-        Objects.requireNonNull(getCommand("autotreechop")).setTabCompleter(new org.milkteamc.autotreechop.command.TabCompleter());
-        Objects.requireNonNull(getCommand("atc")).setTabCompleter(new org.milkteamc.autotreechop.command.TabCompleter());
-
         // Initialize translation system
         translationManager = new TranslationManager(this);
         loadLocale();
 
+        // Register commands
+        var lamp = BukkitLamp.builder(this).build();
+        lamp.register(new ReloadCommand(this, config));
+        lamp.register(new AboutCommand(this));
+        lamp.register(new ToggleCommand(this));
+        lamp.register(new UsageCommand(this, config));
+        lamp.register(new ConfirmCommand(this));
+
         if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
             new AutoTreeChopExpansion(this).register();
             getLogger().info("PlaceholderAPI expansion for AutoTreeChop has been registered.");
-        } else {
-            getLogger().warning("PlaceholderAPI not found. Placeholder expansion for AutoTreeChop will not work.");
         }
 
         new ModrinthUpdateChecker(this, "autotreechop", "paper")
                 .checkEveryXHours(24)
                 .setDonationLink("https://ko-fi.com/maoyue")
-                .setChangelogLink("https://modrinth.com/plugin/autotreechop/version/latest")
-                .setDownloadLink("https://modrinth.com/plugin/autotreechop/version/latest")
+                .setChangelogLink("https://modrinth.com/plugin/autotreechop/changelog")
+                .setDownloadLink("https://modrinth.com/plugin/autotreechop/versions")
                 .setNotifyOpsOnJoin(true)
                 .setNotifyByPermissionOnJoin("autotreechop.updatechecker")
                 .checkNow();
@@ -140,31 +172,21 @@ public class AutoTreeChop extends JavaPlugin implements CommandExecutor {
                 config.getPort(),
                 config.getDatabase(),
                 config.getUsername(),
-                config.getPassword()
-        );
+                config.getPassword());
 
         saveTask = new PlayerDataSaveTask(this, SAVE_THRESHOLD);
-        saveTask.runTaskTimerAsynchronously(this, SAVE_INTERVAL, SAVE_INTERVAL);
-
+        UniversalScheduler.getScheduler(this).runTaskTimerAsynchronously(saveTask, SAVE_INTERVAL, SAVE_INTERVAL);
         autoTreeChopAPI = new AutoTreeChopAPI(this);
         playerConfigs = new ConcurrentHashMap<>();
         initializeHooks();
 
-        cooldownManager = new CooldownManager(this);
+        cooldownManager = new CooldownManager();
+
+        confirmationManager = new ConfirmationManager(this);
 
         this.treeChopUtils = new TreeChopUtils(this);
 
         getLogger().info("AutoTreeChop enabled!");
-        
-        if (!isPaper()) {
-            Bukkit.getScheduler().runTaskLater(this, () -> {
-                getLogger().warning("=================================================");
-                getLogger().warning("Spigot support is deprecated.");
-                getLogger().warning("It will be removed in v1.8.0.");
-                getLogger().warning("Please migrate to Paper or a Paper fork.");
-                getLogger().warning("=================================================");
-            }, 40L); // 2s
-        }
     }
 
     private void registerEvents() {
@@ -181,7 +203,9 @@ public class AutoTreeChop extends JavaPlugin implements CommandExecutor {
                 residenceEnabled = true;
                 getLogger().info("Residence support enabled");
             } catch (Exception e) {
-                getLogger().warning("Residence can't be hook, please report this to our GitHub: https://github.com/milkteamc/AutoTreeChop/issues");
+                getLogger()
+                        .warning(
+                                "Residence can't be hook, please report this to our GitHub: https://github.com/milkteamc/AutoTreeChop/issues");
                 residenceEnabled = false;
             }
         } else {
@@ -194,7 +218,9 @@ public class AutoTreeChop extends JavaPlugin implements CommandExecutor {
                 griefPreventionEnabled = true;
                 getLogger().info("GriefPrevention support enabled");
             } catch (Exception e) {
-                getLogger().warning("GriefPrevention can't be hook, please report this to our GitHub: https://github.com/milkteamc/AutoTreeChop/issues");
+                getLogger()
+                        .warning(
+                                "GriefPrevention can't be hook, please report this to our GitHub: https://github.com/milkteamc/AutoTreeChop/issues");
                 griefPreventionEnabled = false;
             }
         } else {
@@ -207,7 +233,9 @@ public class AutoTreeChop extends JavaPlugin implements CommandExecutor {
                 landsEnabled = true;
                 getLogger().info("Lands support enabled");
             } catch (Exception e) {
-                getLogger().warning("Lands can't be hook, please report this to our GitHub: https://github.com/milkteamc/AutoTreeChop/issues");
+                getLogger()
+                        .warning(
+                                "Lands can't be hook, please report this to our GitHub: https://github.com/milkteamc/AutoTreeChop/issues");
                 landsEnabled = false;
             }
         } else {
@@ -220,7 +248,9 @@ public class AutoTreeChop extends JavaPlugin implements CommandExecutor {
                 worldGuardEnabled = true;
                 getLogger().info("WorldGuard support enabled");
             } catch (NoClassDefFoundError e) {
-                getLogger().warning("WorldGuard can't be hook, please report this to our GitHub: https://github.com/milkteamc/AutoTreeChop/issues");
+                getLogger()
+                        .warning(
+                                "WorldGuard can't be hook, please report this to our GitHub: https://github.com/milkteamc/AutoTreeChop/issues");
                 worldGuardEnabled = false;
             }
         } else {
@@ -237,6 +267,7 @@ public class AutoTreeChop extends JavaPlugin implements CommandExecutor {
         saveResourceIfNotExists("lang/ja.properties");
         saveResourceIfNotExists("lang/ru.properties");
         saveResourceIfNotExists("lang/zh.properties");
+        saveResourceIfNotExists("lang/ms.properties");
 
         Locale defaultLocale = config.getLocale() == null ? Locale.getDefault() : config.getLocale();
         translationManager.initialize(defaultLocale, config.isUseClientLocale());
@@ -253,31 +284,41 @@ public class AutoTreeChop extends JavaPlugin implements CommandExecutor {
         getLogger().info("Saving all player data before shutdown...");
 
         if (saveTask != null) {
-            saveTask.cancel();
-        }
-
-        for (Map.Entry<UUID, PlayerConfig> entry : playerConfigs.entrySet()) {
-            if (entry.getValue().isDirty()) {
-                databaseManager.savePlayerDataSync(entry.getValue().getData());
+            try {
+                saveTask.cancel();
+            } catch (IllegalStateException ignored) {
+                // Task was never scheduled or already cancelled (e.g. Folia shutdown)
             }
         }
 
-        playerConfigs.clear();
+        if (confirmationManager != null && playerConfigs != null) {
+            for (Map.Entry<UUID, PlayerConfig> entry : playerConfigs.entrySet()) {
+                confirmationManager.clearPlayer(entry.getKey());
+                if (entry.getValue().isDirty()) {
+                    databaseManager.savePlayerDataSync(entry.getValue().getData());
+                }
+            }
+            playerConfigs.clear();
+        }
 
         if (databaseManager != null) {
             databaseManager.close();
         }
 
-        SessionManager sessionManager = SessionManager.getInstance();
-        for (UUID uuid : new HashSet<>(playerConfigs.keySet())) {
-            sessionManager.clearAllPlayerSessions(uuid);
+        if (playerConfigs != null) {
+            SessionManager sessionManager = SessionManager.getInstance();
+            for (UUID uuid : new HashSet<>(playerConfigs.keySet())) {
+                sessionManager.clearAllPlayerSessions(uuid);
+            }
         }
 
         if (translationManager != null) {
             translationManager.close();
         }
 
-        metrics.shutdown();
+        if (metrics != null) {
+            metrics.shutdown();
+        }
 
         getLogger().info("AutoTreeChop disabled!");
     }
@@ -288,22 +329,16 @@ public class AutoTreeChop extends JavaPlugin implements CommandExecutor {
         if (playerConfig == null) {
             getLogger().warning("PlayerConfig not found for " + playerUUID + ", loading synchronously");
             try {
-                DatabaseManager.PlayerData data = databaseManager.loadPlayerDataAsync(
-                        playerUUID,
-                        config.getDefaultTreeChop()
-                ).get();
+                DatabaseManager.PlayerData data = databaseManager
+                        .loadPlayerDataAsync(playerUUID, config.getDefaultTreeChop())
+                        .get();
 
                 playerConfig = new PlayerConfig(playerUUID, data);
                 playerConfigs.put(playerUUID, playerConfig);
             } catch (Exception e) {
                 getLogger().warning("Failed to load player data: " + e.getMessage());
                 DatabaseManager.PlayerData defaultData = new DatabaseManager.PlayerData(
-                        playerUUID,
-                        config.getDefaultTreeChop(),
-                        0,
-                        0,
-                        java.time.LocalDate.now()
-                );
+                        playerUUID, config.getDefaultTreeChop(), 0, 0, java.time.LocalDate.now());
                 playerConfig = new PlayerConfig(playerUUID, defaultData);
                 playerConfigs.put(playerUUID, playerConfig);
             }
@@ -346,6 +381,10 @@ public class AutoTreeChop extends JavaPlugin implements CommandExecutor {
 
     public TranslationManager getTranslationManager() {
         return translationManager;
+    }
+
+    public ConfirmationManager getConfirmationManager() {
+        return confirmationManager;
     }
 
     public boolean isWorldGuardEnabled() {

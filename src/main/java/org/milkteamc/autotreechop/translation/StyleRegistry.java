@@ -1,13 +1,32 @@
+/*
+ * Copyright (C) 2026 MilkTeaMC and contributors
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+ 
 package org.milkteamc.autotreechop.translation;
 
-import org.milkteamc.autotreechop.AutoTreeChop;
-
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
+import org.milkteamc.autotreechop.AutoTreeChop;
 
 /**
  * Manages custom style tags from styles.properties and converts them to MiniMessage format
@@ -37,8 +56,8 @@ public class StyleRegistry {
         }
 
         Properties properties = new Properties();
-        try (InputStreamReader reader = new InputStreamReader(
-                new FileInputStream(stylesFile), StandardCharsets.UTF_8)) {
+        try (InputStreamReader reader =
+                new InputStreamReader(new FileInputStream(stylesFile), StandardCharsets.UTF_8)) {
             properties.load(reader);
 
             for (String key : properties.stringPropertyNames()) {
@@ -187,7 +206,9 @@ public class StyleRegistry {
                 String innerContent = processedContent.substring(startIdx + openTag.length(), endIdx);
                 String styledInner = applyStyleToContent(nestedStyle, innerContent);
 
-                processedContent = processedContent.substring(0, startIdx) + styledInner + processedContent.substring(endIdx + closeTag.length());
+                processedContent = processedContent.substring(0, startIdx)
+                        + styledInner
+                        + processedContent.substring(endIdx + closeTag.length());
             }
         }
 
