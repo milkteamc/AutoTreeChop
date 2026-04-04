@@ -341,6 +341,10 @@ public class TreeChopUtils {
                     }
                     block.breakNaturally();
 
+                    if (config.isIncrementBlockStatistics()) {
+                        player.incrementStatistic(org.bukkit.Statistic.MINE_BLOCK, originalLogType);
+                    }
+
                     actuallyRemovedLogs.add(location);
                     sessionManager.trackRemovedLogForPlayer(playerUUID.toString(), location);
                     playerConfig.incrementDailyBlocksBroken();
@@ -566,6 +570,7 @@ public class TreeChopUtils {
                 EffectUtils.showLeafRemovalEffect(player, leafBlock);
             }
 
+            Material leafMaterial = leafBlock.getType();
             if (config.getLeafRemovalDropItems()) {
                 leafBlock.breakNaturally();
             } else {
@@ -575,6 +580,10 @@ public class TreeChopUtils {
                 } else {
                     leafBlock.setType(Material.AIR, false);
                 }
+            }
+
+            if (config.isIncrementBlockStatistics()) {
+                player.incrementStatistic(org.bukkit.Statistic.MINE_BLOCK, leafMaterial);
             }
 
             // Update daily blocks count if needed
