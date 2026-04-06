@@ -76,6 +76,8 @@ public class AutoTreeChop extends JavaPlugin {
     public static final String CONFIRMATION_REQUIRED_BOTH_MESSAGE = "confirmationRequiredBoth";
     public static final String CONFIRMATION_SUCCESS_MESSAGE = "confirmationSuccess";
     public static final String NO_PENDING_CONFIRMATION_MESSAGE = "noPendingConfirmation";
+    public static final String ALREADY_ENABLED_MESSAGE = "alreadyEnabled";
+    public static final String ALREADY_DISABLED_MESSAGE = "alreadyDisabled";
     public static final String ABOUT_HEADER = "aboutHeader";
     public static final String ABOUT_LICENSE = "aboutLicense";
     public static final String ABOUT_GITHUB = "aboutGithub";
