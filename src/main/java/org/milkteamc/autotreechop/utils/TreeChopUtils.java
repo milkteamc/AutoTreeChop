@@ -17,6 +17,7 @@
  
 package org.milkteamc.autotreechop.utils;
 
+import com.cryptomorin.xseries.XEnchantment;
 import com.cryptomorin.xseries.XMaterial;
 import com.cryptomorin.xseries.XSound;
 import java.util.*;
@@ -24,7 +25,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
-import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.inventory.ItemStack;
@@ -106,7 +106,7 @@ public class TreeChopUtils {
 
     private static int getUnbreakingLevel(ItemStack item) {
         if (item != null && item.hasItemMeta() && item.getItemMeta().hasEnchants()) {
-            return item.getEnchantmentLevel(Enchantment.UNBREAKING);
+            return item.getEnchantmentLevel(XEnchantment.UNBREAKING.get());
         }
         return 0;
     }
@@ -569,12 +569,7 @@ public class TreeChopUtils {
             if (config.getLeafRemovalDropItems()) {
                 leafBlock.breakNaturally();
             } else {
-                Material air = XMaterial.AIR.get();
-                if (air != null) {
-                    leafBlock.setType(air, false);
-                } else {
-                    leafBlock.setType(Material.AIR, false);
-                }
+                leafBlock.setType(XMaterial.AIR.get(), false);
             }
 
             // Update daily blocks count if needed
