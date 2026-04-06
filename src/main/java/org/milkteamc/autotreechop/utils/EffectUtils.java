@@ -86,7 +86,7 @@ public class EffectUtils {
                 .spawn();
 
         // Falling leaf-like block particles
-        if (XMaterial.supports(13)) {
+        if (XMaterial.supports(1, 13)) {
             try {
                 XMaterial blockMaterial = XMaterial.matchXMaterial(block.getType());
                 if (blockMaterial != null && blockMaterial.get() != null) {
