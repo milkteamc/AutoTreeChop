@@ -21,6 +21,7 @@ import java.util.UUID;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import org.bukkit.entity.Player;
 import org.milkteamc.autotreechop.AutoTreeChop;
+import org.milkteamc.autotreechop.MessageKeys;
 import org.milkteamc.autotreechop.PlayerConfig;
 import revxrsal.commands.annotation.Command;
 import revxrsal.commands.annotation.Optional;
@@ -52,7 +53,7 @@ public class ToggleCommand {
         }
 
         if (!actor.sender().hasPermission("autotreechop.other")) {
-            AutoTreeChop.sendMessage(actor.sender(), AutoTreeChop.NO_PERMISSION_MESSAGE);
+            AutoTreeChop.sendMessage(actor.sender(), MessageKeys.NO_PERMISSION);
             return;
         }
 
@@ -64,21 +65,21 @@ public class ToggleCommand {
         if (autoTreeChopEnabled) {
             AutoTreeChop.sendMessage(
                     targetPlayer,
-                    AutoTreeChop.ENABLED_BY_OTHER_MESSAGE,
+                    MessageKeys.ENABLED_BY_OTHER,
                     Placeholder.parsed("player", actor.sender().getName()));
             AutoTreeChop.sendMessage(
                     actor.sender(),
-                    AutoTreeChop.ENABLED_FOR_OTHER_MESSAGE,
+                    MessageKeys.ENABLED_FOR_OTHER,
                     Placeholder.parsed("player", targetPlayer.getName()));
         } else {
             plugin.getConfirmationManager().clearPlayer(targetUUID);
             AutoTreeChop.sendMessage(
                     targetPlayer,
-                    AutoTreeChop.DISABLED_BY_OTHER_MESSAGE,
+                    MessageKeys.DISABLED_BY_OTHER,
                     Placeholder.parsed("player", actor.sender().getName()));
             AutoTreeChop.sendMessage(
                     actor.sender(),
-                    AutoTreeChop.DISABLED_FOR_OTHER_MESSAGE,
+                    MessageKeys.DISABLED_FOR_OTHER,
                     Placeholder.parsed("player", targetPlayer.getName()));
         }
     }
@@ -88,20 +89,20 @@ public class ToggleCommand {
     @CommandPermission("autotreechop.use")
     public void enable(BukkitCommandActor actor) {
         if (!plugin.getPluginConfig().getCommandToggle()) {
-            AutoTreeChop.sendMessage(actor.sender(), AutoTreeChop.NO_PERMISSION_MESSAGE);
+            AutoTreeChop.sendMessage(actor.sender(), MessageKeys.NO_PERMISSION);
             return;
         }
         if (!(actor.sender() instanceof Player player)) {
-            AutoTreeChop.sendMessage(actor.sender(), AutoTreeChop.ONLY_PLAYERS_MESSAGE);
+            AutoTreeChop.sendMessage(actor.sender(), MessageKeys.ONLY_PLAYERS);
             return;
         }
         PlayerConfig playerConfig = plugin.getPlayerConfig(player.getUniqueId());
         if (playerConfig.isAutoTreeChopEnabled()) {
-            AutoTreeChop.sendMessage(player, AutoTreeChop.ALREADY_ENABLED_MESSAGE);
+            AutoTreeChop.sendMessage(player, MessageKeys.ALREADY_ENABLED);
             return;
         }
         playerConfig.setAutoTreeChopEnabled(true);
-        AutoTreeChop.sendMessage(player, AutoTreeChop.ENABLED_MESSAGE);
+        AutoTreeChop.sendMessage(player, MessageKeys.ENABLED);
     }
 
     // enable — targets (requires .other)
@@ -118,15 +119,15 @@ public class ToggleCommand {
             count++;
             AutoTreeChop.sendMessage(
                     targetPlayer,
-                    AutoTreeChop.ENABLED_BY_OTHER_MESSAGE,
+                    MessageKeys.ENABLED_BY_OTHER,
                     Placeholder.parsed("player", actor.sender().getName()));
         }
         if (count == 1 && lastName != null) {
             AutoTreeChop.sendMessage(
-                    actor.sender(), AutoTreeChop.ENABLED_FOR_OTHER_MESSAGE, Placeholder.parsed("player", lastName));
+                    actor.sender(), MessageKeys.ENABLED_FOR_OTHER, Placeholder.parsed("player", lastName));
         } else if (count > 1) {
             AutoTreeChop.sendMessage(
-                    actor.sender(), AutoTreeChop.ENABLED_FOR_OTHER_MESSAGE, Placeholder.parsed("player", "everyone"));
+                    actor.sender(), MessageKeys.ENABLED_FOR_OTHER, Placeholder.parsed("player", "everyone"));
         }
     }
 
@@ -135,22 +136,22 @@ public class ToggleCommand {
     @CommandPermission("autotreechop.use")
     public void disable(BukkitCommandActor actor) {
         if (!plugin.getPluginConfig().getCommandToggle()) {
-            AutoTreeChop.sendMessage(actor.sender(), AutoTreeChop.NO_PERMISSION_MESSAGE);
+            AutoTreeChop.sendMessage(actor.sender(), MessageKeys.NO_PERMISSION);
             return;
         }
         if (!(actor.sender() instanceof Player player)) {
-            AutoTreeChop.sendMessage(actor.sender(), AutoTreeChop.ONLY_PLAYERS_MESSAGE);
+            AutoTreeChop.sendMessage(actor.sender(), MessageKeys.ONLY_PLAYERS);
             return;
         }
         UUID playerUUID = player.getUniqueId();
         PlayerConfig playerConfig = plugin.getPlayerConfig(playerUUID);
         if (!playerConfig.isAutoTreeChopEnabled()) {
-            AutoTreeChop.sendMessage(player, AutoTreeChop.ALREADY_DISABLED_MESSAGE);
+            AutoTreeChop.sendMessage(player, MessageKeys.ALREADY_DISABLED);
             return;
         }
         playerConfig.setAutoTreeChopEnabled(false);
         plugin.getConfirmationManager().clearPlayer(playerUUID);
-        AutoTreeChop.sendMessage(player, AutoTreeChop.DISABLED_MESSAGE);
+        AutoTreeChop.sendMessage(player, MessageKeys.DISABLED);
     }
 
     // disable — targets
@@ -169,26 +170,26 @@ public class ToggleCommand {
             count++;
             AutoTreeChop.sendMessage(
                     targetPlayer,
-                    AutoTreeChop.DISABLED_BY_OTHER_MESSAGE,
+                    MessageKeys.DISABLED_BY_OTHER,
                     Placeholder.parsed("player", actor.sender().getName()));
         }
         if (count == 1 && lastName != null) {
             AutoTreeChop.sendMessage(
-                    actor.sender(), AutoTreeChop.DISABLED_FOR_OTHER_MESSAGE, Placeholder.parsed("player", lastName));
+                    actor.sender(), MessageKeys.DISABLED_FOR_OTHER, Placeholder.parsed("player", lastName));
         } else if (count > 1) {
             AutoTreeChop.sendMessage(
-                    actor.sender(), AutoTreeChop.DISABLED_FOR_OTHER_MESSAGE, Placeholder.parsed("player", "everyone"));
+                    actor.sender(), MessageKeys.DISABLED_FOR_OTHER, Placeholder.parsed("player", "everyone"));
         }
     }
 
     private void performSelfToggle(BukkitCommandActor actor) {
         if (!(actor.sender() instanceof Player player)) {
-            AutoTreeChop.sendMessage(actor.sender(), AutoTreeChop.ONLY_PLAYERS_MESSAGE);
+            AutoTreeChop.sendMessage(actor.sender(), MessageKeys.ONLY_PLAYERS);
             return;
         }
 
         if (!plugin.getPluginConfig().getCommandToggle()) {
-            AutoTreeChop.sendMessage(actor.sender(), AutoTreeChop.NO_PERMISSION_MESSAGE);
+            AutoTreeChop.sendMessage(actor.sender(), MessageKeys.NO_PERMISSION);
             return;
         }
 
@@ -198,10 +199,10 @@ public class ToggleCommand {
         playerConfig.setAutoTreeChopEnabled(autoTreeChopEnabled);
 
         if (autoTreeChopEnabled) {
-            AutoTreeChop.sendMessage(player, AutoTreeChop.ENABLED_MESSAGE);
+            AutoTreeChop.sendMessage(player, MessageKeys.ENABLED);
         } else {
             plugin.getConfirmationManager().clearPlayer(playerUUID);
-            AutoTreeChop.sendMessage(player, AutoTreeChop.DISABLED_MESSAGE);
+            AutoTreeChop.sendMessage(player, MessageKeys.DISABLED);
         }
     }
 }

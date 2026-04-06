@@ -21,6 +21,7 @@ import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import org.bukkit.entity.Player;
 import org.milkteamc.autotreechop.AutoTreeChop;
 import org.milkteamc.autotreechop.Config;
+import org.milkteamc.autotreechop.MessageKeys;
 import revxrsal.commands.annotation.Command;
 import revxrsal.commands.annotation.Subcommand;
 import revxrsal.commands.bukkit.actor.BukkitCommandActor;
@@ -41,7 +42,7 @@ public class UsageCommand {
     @CommandPermission("autotreechop.use")
     public void usage(BukkitCommandActor actor) {
         if (!actor.isPlayer()) {
-            AutoTreeChop.sendMessage(actor.sender(), AutoTreeChop.ONLY_PLAYERS_MESSAGE);
+            AutoTreeChop.sendMessage(actor.sender(), MessageKeys.ONLY_PLAYERS);
             return;
         }
 
@@ -67,13 +68,13 @@ public class UsageCommand {
 
         AutoTreeChop.sendMessage(
                 player,
-                AutoTreeChop.USAGE_MESSAGE,
+                MessageKeys.USAGE,
                 Placeholder.parsed("current_uses", String.valueOf(pConfig.getDailyUses())),
                 Placeholder.parsed("max_uses", maxUsesStr));
 
         AutoTreeChop.sendMessage(
                 player,
-                AutoTreeChop.BLOCKS_BROKEN_MESSAGE,
+                MessageKeys.BLOCKS_BROKEN,
                 Placeholder.parsed("current_blocks", String.valueOf(pConfig.getDailyBlocksBroken())),
                 Placeholder.parsed("max_blocks", maxBlocksStr));
     }
