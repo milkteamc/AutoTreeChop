@@ -13,7 +13,7 @@ version = '1.7.4'
 // Java Configuration
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(25)
+        languageVersion = JavaLanguageVersion.of(21)
     }
 }
 
@@ -178,6 +178,9 @@ tasks.shadowJar {
 
 tasks.runServer {
     minecraftVersion('26.1.1')
+    javaLauncher = javaToolchains.launcherFor {
+            languageVersion = JavaLanguageVersion.of(25)
+    }
 }
 
 runPaper.folia.registerTask()
