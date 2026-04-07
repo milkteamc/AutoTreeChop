@@ -90,7 +90,7 @@ public class ModrinthUpdateChecker implements Listener {
     public ModrinthUpdateChecker(@NotNull JavaPlugin plugin, @NotNull String projectId, @NotNull String loader) {
         this.plugin = plugin;
         this.projectId = projectId;
-        this.currentVersion = plugin.getPluginMeta().getVersion();
+        this.currentVersion = plugin.getDescription().getVersion();
         this.loader = loader;
         this.minecraftVersion = plugin.getServer().getBukkitVersion().split("-")[0];
     }
