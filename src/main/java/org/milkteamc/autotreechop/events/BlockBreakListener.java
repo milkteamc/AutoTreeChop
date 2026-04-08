@@ -36,6 +36,7 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.inventory.ItemStack;
 import org.milkteamc.autotreechop.AutoTreeChop;
 import org.milkteamc.autotreechop.Config;
+import org.milkteamc.autotreechop.MessageKeys;
 import org.milkteamc.autotreechop.PlayerConfig;
 import org.milkteamc.autotreechop.utils.AsyncTaskScheduler;
 import org.milkteamc.autotreechop.utils.BlockDiscoveryUtils;
@@ -103,7 +104,7 @@ public class BlockBreakListener implements Listener {
             long remaining = plugin.getCooldownManager().getRemainingCooldown(playerUUID);
             AutoTreeChop.sendMessage(
                     player,
-                    AutoTreeChop.STILL_IN_COOLDOWN_MESSAGE,
+                    MessageKeys.STILL_IN_COOLDOWN,
                     Placeholder.parsed("cooldown_time", String.valueOf(remaining)));
             return;
         }
@@ -116,7 +117,7 @@ public class BlockBreakListener implements Listener {
 
         if (!PermissionUtils.hasVipUses(player, playerConfig, config)
                 && playerConfig.getDailyUses() >= config.getMaxUsesPerDay()) {
-            AutoTreeChop.sendMessage(player, AutoTreeChop.HIT_MAX_USAGE_MESSAGE);
+            AutoTreeChop.sendMessage(player, MessageKeys.HIT_MAX_USAGE);
             return;
         }
 
@@ -128,7 +129,7 @@ public class BlockBreakListener implements Listener {
             // Player confirmed by breaking a log within the confirmation window.
             // Skip the leaf check entirely; grace is determined by the original reason.
             confirmationManager.recordSuccessfulChop(playerUUID, pending.reason(), false);
-            AutoTreeChop.sendMessage(player, AutoTreeChop.CONFIRMATION_SUCCESS_MESSAGE);
+            AutoTreeChop.sendMessage(player, MessageKeys.CONFIRMATION_SUCCESS);
             dispatchChop(player, playerConfig, block, tool, location, config);
             return;
         }
@@ -168,9 +169,9 @@ public class BlockBreakListener implements Listener {
                         String timeoutStr = String.valueOf(config.getConfirmationWindowSeconds());
                         String messageKey =
                                 switch (reason) {
-                                    case IDLE_OR_REJOIN -> AutoTreeChop.CONFIRMATION_REQUIRED_IDLE_MESSAGE;
-                                    case NO_LEAVES -> AutoTreeChop.CONFIRMATION_REQUIRED_NO_LEAVES_MESSAGE;
-                                    case BOTH -> AutoTreeChop.CONFIRMATION_REQUIRED_BOTH_MESSAGE;
+                                    case IDLE_OR_REJOIN -> MessageKeys.CONFIRMATION_REQUIRED_IDLE;
+                                    case NO_LEAVES -> MessageKeys.CONFIRMATION_REQUIRED_NO_LEAVES;
+                                    case BOTH -> MessageKeys.CONFIRMATION_REQUIRED_BOTH;
                                 };
                         AutoTreeChop.sendMessage(player, messageKey, Placeholder.parsed("timeout", timeoutStr));
                         return;

@@ -1,4 +1,5 @@
 # AutoTreeChop
+
 ![atc-intro](https://github.com/user-attachments/assets/7b556970-7c4c-4271-9016-4a4612895379)  
 **AutoTreeChop** lets your players chop entire trees by breaking just one log.
 It's async-friendly, lightweight, and fully customizable — with built-in support for MySQL(optional), CoreProtect, and popular protection plugins.
@@ -13,38 +14,46 @@ It's async-friendly, lightweight, and fully customizable — with built-in suppo
 ## Key Features
 
 ### 🌲 Smart Tree Chopping
+
 - Chop entire trees by breaking just one log
 - Toggle on/off with `/atc` command or by sneaking (pressing SHIFT)
 - Async support for smooth performance on Modern servers
 - Customizable leaves cleaner
 
 ### ⚡ Lightweight & Easy to Configure
+
 - Minimal performance impact
 - Simple setup, and user-friendly configuration
 
 ### 🔁 Auto Replanting
+
 - Automatically replant saplings after chopping
 - Optionally require players to have saplings
 
 ### 🧑‍🤝‍🧑 Player Control & Limits
+
 - Daily limits for usage and chopped blocks
 - Configurable cooldowns
 - VIP players can bypass limits with permission
 
 ### 🛡️ Full Protection Plugin Support
+
 - Compatible with Residence, WorldGuard, Lands, GriefPrevention
 - Supports **CoreProtect** for logging actions
 
 ### 🌐 Multi-Language & Locale Support
+
 - Translations included: `en`, `zh`, `ja`, `de`, `es`, `fr`, `ru`, etc.
 - Automatically switches to player's locale if enabled
 
 ### 🗄️ MySQL & SQLite Support
+
 - Scale with MySQL or keep it simple with SQLite (default)
 
 ---
 
 ## Supported Plugins
+>
 > Since we call the block break event directly by default, plugins such as CoreProtect and Drop2Inventory should be supported without modification.
 
 - WorldGuard
@@ -102,12 +111,13 @@ It's async-friendly, lightweight, and fully customizable — with built-in suppo
 
 - Need help? Join our [Matrix](https://matrix.to/#/#maoyue-dev:matrix.org)
 - Found a bug? Open an issue on [GitHub](https://github.com/milkteamc/AutoTreeChop/issues)
-- Want to help translate? Get started [here](https://translate.codeberg.org/projects/autotreechop/autotreechop)
+- Want to help translate? Get started [on this page](https://translate.codeberg.org/projects/autotreechop/autotreechop)
 - Love the plugin? Give it a ⭐️ on [GitHub](https://github.com/milkteamc/AutoTreeChop)
 
 ---
 
 ## bStats
+
 This plugin uses [bStats](https://bstats.org) to collect anonymous usage statistics (such as plugin version, server software, and player count).  
 These statistics help us improve the plugin.  
 If you prefer not to participate, you can disable it anytime in:
@@ -118,7 +128,8 @@ If you prefer not to participate, you can disable it anytime in:
 ---
 
 ## License
-```
+
+```txt
     Copyright (C) 2026 MilkTeaMC and contributors
 
     This program is free software: you can redistribute it and/or modify

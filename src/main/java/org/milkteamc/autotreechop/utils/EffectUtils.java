@@ -17,9 +17,6 @@
  
 package org.milkteamc.autotreechop.utils;
 
-import static org.milkteamc.autotreechop.AutoTreeChop.HIT_MAX_BLOCK_MESSAGE;
-import static org.milkteamc.autotreechop.AutoTreeChop.sendMessage;
-
 import com.cryptomorin.xseries.XMaterial;
 import com.cryptomorin.xseries.particles.ParticleDisplay;
 import com.cryptomorin.xseries.particles.XParticle;
@@ -27,13 +24,15 @@ import java.awt.Color;
 import java.util.logging.Logger;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
+import org.milkteamc.autotreechop.AutoTreeChop;
+import org.milkteamc.autotreechop.MessageKeys;
 
 public class EffectUtils {
 
     private static final Logger LOGGER = Logger.getLogger("AutoTreeChop");
 
     public static void sendMaxBlockLimitReachedMessage(Player player, Block block) {
-        sendMessage(player, HIT_MAX_BLOCK_MESSAGE);
+        AutoTreeChop.sendMessage(player, MessageKeys.HIT_MAX_BLOCK);
         ParticleDisplay.of(XParticle.DUST)
                 .withLocation(block.getLocation().add(0.5, 0.5, 0.5))
                 .withColor(Color.RED, 1.0f)

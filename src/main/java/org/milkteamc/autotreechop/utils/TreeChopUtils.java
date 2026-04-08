@@ -31,6 +31,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.Damageable;
 import org.milkteamc.autotreechop.AutoTreeChop;
 import org.milkteamc.autotreechop.Config;
+import org.milkteamc.autotreechop.MessageKeys;
 import org.milkteamc.autotreechop.PlayerConfig;
 
 public class TreeChopUtils {
@@ -241,14 +242,14 @@ public class TreeChopUtils {
         }
 
         if (treeBlocks.size() > config.getMaxTreeSize()) {
-            AutoTreeChop.sendMessage(player, AutoTreeChop.HIT_MAX_BLOCK_MESSAGE);
+            AutoTreeChop.sendMessage(player, MessageKeys.HIT_MAX_BLOCK);
             sessionManager.clearTreeChopSession(playerUUID);
             return;
         }
 
         if (!PermissionUtils.hasVipBlock(player, playerConfig, config)) {
             if (playerConfig.getDailyBlocksBroken() + treeBlocks.size() > config.getMaxBlocksPerDay()) {
-                AutoTreeChop.sendMessage(player, AutoTreeChop.HIT_MAX_BLOCK_MESSAGE);
+                AutoTreeChop.sendMessage(player, MessageKeys.HIT_MAX_BLOCK);
                 sessionManager.clearTreeChopSession(playerUUID);
                 return;
             }
