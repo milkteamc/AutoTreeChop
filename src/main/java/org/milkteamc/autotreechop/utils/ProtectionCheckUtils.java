@@ -1,3 +1,20 @@
+/*
+ * Copyright (C) 2026 MilkTeaMC and contributors
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+ 
 package org.milkteamc.autotreechop.utils;
 
 import org.bukkit.Location;
@@ -67,7 +84,6 @@ public class ProtectionCheckUtils {
     /**
      * Individual check methods (for backwards compatibility or specific use cases)
      */
-
     public static boolean checkWorldGuard(Player player, Location location, boolean enabled, WorldGuardHook hook) {
         return !enabled || hook.checkBuild(player, location);
     }
@@ -76,7 +92,8 @@ public class ProtectionCheckUtils {
         return !enabled || hook.checkBuild(player, location);
     }
 
-    public static boolean checkGriefPrevention(Player player, Location location, boolean enabled, GriefPreventionHook hook) {
+    public static boolean checkGriefPrevention(
+            Player player, Location location, boolean enabled, GriefPreventionHook hook) {
         return !enabled || hook.checkBuild(player, location);
     }
 
@@ -96,10 +113,14 @@ public class ProtectionCheckUtils {
         public final LandsHook lands;
 
         public ProtectionHooks(
-                boolean worldGuardEnabled, WorldGuardHook worldGuard,
-                boolean residenceEnabled, ResidenceHook residence,
-                boolean griefPreventionEnabled, GriefPreventionHook griefPrevention,
-                boolean landsEnabled, LandsHook lands) {
+                boolean worldGuardEnabled,
+                WorldGuardHook worldGuard,
+                boolean residenceEnabled,
+                ResidenceHook residence,
+                boolean griefPreventionEnabled,
+                GriefPreventionHook griefPrevention,
+                boolean landsEnabled,
+                LandsHook lands) {
             this.worldGuardEnabled = worldGuardEnabled;
             this.worldGuard = worldGuard;
             this.residenceEnabled = residenceEnabled;

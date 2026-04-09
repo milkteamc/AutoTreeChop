@@ -1,18 +1,32 @@
+/*
+ * Copyright (C) 2026 MilkTeaMC and contributors
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+ 
 package org.milkteamc.autotreechop.utils;
-
-import org.bukkit.Location;
-import org.milkteamc.autotreechop.AutoTreeChop;
 
 import java.util.List;
 import java.util.function.BiConsumer;
+import org.bukkit.Location;
+import org.milkteamc.autotreechop.AutoTreeChop;
 
 public class BatchProcessor {
 
-    private final AutoTreeChop plugin;
     private final AsyncTaskScheduler scheduler;
 
     public BatchProcessor(AutoTreeChop plugin, AsyncTaskScheduler scheduler) {
-        this.plugin = plugin;
         this.scheduler = scheduler;
     }
 
@@ -102,9 +116,8 @@ public class BatchProcessor {
             } else {
                 // Schedule next batch at the next batch's first location
                 Location nextLocation = locations.get(endIndex);
-                Runnable nextBatch = () -> processBatchInternal(
-                        locations, endIndex, batchSize, processor, onComplete, delayTicks
-                );
+                Runnable nextBatch =
+                        () -> processBatchInternal(locations, endIndex, batchSize, processor, onComplete, delayTicks);
                 scheduler.runTaskLaterAtLocation(nextLocation, nextBatch, delayTicks);
             }
         };
@@ -166,9 +179,8 @@ public class BatchProcessor {
             } else {
                 Location nextLocation = locations.get(i);
                 int finalI = i;
-                Runnable nextBatch = () -> processBatchWithTermination(
-                        locations, finalI, batchSize, processor, onComplete
-                );
+                Runnable nextBatch =
+                        () -> processBatchWithTermination(locations, finalI, batchSize, processor, onComplete);
                 scheduler.runTaskLaterAtLocation(nextLocation, nextBatch, 1L);
             }
         };
