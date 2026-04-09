@@ -20,6 +20,7 @@ package org.milkteamc.autotreechop.command;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import org.bukkit.command.CommandSender;
 import org.milkteamc.autotreechop.AutoTreeChop;
+import org.milkteamc.autotreechop.MessageKeys;
 import revxrsal.commands.annotation.Command;
 import revxrsal.commands.annotation.Subcommand;
 import revxrsal.commands.bukkit.actor.BukkitCommandActor;
@@ -39,11 +40,11 @@ public class AboutCommand {
 
         AutoTreeChop.sendMessage(
                 sender,
-                AutoTreeChop.ABOUT_HEADER,
+                MessageKeys.ABOUT_HEADER,
                 Placeholder.parsed("version", plugin.getDescription().getVersion()));
 
-        AutoTreeChop.sendMessage(sender, AutoTreeChop.ABOUT_LICENSE);
-        AutoTreeChop.sendMessage(sender, AutoTreeChop.ABOUT_GITHUB);
-        AutoTreeChop.sendMessage(sender, AutoTreeChop.ABOUT_MODRINTH);
+        AutoTreeChop.sendMessage(sender, MessageKeys.ABOUT_LICENSE);
+        AutoTreeChop.sendMessage(sender, MessageKeys.ABOUT_GITHUB);
+        AutoTreeChop.sendMessage(sender, MessageKeys.ABOUT_MODRINTH);
     }
 }

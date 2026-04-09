@@ -22,6 +22,7 @@ import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.milkteamc.autotreechop.AutoTreeChop;
 import org.milkteamc.autotreechop.Config;
+import org.milkteamc.autotreechop.MessageKeys;
 import org.milkteamc.autotreechop.PlayerConfig;
 import org.milkteamc.autotreechop.utils.BlockDiscoveryUtils;
 import org.milkteamc.autotreechop.utils.ConfirmationManager.ChopData;
@@ -45,7 +46,7 @@ public class ConfirmCommand {
     @CommandPermission("autotreechop.use")
     public void confirm(BukkitCommandActor actor) {
         if (!(actor.sender() instanceof Player player)) {
-            AutoTreeChop.sendMessage(actor.sender(), AutoTreeChop.ONLY_PLAYERS_MESSAGE);
+            AutoTreeChop.sendMessage(actor.sender(), MessageKeys.ONLY_PLAYERS);
             return;
         }
 
@@ -57,7 +58,7 @@ public class ConfirmCommand {
         ChopData chop = plugin.getConfirmationManager().consumePendingConfirmation(uuid);
 
         if (chop == null) {
-            AutoTreeChop.sendMessage(player, AutoTreeChop.NO_PENDING_CONFIRMATION_MESSAGE);
+            AutoTreeChop.sendMessage(player, MessageKeys.NO_PENDING_CONFIRMATION);
             return;
         }
 
@@ -70,12 +71,12 @@ public class ConfirmCommand {
         if (!BlockDiscoveryUtils.isLog(block.getType(), config)) {
             // Log is gone — treat as if there was no pending confirmation so the
             // player gets clear feedback rather than a silent no-op.
-            AutoTreeChop.sendMessage(player, AutoTreeChop.NO_PENDING_CONFIRMATION_MESSAGE);
+            AutoTreeChop.sendMessage(player, MessageKeys.NO_PENDING_CONFIRMATION);
             return;
         }
 
         plugin.getConfirmationManager().recordSuccessfulChop(uuid, chop.reason(), false);
-        AutoTreeChop.sendMessage(player, AutoTreeChop.CONFIRMATION_SUCCESS_MESSAGE);
+        AutoTreeChop.sendMessage(player, MessageKeys.CONFIRMATION_SUCCESS);
 
         if (config.isVisualEffect()) {
             EffectUtils.showChopEffect(player, block);

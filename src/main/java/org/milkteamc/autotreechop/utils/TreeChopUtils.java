@@ -17,6 +17,7 @@
  
 package org.milkteamc.autotreechop.utils;
 
+import com.cryptomorin.xseries.XEnchantment;
 import com.cryptomorin.xseries.XMaterial;
 import com.cryptomorin.xseries.XSound;
 import java.util.*;
@@ -24,13 +25,13 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
-import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.Damageable;
 import org.milkteamc.autotreechop.AutoTreeChop;
 import org.milkteamc.autotreechop.Config;
+import org.milkteamc.autotreechop.MessageKeys;
 import org.milkteamc.autotreechop.PlayerConfig;
 
 import static org.bukkit.Statistic.MINE_BLOCK;
@@ -108,7 +109,7 @@ public class TreeChopUtils {
 
     private static int getUnbreakingLevel(ItemStack item) {
         if (item != null && item.hasItemMeta() && item.getItemMeta().hasEnchants()) {
-            return item.getEnchantmentLevel(Enchantment.UNBREAKING);
+            return item.getEnchantmentLevel(XEnchantment.UNBREAKING.get());
         }
         return 0;
     }
@@ -243,14 +244,14 @@ public class TreeChopUtils {
         }
 
         if (treeBlocks.size() > config.getMaxTreeSize()) {
-            AutoTreeChop.sendMessage(player, AutoTreeChop.HIT_MAX_BLOCK_MESSAGE);
+            AutoTreeChop.sendMessage(player, MessageKeys.HIT_MAX_BLOCK);
             sessionManager.clearTreeChopSession(playerUUID);
             return;
         }
 
         if (!PermissionUtils.hasVipBlock(player, playerConfig, config)) {
             if (playerConfig.getDailyBlocksBroken() + treeBlocks.size() > config.getMaxBlocksPerDay()) {
-                AutoTreeChop.sendMessage(player, AutoTreeChop.HIT_MAX_BLOCK_MESSAGE);
+                AutoTreeChop.sendMessage(player, MessageKeys.HIT_MAX_BLOCK);
                 sessionManager.clearTreeChopSession(playerUUID);
                 return;
             }
@@ -589,12 +590,7 @@ public class TreeChopUtils {
             if (config.getLeafRemovalDropItems()) {
                 leafBlock.breakNaturally();
             } else {
-                Material air = XMaterial.AIR.get();
-                if (air != null) {
-                    leafBlock.setType(air, false);
-                } else {
-                    leafBlock.setType(Material.AIR, false);
-                }
+                leafBlock.setType(XMaterial.AIR.get(), false);
             }
 
             if (config.isIncrementBlockStatistics()) {

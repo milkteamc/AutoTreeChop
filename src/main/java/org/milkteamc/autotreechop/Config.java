@@ -37,7 +37,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.bukkit.Material;
@@ -280,16 +279,8 @@ public class Config {
     }
 
     private Material parseMaterial(String name) {
-        Optional<XMaterial> xMat = XMaterial.matchXMaterial(name);
-        if (xMat.isPresent()) {
-            Material mat = xMat.get().get();
-            if (mat != null) {
-                return mat;
-            }
-        }
-
         try {
-            return Material.getMaterial(name);
+            return XMaterial.matchXMaterial(name).map(XMaterial::get).orElse(null);
         } catch (Exception e) {
             plugin.getLogger().fine("Material not available in this version: " + name);
             return null;

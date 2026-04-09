@@ -53,34 +53,6 @@ import revxrsal.commands.bukkit.BukkitLamp;
 
 public class AutoTreeChop extends JavaPlugin {
 
-    // Message keys (replacing old Message objects)
-    public static final String NO_RESIDENCE_PERMISSIONS = "noResidencePermissions";
-    public static final String ENABLED_MESSAGE = "enabled";
-    public static final String DISABLED_MESSAGE = "disabled";
-    public static final String NO_PERMISSION_MESSAGE = "no-permission";
-    public static final String ONLY_PLAYERS_MESSAGE = "only-players";
-    public static final String HIT_MAX_USAGE_MESSAGE = "hitmaxusage";
-    public static final String HIT_MAX_BLOCK_MESSAGE = "hitmaxblock";
-    public static final String USAGE_MESSAGE = "usage";
-    public static final String BLOCKS_BROKEN_MESSAGE = "blocks-broken";
-    public static final String ENABLED_BY_OTHER_MESSAGE = "enabledByOther";
-    public static final String ENABLED_FOR_OTHER_MESSAGE = "enabledForOther";
-    public static final String DISABLED_BY_OTHER_MESSAGE = "disabledByOther";
-    public static final String DISABLED_FOR_OTHER_MESSAGE = "disabledForOther";
-    public static final String STILL_IN_COOLDOWN_MESSAGE = "stillInCooldown";
-    public static final String CONSOLE_NAME = "consoleName";
-    public static final String SNEAK_ENABLED_MESSAGE = "sneakEnabled";
-    public static final String SNEAK_DISABLED_MESSAGE = "sneakDisabled";
-    public static final String CONFIRMATION_REQUIRED_IDLE_MESSAGE = "confirmationRequiredIdle";
-    public static final String CONFIRMATION_REQUIRED_NO_LEAVES_MESSAGE = "confirmationRequiredNoLeaves";
-    public static final String CONFIRMATION_REQUIRED_BOTH_MESSAGE = "confirmationRequiredBoth";
-    public static final String CONFIRMATION_SUCCESS_MESSAGE = "confirmationSuccess";
-    public static final String NO_PENDING_CONFIRMATION_MESSAGE = "noPendingConfirmation";
-    public static final String ABOUT_HEADER = "aboutHeader";
-    public static final String ABOUT_LICENSE = "aboutLicense";
-    public static final String ABOUT_GITHUB = "aboutGithub";
-    public static final String ABOUT_MODRINTH = "aboutModrinth";
-
     private static final long SAVE_INTERVAL = 1200L; // 60s
     private static final int SAVE_THRESHOLD = 15;
 
