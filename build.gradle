@@ -173,8 +173,9 @@ tasks.shadowJar {
 
 tasks.runServer {
     minecraftVersion('26.1.1')
+    def javaVersion = Math.max(25, JavaVersion.current().majorVersion.toInteger())
     javaLauncher = javaToolchains.launcherFor {
-            languageVersion = JavaLanguageVersion.of(25)
+        languageVersion = JavaLanguageVersion.of(javaVersion)
     }
 }
 
