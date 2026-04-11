@@ -121,7 +121,7 @@ public class BlockBreakListener implements Listener {
             return;
         }
 
-        // Limits cleared — now check for a pending confirmation.
+        // Limits cleared — check for a pending confirmation first.
         ConfirmationManager confirmationManager = plugin.getConfirmationManager();
         ChopData pending = confirmationManager.consumePendingConfirmation(playerUUID);
 
@@ -145,8 +145,8 @@ public class BlockBreakListener implements Listener {
         // here), then read them on an async thread (snapshots are immutable — thread-safe).
         Map<Long, ChunkSnapshot> snapshots = captureLeafCheckSnapshots(block, config);
 
-        // Clone location and tool now so we have stable values if the async path
-        // later needs them (block reference is live world state — not safe async).
+        // Clone location and tool now so we have stable values for the async path.
+        // The block reference itself is a live world object — not safe to read off-thread.
         Location frozenLocation = location.clone();
         ItemStack frozenTool = tool.clone();
 
@@ -193,15 +193,7 @@ public class BlockBreakListener implements Listener {
             EffectUtils.showChopEffect(player, block);
         }
 
-        ProtectionHooks hooks = new ProtectionHooks(
-                plugin.isWorldGuardEnabled(),
-                plugin.getWorldGuardHook(),
-                plugin.isResidenceEnabled(),
-                plugin.getResidenceHook(),
-                plugin.isGriefPreventionEnabled(),
-                plugin.getGriefPreventionHook(),
-                plugin.isLandsEnabled(),
-                plugin.getLandsHook());
+        ProtectionHooks hooks = buildProtectionHooks();
 
         plugin.getTreeChopUtils()
                 .chopTree(
@@ -213,6 +205,24 @@ public class BlockBreakListener implements Listener {
                         config,
                         playerConfig,
                         hooks);
+    }
+
+    /**
+     * Builds a {@link ProtectionHooks} snapshot from the plugin's current hook state.
+     *
+     * <p>Extracted from {@link #dispatchChop} so that the hook wiring lives in one
+     * place and future hook additions only need to be made here.
+     */
+    private ProtectionHooks buildProtectionHooks() {
+        return new ProtectionHooks(
+                plugin.isWorldGuardEnabled(),
+                plugin.getWorldGuardHook(),
+                plugin.isResidenceEnabled(),
+                plugin.getResidenceHook(),
+                plugin.isGriefPreventionEnabled(),
+                plugin.getGriefPreventionHook(),
+                plugin.isLandsEnabled(),
+                plugin.getLandsHook());
     }
 
     /**
@@ -233,7 +243,7 @@ public class BlockBreakListener implements Listener {
                 int chunkX = (cx + dx) >> 4;
                 int chunkZ = (cz + dz) >> 4;
                 if (!world.isChunkLoaded(chunkX, chunkZ)) continue;
-                long key = ((long) chunkX << 32) | (chunkZ & 0xFFFFFFFFL);
+                long key = chunkKey(chunkX, chunkZ);
                 snapshots.computeIfAbsent(
                         key, k -> world.getChunkAt(chunkX, chunkZ).getChunkSnapshot(false, false, false));
             }
@@ -266,7 +276,7 @@ public class BlockBreakListener implements Listener {
                     int z = cz + dz;
                     if (y < minY || y >= maxY) continue;
 
-                    long key = ((long) (x >> 4) << 32) | ((z >> 4) & 0xFFFFFFFFL);
+                    long key = chunkKey(x >> 4, z >> 4);
                     ChunkSnapshot snapshot = snapshots.get(key);
                     if (snapshot == null) continue;
 
@@ -277,5 +287,9 @@ public class BlockBreakListener implements Listener {
             }
         }
         return false;
+    }
+
+    private static long chunkKey(int chunkX, int chunkZ) {
+        return ((long) chunkX << 32) | (chunkZ & 0xFFFFFFFFL);
     }
 }
