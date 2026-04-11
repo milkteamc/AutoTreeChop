@@ -249,17 +249,8 @@ public class TranslationManager {
         if (localeCode == null || localeCode.isEmpty()) {
             return null;
         }
-
-        String[] parts = localeCode.split("_");
-        if (parts.length == 1) {
-            return new Locale(parts[0]);
-        } else if (parts.length == 2) {
-            return new Locale(parts[0], parts[1]);
-        } else if (parts.length == 3) {
-            return new Locale(parts[0], parts[1], parts[2]);
-        }
-
-        return null;
+        String languageTag = localeCode.replace('_', '-');
+        return Locale.forLanguageTag(languageTag);
     }
 
     /**
@@ -267,21 +258,15 @@ public class TranslationManager {
      */
     public Locale getLocale(CommandSender sender) {
         if (useClientLocale && sender instanceof Player player) {
-            String clientLocale = player.getLocale();
+            Locale clientLocale = player.locale();
 
-            // Try exact match first (e.g., zh_TW)
-            Locale locale = parseLocale(clientLocale);
-            if (locale != null && translations.containsKey(locale)) {
-                return locale;
+            if (translations.containsKey(clientLocale)) {
+                return clientLocale;
             }
 
-            // Try just the language part (e.g., "zh" from "zh_TW")
-            if (clientLocale.contains("_")) {
-                String language = clientLocale.split("_")[0];
-                locale = new Locale(language);
-                if (translations.containsKey(locale)) {
-                    return locale;
-                }
+            Locale languageOnly = Locale.forLanguageTag(clientLocale.getLanguage());
+            if (translations.containsKey(languageOnly)) {
+                return languageOnly;
             }
         }
 
