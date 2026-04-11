@@ -96,10 +96,6 @@ public class BlockBreakListener implements Listener {
             return;
         }
 
-        // Cancel the event now — from this point we own the block break.
-        // chopTree handles the actual breaking itself via breakNaturally().
-        event.setCancelled(true);
-
         if (plugin.getCooldownManager().isInCooldown(playerUUID)) {
             long remaining = plugin.getCooldownManager().getRemainingCooldown(playerUUID);
             AutoTreeChop.sendMessage(
@@ -124,6 +120,8 @@ public class BlockBreakListener implements Listener {
         // Limits cleared — check for a pending confirmation first.
         ConfirmationManager confirmationManager = plugin.getConfirmationManager();
         ChopData pending = confirmationManager.consumePendingConfirmation(playerUUID);
+
+        event.setCancelled(true);
 
         if (pending != null) {
             // Player confirmed by breaking a log within the confirmation window.
