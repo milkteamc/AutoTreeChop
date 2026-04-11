@@ -28,6 +28,7 @@ import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import org.bstats.bukkit.Metrics;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
+import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.milkteamc.autotreechop.command.AboutCommand;
 import org.milkteamc.autotreechop.command.ConfirmCommand;
@@ -66,6 +67,7 @@ public class AutoTreeChop extends JavaPlugin {
     private TranslationManager translationManager;
     private ConfirmationManager confirmationManager;
     private ModrinthUpdateChecker updateChecker;
+    private PluginDescriptionFile description;
 
     private boolean worldGuardEnabled = false;
     private boolean residenceEnabled = false;
@@ -99,6 +101,13 @@ public class AutoTreeChop extends JavaPlugin {
         } catch (ClassNotFoundException e) {
             return false;
         }
+    }
+
+    @Override
+    public void onLoad() {
+        @SuppressWarnings("deprecation")
+        PluginDescriptionFile desc = getDescription();
+        this.description = desc;
     }
 
     @Override
@@ -334,6 +343,10 @@ public class AutoTreeChop extends JavaPlugin {
 
     public ModrinthUpdateChecker getUpdateChecker() {
         return updateChecker;
+    }
+
+    public PluginDescriptionFile getPluginDescription() {
+        return description;
     }
 
     public CooldownManager getCooldownManager() {

@@ -41,7 +41,7 @@ public class AboutCommand {
         AutoTreeChop.sendMessage(
                 sender,
                 MessageKeys.ABOUT_HEADER,
-                Placeholder.parsed("version", plugin.getDescription().getVersion()));
+                Placeholder.parsed("version", plugin.getPluginDescription().getVersion()));
 
         AutoTreeChop.sendMessage(sender, MessageKeys.ABOUT_LICENSE);
         AutoTreeChop.sendMessage(sender, MessageKeys.ABOUT_GITHUB);

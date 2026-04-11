@@ -37,12 +37,12 @@ public class AutoTreeChopExpansion extends PlaceholderExpansion {
 
     @Override
     public @NotNull String getAuthor() {
-        return plugin.getDescription().getAuthors().get(0);
+        return plugin.getPluginDescription().getAuthors().get(0);
     }
 
     @Override
     public @NotNull String getVersion() {
-        return plugin.getDescription().getVersion();
+        return plugin.getPluginDescription().getVersion();
     }
 
     @Override
