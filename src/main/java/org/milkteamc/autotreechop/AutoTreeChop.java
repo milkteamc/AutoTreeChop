@@ -19,7 +19,6 @@ package org.milkteamc.autotreechop;
 
 import com.github.Anon8281.universalScheduler.UniversalScheduler;
 import java.io.File;
-import java.util.HashSet;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
@@ -241,15 +240,10 @@ public class AutoTreeChop extends JavaPlugin {
     }
 
     private void loadLocale() {
-        saveResourceIfNotExists("lang/styles.properties");
-        saveResourceIfNotExists("lang/en.properties");
-        saveResourceIfNotExists("lang/de.properties");
-        saveResourceIfNotExists("lang/es.properties");
-        saveResourceIfNotExists("lang/fr.properties");
-        saveResourceIfNotExists("lang/ja.properties");
-        saveResourceIfNotExists("lang/ru.properties");
-        saveResourceIfNotExists("lang/zh.properties");
-        saveResourceIfNotExists("lang/ms.properties");
+        String[] langs = {"styles", "en", "de", "es", "fr", "ja", "ru", "zh", "ms"};
+        for (String lang : langs) {
+            saveResourceIfNotExists("lang/" + lang + ".properties");
+        }
 
         Locale defaultLocale = config.getLocale() == null ? Locale.getDefault() : config.getLocale();
         translationManager.initialize(defaultLocale, config.isUseClientLocale());
@@ -273,11 +267,22 @@ public class AutoTreeChop extends JavaPlugin {
             }
         }
 
-        if (confirmationManager != null && playerConfigs != null) {
+        if (playerConfigs != null && !playerConfigs.isEmpty()) {
+            SessionManager sessionManager = SessionManager.getInstance();
             for (Map.Entry<UUID, PlayerConfig> entry : playerConfigs.entrySet()) {
-                confirmationManager.clearPlayer(entry.getKey());
-                if (entry.getValue().isDirty()) {
-                    databaseManager.savePlayerDataSync(entry.getValue().getData());
+                UUID uuid = entry.getKey();
+                PlayerConfig pConfig = entry.getValue();
+
+                if (confirmationManager != null) {
+                    confirmationManager.clearPlayer(uuid);
+                }
+
+                if (pConfig.isDirty() && databaseManager != null) {
+                    databaseManager.savePlayerDataSync(pConfig.getData());
+                }
+
+                if (sessionManager != null) {
+                    sessionManager.clearAllPlayerSessions(uuid);
                 }
             }
             playerConfigs.clear();
@@ -285,13 +290,6 @@ public class AutoTreeChop extends JavaPlugin {
 
         if (databaseManager != null) {
             databaseManager.close();
-        }
-
-        if (playerConfigs != null) {
-            SessionManager sessionManager = SessionManager.getInstance();
-            for (UUID uuid : new HashSet<>(playerConfigs.keySet())) {
-                sessionManager.clearAllPlayerSessions(uuid);
-            }
         }
 
         if (translationManager != null) {
@@ -309,21 +307,9 @@ public class AutoTreeChop extends JavaPlugin {
         PlayerConfig playerConfig = playerConfigs.get(playerUUID);
 
         if (playerConfig == null) {
-            getLogger().warning("PlayerConfig not found for " + playerUUID + ", loading synchronously");
-            try {
-                DatabaseManager.PlayerData data = databaseManager
-                        .loadPlayerDataAsync(playerUUID, config.getDefaultTreeChop())
-                        .get();
-
-                playerConfig = new PlayerConfig(playerUUID, data);
-                playerConfigs.put(playerUUID, playerConfig);
-            } catch (Exception e) {
-                getLogger().warning("Failed to load player data: " + e.getMessage());
-                DatabaseManager.PlayerData defaultData = new DatabaseManager.PlayerData(
-                        playerUUID, config.getDefaultTreeChop(), 0, 0, java.time.LocalDate.now());
-                playerConfig = new PlayerConfig(playerUUID, defaultData);
-                playerConfigs.put(playerUUID, playerConfig);
-            }
+            DatabaseManager.PlayerData tempDefaultData =
+                    new DatabaseManager.PlayerData(playerUUID, false, 0, 0, java.time.LocalDate.now());
+            return new PlayerConfig(playerUUID, tempDefaultData);
         }
 
         return playerConfig;

@@ -141,15 +141,15 @@ public class BlockBreakListener implements Listener {
 
         // Pre-capture chunk snapshots on the main/region thread (world access is required
         // here), then read them on an async thread (snapshots are immutable — thread-safe).
-        Map<Long, ChunkSnapshot> snapshots = captureLeafCheckSnapshots(block, config);
+        int radius = config.getNoLeavesDetectionRadius();
+        Map<Long, ChunkSnapshot> snapshots = captureLeafCheckSnapshots(block, radius);
 
-        // Clone location and tool now so we have stable values for the async path.
-        // The block reference itself is a live world object — not safe to read off-thread.
-        Location frozenLocation = location.clone();
+        // Clone tool now so we have stable values for the async path.
         ItemStack frozenTool = tool.clone();
+        Location frozenLocation = location;
 
         scheduler.runTaskAsync(() -> {
-            boolean hasLeaves = hasNearbyLeaves(block, config, snapshots);
+            boolean hasLeaves = hasNearbyLeaves(block, radius, config, snapshots);
 
             // Return to the main/region thread to act on the result.
             scheduler.runTaskAtLocation(frozenLocation, () -> {
@@ -229,8 +229,7 @@ public class BlockBreakListener implements Listener {
      * <p>Must be called on the main/region thread since it accesses live world state.
      * Once captured, the returned snapshots are immutable and safe to read on any thread.
      */
-    private Map<Long, ChunkSnapshot> captureLeafCheckSnapshots(Block log, Config config) {
-        int radius = config.getNoLeavesDetectionRadius();
+    private Map<Long, ChunkSnapshot> captureLeafCheckSnapshots(Block log, int radius) {
         World world = log.getWorld();
         int cx = log.getX();
         int cz = log.getZ();
@@ -257,8 +256,7 @@ public class BlockBreakListener implements Listener {
      * pre-captured {@code snapshots}, which are immutable. Short-circuits on the
      * first leaf found.
      */
-    private static boolean hasNearbyLeaves(Block log, Config config, Map<Long, ChunkSnapshot> snapshots) {
-        int radius = config.getNoLeavesDetectionRadius();
+    private static boolean hasNearbyLeaves(Block log, int radius, Config config, Map<Long, ChunkSnapshot> snapshots) {
         World world = log.getWorld();
         int cx = log.getX();
         int cy = log.getY();
