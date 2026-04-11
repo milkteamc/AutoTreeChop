@@ -34,6 +34,8 @@ import org.milkteamc.autotreechop.Config;
 import org.milkteamc.autotreechop.MessageKeys;
 import org.milkteamc.autotreechop.PlayerConfig;
 
+import static org.bukkit.Statistic.MINE_BLOCK;
+
 public class TreeChopUtils {
 
     private static final Random random = new Random();
@@ -304,6 +306,7 @@ public class TreeChopUtils {
 
         BlockSnapshot finalLeafSnapshot = leafSnapshot;
 
+        Map<Material, Integer> logStatCounts = new HashMap<>();
         batchProcessor.processBatch(
                 blockList,
                 0,
@@ -342,12 +345,21 @@ public class TreeChopUtils {
                     }
                     block.breakNaturally();
 
+                    if (config.isIncrementBlockStatistics()) {
+                        logStatCounts.merge(originalLogType, 1, Integer::sum);
+                    }
+
                     actuallyRemovedLogs.add(location);
                     sessionManager.trackRemovedLogForPlayer(playerUUID.toString(), location);
                     playerConfig.incrementDailyBlocksBroken();
                 },
                 () -> {
                     // After all logs are removed
+                    if (config.isIncrementBlockStatistics()) {
+                        logStatCounts.forEach((mat, count) ->
+                                player.incrementStatistic(MINE_BLOCK, mat, count));
+                    }
+
                     if (config.isToolDamage()) {
                         applyToolDamage(tool, player, totalBlocks, config);
                     }
@@ -495,6 +507,7 @@ public class TreeChopUtils {
 
         List<Location> leafList = new ArrayList<>(leavesToRemove);
         int batchSize = config.getLeafRemovalBatchSize();
+        Map<Material, Integer> leafStatCounts = new HashMap<>();
 
         batchProcessor.processBatchWithTermination(
                 leafList,
@@ -512,11 +525,17 @@ public class TreeChopUtils {
                     Block leafBlock = location.getBlock();
 
                     // Remove the leaf block with all checks
-                    removeLeafBlock(leafBlock, player, config, playerConfig, hooks);
+                    removeLeafBlock(leafBlock, player, config, playerConfig, hooks, leafStatCounts);
 
                     return true; // Continue processing
                 },
                 () -> {
+                    // Flush accumulated leaf statistics
+                    if (config.isIncrementBlockStatistics()) {
+                        leafStatCounts.forEach((mat, count) ->
+                                player.incrementStatistic(MINE_BLOCK, mat, count));
+                    }
+
                     // Leaf removal complete - end session
                     sessionManager.endLeafRemovalSession(sessionId, playerKey);
                 });
@@ -531,7 +550,8 @@ public class TreeChopUtils {
             Player player,
             Config config,
             PlayerConfig playerConfig,
-            ProtectionCheckUtils.ProtectionHooks hooks) {
+            ProtectionCheckUtils.ProtectionHooks hooks,
+            Map<Material, Integer> leafStatCounts) {
 
         Location leafLocation = leafBlock.getLocation();
 
@@ -571,6 +591,11 @@ public class TreeChopUtils {
                 leafBlock.breakNaturally();
             } else {
                 leafBlock.setType(XMaterial.AIR.get(), false);
+            }
+
+            if (config.isIncrementBlockStatistics()) {
+                Material leafMaterial = leafBlock.getType();
+                leafStatCounts.merge(leafMaterial, 1, Integer::sum);
             }
 
             // Update daily blocks count if needed

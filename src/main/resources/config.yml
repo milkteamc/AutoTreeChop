@@ -83,6 +83,9 @@ max-discovery-blocks: 1000
 # Call BlockBreakEvent for each block
 # true = Better plugin compatibility
 call-block-break-event: true
+# Increment player's Minecraft block-break statistic (Statistic.MINE_BLOCK) for every block broken by AutoTreeChop,
+# including all chain-chopped logs and leaves (if leaf removal is enabled).
+increment-block-statistics: false
 
 # Protection plugins setting
 # If you are using Residence, you can set which Flag players have access to AutoTreeChop in residence.

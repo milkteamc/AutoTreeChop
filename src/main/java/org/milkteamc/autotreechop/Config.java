@@ -104,6 +104,7 @@ public class Config {
     private int maxTreeSize;
     private int maxDiscoveryBlocks;
     private boolean callBlockBreakEvent;
+    private boolean incrementBlockStatistics;
 
     public Config(AutoTreeChop plugin) {
         this.plugin = plugin;
@@ -227,6 +228,7 @@ public class Config {
         maxTreeSize = config.getInt("max-tree-size", 500);
         maxDiscoveryBlocks = config.getInt("max-discovery-blocks", 1000);
         callBlockBreakEvent = config.getBoolean("call-block-break-event", true);
+        incrementBlockStatistics = config.getBoolean("increment-block-statistics", false);
 
         autoReplantEnabled = config.getBoolean("enable-auto-replant", true);
         replantDelayTicks = config.getLong("replant-delay-ticks", 15L);
@@ -535,6 +537,10 @@ public class Config {
 
     public boolean isCallBlockBreakEvent() {
         return callBlockBreakEvent;
+    }
+
+    public boolean isIncrementBlockStatistics() {
+        return incrementBlockStatistics;
     }
 
     public int getIdleTimeoutSeconds() {
