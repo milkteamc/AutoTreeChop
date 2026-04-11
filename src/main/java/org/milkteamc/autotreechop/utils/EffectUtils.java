@@ -85,25 +85,22 @@ public class EffectUtils {
                 .spawn();
 
         // Falling leaf-like block particles
-        if (XMaterial.supports(13)) {
-            try {
-                XMaterial blockMaterial = XMaterial.matchXMaterial(block.getType());
-                if (blockMaterial != null && blockMaterial.get() != null) {
-                    ParticleDisplay.of(XParticle.BLOCK)
-                            .withLocation(block.getLocation().add(0.5, 0.8, 0.5))
-                            .withBlock(blockMaterial.get().createBlockData())
-                            .withCount(10)
-                            .offset(0.2, 0.1, 0.2)
-                            .spawn();
-                }
-            } catch (NoSuchMethodError | UnsupportedOperationException e) {
-                // The BLOCK particle API changed between MC versions; XSeries could not
-                // provide a compatible implementation on this server.  The visual is
-                // purely cosmetic so we degrade gracefully, but log at FINE so server
-                // admins can diagnose version-compatibility issues if needed.
-                LOGGER.fine(
-                        "BLOCK particle unavailable for leaf removal effect on this server version: " + e.getMessage());
+        try {
+            XMaterial blockMaterial = XMaterial.matchXMaterial(block.getType());
+            if (blockMaterial != null && blockMaterial.get() != null) {
+                ParticleDisplay.of(XParticle.BLOCK)
+                        .withLocation(block.getLocation().add(0.5, 0.8, 0.5))
+                        .withBlock(blockMaterial.get().createBlockData())
+                        .withCount(10)
+                        .offset(0.2, 0.1, 0.2)
+                        .spawn();
             }
+        } catch (NoSuchMethodError | UnsupportedOperationException e) {
+            // The BLOCK particle API changed between MC versions; XSeries could not
+            // provide a compatible implementation on this server.  The visual is
+            // purely cosmetic so we degrade gracefully, but log at FINE so server
+            // admins can diagnose version-compatibility issues if needed.
+            LOGGER.fine("BLOCK particle unavailable for leaf removal effect on this server version: " + e.getMessage());
         }
     }
 }
