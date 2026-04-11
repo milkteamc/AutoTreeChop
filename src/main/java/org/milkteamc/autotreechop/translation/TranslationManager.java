@@ -35,6 +35,18 @@ import org.milkteamc.autotreechop.AutoTreeChop;
  */
 public class TranslationManager {
 
+    private static final boolean HAS_PAPER_LOCALE_API;
+
+    static {
+        boolean hasApi = false;
+        try {
+            Player.class.getMethod("locale");
+            hasApi = true;
+        } catch (NoSuchMethodException e) {
+        }
+        HAS_PAPER_LOCALE_API = hasApi;
+    }
+
     private final AutoTreeChop plugin;
     private final StyleRegistry styleRegistry;
     private final MessageFormatter formatter;
@@ -143,11 +155,11 @@ public class TranslationManager {
      *
      * <p>Handles all characters that {@link Properties#load} treats specially:
      * <ul>
-     *   <li>{@code \} → {@code \\}</li>
-     *   <li>newline / carriage-return / tab → {@code \n} / {@code \r} / {@code \t}</li>
-     *   <li>Leading spaces and form-feeds — prefixed with {@code \} so that
-     *       {@code Properties.load()} does not strip them as whitespace before
-     *       the value.</li>
+     * <li>{@code \} → {@code \\}</li>
+     * <li>newline / carriage-return / tab → {@code \n} / {@code \r} / {@code \t}</li>
+     * <li>Leading spaces and form-feeds — prefixed with {@code \} so that
+     * {@code Properties.load()} does not strip them as whitespace before
+     * the value.</li>
      * </ul>
      *
      * <p>Note: {@code #} and {@code !} do <em>not</em> need escaping when they appear
@@ -253,20 +265,32 @@ public class TranslationManager {
         return Locale.forLanguageTag(languageTag);
     }
 
+    private Locale getPlayerLocale(Player player) {
+        if (HAS_PAPER_LOCALE_API) {
+            return player.locale();
+        } else {
+            @SuppressWarnings("deprecation")
+            String localeString = player.getLocale();
+            return parseLocale(localeString);
+        }
+    }
+
     /**
      * Gets the appropriate locale for a command sender
      */
     public Locale getLocale(CommandSender sender) {
         if (useClientLocale && sender instanceof Player player) {
-            Locale clientLocale = player.locale();
+            Locale clientLocale = getPlayerLocale(player);
 
-            if (translations.containsKey(clientLocale)) {
-                return clientLocale;
-            }
+            if (clientLocale != null) {
+                if (translations.containsKey(clientLocale)) {
+                    return clientLocale;
+                }
 
-            Locale languageOnly = Locale.forLanguageTag(clientLocale.getLanguage());
-            if (translations.containsKey(languageOnly)) {
-                return languageOnly;
+                Locale languageOnly = Locale.forLanguageTag(clientLocale.getLanguage());
+                if (translations.containsKey(languageOnly)) {
+                    return languageOnly;
+                }
             }
         }
 
@@ -278,10 +302,10 @@ public class TranslationManager {
      *
      * <p>Fallback priority:
      * <ol>
-     *   <li>Requested locale</li>
-     *   <li>English ({@link Locale#ENGLISH}) — always the canonical reference translation</li>
-     *   <li>The configured default locale (if different from English)</li>
-     *   <li>Any loaded locale that contains the key</li>
+     * <li>Requested locale</li>
+     * <li>English ({@link Locale#ENGLISH}) — always the canonical reference translation</li>
+     * <li>The configured default locale (if different from English)</li>
+     * <li>Any loaded locale that contains the key</li>
      * </ol>
      */
     public String getMessage(String key, Locale locale) {
