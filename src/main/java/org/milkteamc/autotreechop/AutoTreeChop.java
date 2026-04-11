@@ -19,6 +19,8 @@ package org.milkteamc.autotreechop;
 
 import com.github.Anon8281.universalScheduler.UniversalScheduler;
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
@@ -269,6 +271,8 @@ public class AutoTreeChop extends JavaPlugin {
 
         if (playerConfigs != null && !playerConfigs.isEmpty()) {
             SessionManager sessionManager = SessionManager.getInstance();
+            List<DatabaseManager.PlayerData> dirtyDataList = new ArrayList<>();
+
             for (Map.Entry<UUID, PlayerConfig> entry : playerConfigs.entrySet()) {
                 UUID uuid = entry.getKey();
                 PlayerConfig pConfig = entry.getValue();
@@ -277,14 +281,24 @@ public class AutoTreeChop extends JavaPlugin {
                     confirmationManager.clearPlayer(uuid);
                 }
 
-                if (pConfig.isDirty() && databaseManager != null) {
-                    databaseManager.savePlayerDataSync(pConfig.getData());
+                if (pConfig.isDirty()) {
+                    dirtyDataList.add(pConfig.getData());
                 }
 
                 if (sessionManager != null) {
                     sessionManager.clearAllPlayerSessions(uuid);
                 }
             }
+
+            if (!dirtyDataList.isEmpty() && databaseManager != null) {
+                long startTime = System.currentTimeMillis();
+
+                databaseManager.savePlayerDataBatchSync(dirtyDataList);
+
+                long duration = System.currentTimeMillis() - startTime;
+                getLogger().info("Successfully saved player records in " + duration + "ms.");
+            }
+
             playerConfigs.clear();
         }
 

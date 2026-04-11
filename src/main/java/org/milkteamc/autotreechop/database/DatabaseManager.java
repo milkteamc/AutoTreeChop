@@ -25,6 +25,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -124,37 +125,46 @@ public class DatabaseManager {
         }
     }
 
-    public CompletableFuture<Void> savePlayerDataBatchAsync(Map<UUID, PlayerData> dataMap) {
-        return CompletableFuture.runAsync(() -> {
-            if (dataMap.isEmpty()) return;
+    public void savePlayerDataBatchSync(Collection<PlayerData> dataCollection) {
+        if (dataCollection == null || dataCollection.isEmpty()) return;
 
-            String sql = buildUpsertSql();
-            try (Connection conn = dataSource.getConnection()) {
-                conn.setAutoCommit(false);
+        String sql = buildUpsertSql();
 
-                try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                    for (PlayerData data : dataMap.values()) {
-                        bindUpsertParams(stmt, data);
-                        stmt.addBatch();
-                    }
-                    stmt.executeBatch();
-                    conn.commit();
-                } catch (SQLException e) {
-                    conn.rollback();
-                    throw e;
+        try (Connection conn = dataSource.getConnection()) {
+            boolean originalAutoCommit = conn.getAutoCommit();
+            conn.setAutoCommit(false);
+
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                for (PlayerData data : dataCollection) {
+                    bindUpsertParams(stmt, data);
+                    stmt.addBatch();
                 }
+
+                stmt.executeBatch();
+                conn.commit();
+
             } catch (SQLException e) {
-                plugin.getLogger().warning("Error batch saving player data: " + e.getMessage());
+                conn.rollback();
+                plugin.getLogger().severe("Failed to batch save player data: " + e.getMessage());
+                throw e; // 如果是嚴重錯誤，可能需要往上拋或在這裡單純記錄
+            } finally {
+                conn.setAutoCommit(originalAutoCommit);
             }
-        });
+        } catch (SQLException e) {
+            plugin.getLogger().severe("Database connection error during batch save: " + e.getMessage());
+        }
+    }
+
+    public CompletableFuture<Void> savePlayerDataBatchAsync(Map<UUID, PlayerData> dataMap) {
+        return CompletableFuture.runAsync(() -> savePlayerDataBatchSync(dataMap.values()));
     }
 
     /**
      * Returns a dialect-appropriate UPSERT statement.
      *
      * <ul>
-     *   <li>SQLite: {@code INSERT OR REPLACE INTO ...}
-     *   <li>MySQL:  {@code INSERT INTO ... ON DUPLICATE KEY UPDATE ...}
+     * <li>SQLite: {@code INSERT OR REPLACE INTO ...}
+     * <li>MySQL:  {@code INSERT INTO ... ON DUPLICATE KEY UPDATE ...}
      * </ul>
      */
     private String buildUpsertSql() {
