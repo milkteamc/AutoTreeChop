@@ -17,6 +17,7 @@
  
 package org.milkteamc.autotreechop.events;
 
+import com.github.Anon8281.universalScheduler.UniversalScheduler;
 import java.util.UUID;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -25,6 +26,7 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.milkteamc.autotreechop.AutoTreeChop;
 import org.milkteamc.autotreechop.PlayerConfig;
 import org.milkteamc.autotreechop.database.DatabaseManager;
+import org.milkteamc.autotreechop.updater.ModrinthUpdateChecker;
 
 public class PlayerJoinListener implements Listener {
 
@@ -61,5 +63,9 @@ public class PlayerJoinListener implements Listener {
                     // Default is disabled, so no markRejoin needed here.
                     return null;
                 });
+        ModrinthUpdateChecker checker = plugin.getUpdateChecker();
+        if (checker != null && checker.shouldNotifyPlayer(player)) {
+            UniversalScheduler.getScheduler(plugin).runTaskLater(() -> checker.notifyPlayer(player), 40L); // 2s delay
+        }
     }
 }

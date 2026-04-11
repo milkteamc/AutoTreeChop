@@ -45,6 +45,7 @@ import org.milkteamc.autotreechop.hooks.ResidenceHook;
 import org.milkteamc.autotreechop.hooks.WorldGuardHook;
 import org.milkteamc.autotreechop.tasks.PlayerDataSaveTask;
 import org.milkteamc.autotreechop.translation.TranslationManager;
+import org.milkteamc.autotreechop.updater.ModrinthUpdateChecker;
 import org.milkteamc.autotreechop.utils.ConfirmationManager;
 import org.milkteamc.autotreechop.utils.CooldownManager;
 import org.milkteamc.autotreechop.utils.SessionManager;
@@ -64,6 +65,7 @@ public class AutoTreeChop extends JavaPlugin {
     private Metrics metrics;
     private TranslationManager translationManager;
     private ConfirmationManager confirmationManager;
+    private ModrinthUpdateChecker updateChecker;
 
     private boolean worldGuardEnabled = false;
     private boolean residenceEnabled = false;
@@ -128,14 +130,13 @@ public class AutoTreeChop extends JavaPlugin {
             getLogger().info("PlaceholderAPI expansion for AutoTreeChop has been registered.");
         }
 
-        new ModrinthUpdateChecker(this, "autotreechop", "paper")
-                .checkEveryXHours(24)
+        updateChecker = new ModrinthUpdateChecker(this, "autotreechop", "paper")
                 .setDonationLink("https://ko-fi.com/maoyue")
                 .setChangelogLink("https://modrinth.com/plugin/autotreechop/changelog")
                 .setDownloadLink("https://modrinth.com/plugin/autotreechop/versions")
                 .setNotifyOpsOnJoin(true)
                 .setNotifyByPermissionOnJoin("autotreechop.updatechecker")
-                .checkNow();
+                .startPeriodicCheck();
 
         databaseManager = new DatabaseManager(
                 this,
@@ -329,6 +330,10 @@ public class AutoTreeChop extends JavaPlugin {
 
     public AutoTreeChopAPI getAutoTreeChopAPI() {
         return autoTreeChopAPI;
+    }
+
+    public ModrinthUpdateChecker getUpdateChecker() {
+        return updateChecker;
     }
 
     public CooldownManager getCooldownManager() {
