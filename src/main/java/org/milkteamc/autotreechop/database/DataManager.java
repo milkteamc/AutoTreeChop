@@ -20,7 +20,6 @@ package org.milkteamc.autotreechop.database;
 import com.github.Anon8281.universalScheduler.UniversalScheduler;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -77,12 +76,13 @@ public class DataManager {
                     confirmationManager.clearPlayer(uuid);
                 }
 
-                if (pConfig.isDirty()) {
-                    dirtyDataList.add(pConfig.getData());
-                }
-
                 if (sessionManager != null) {
                     sessionManager.clearAllPlayerSessions(uuid);
+                }
+
+                DatabaseManager.PlayerData snapshot = pConfig.popSnapshotIfDirty();
+                if (snapshot != null) {
+                    dirtyDataList.add(snapshot);
                 }
             }
 
@@ -90,7 +90,8 @@ public class DataManager {
                 long startTime = System.currentTimeMillis();
                 databaseManager.savePlayerDataBatchSync(dirtyDataList);
                 long duration = System.currentTimeMillis() - startTime;
-                plugin.getLogger().info("Successfully saved player records in " + duration + "ms.");
+                plugin.getLogger()
+                        .info("Successfully saved " + dirtyDataList.size() + " player records in " + duration + "ms.");
             }
 
             playerConfigs.clear();
@@ -102,30 +103,28 @@ public class DataManager {
     }
 
     public void addPlayerConfig(UUID uuid, PlayerConfig config) {
-        this.playerConfigs.put(uuid, config);
+        playerConfigs.put(uuid, config);
     }
 
-    public void removePlayerConfig(UUID uuid) {
-        this.playerConfigs.remove(uuid);
+    public PlayerConfig removePlayerConfig(UUID uuid) {
+        return playerConfigs.remove(uuid);
     }
 
-    public PlayerConfig getPlayerConfig(UUID playerUUID) {
-        return playerConfigs.computeIfAbsent(playerUUID, k -> {
-            DatabaseManager.PlayerData tempDefaultData =
-                    new DatabaseManager.PlayerData(k, false, 0, 0, java.time.LocalDate.now());
-            return new PlayerConfig(k, tempDefaultData);
-        });
+    public PlayerConfig getPlayerConfig(UUID uuid) {
+        return playerConfigs.get(uuid);
     }
 
     public Collection<PlayerConfig> getOnlinePlayersConfigs() {
-        return Collections.unmodifiableCollection(playerConfigs.values());
+        return playerConfigs.values();
     }
 
     public int getPlayerDailyUses(UUID playerUUID) {
-        return getPlayerConfig(playerUUID).getDailyUses();
+        PlayerConfig config = getPlayerConfig(playerUUID);
+        return config != null ? config.getDailyUses() : 0;
     }
 
     public int getPlayerDailyBlocksBroken(UUID playerUUID) {
-        return getPlayerConfig(playerUUID).getDailyBlocksBroken();
+        PlayerConfig config = getPlayerConfig(playerUUID);
+        return config != null ? config.getDailyBlocksBroken() : 0;
     }
 }

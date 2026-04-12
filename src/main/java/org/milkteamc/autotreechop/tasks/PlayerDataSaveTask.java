@@ -62,30 +62,23 @@ public class PlayerDataSaveTask extends UniversalRunnable {
         Map<UUID, DatabaseManager.PlayerData> dirtyDataMap = new HashMap<>();
 
         for (PlayerConfig config : plugin.getDataManager().getOnlinePlayersConfigs()) {
-            if (config.isDirty()) {
-                DatabaseManager.PlayerData snapshot = new DatabaseManager.PlayerData(config.getData());
-
+            DatabaseManager.PlayerData snapshot = config.popSnapshotIfDirty();
+            if (snapshot != null) {
                 dirtyDataMap.put(snapshot.getPlayerUUID(), snapshot);
-                config.clearDirty();
             }
         }
 
         if (!dirtyDataMap.isEmpty()) {
-            plugin.getDatabaseManager()
-                    .savePlayerDataBatchAsync(dirtyDataMap)
-                    .thenRun(() -> {
-                        dirtyCount = 0;
-                    })
-                    .exceptionally(ex -> {
-                        plugin.getLogger().warning("Failed to save player data: " + ex.getMessage());
-                        for (UUID uuid : dirtyDataMap.keySet()) {
-                            PlayerConfig config = plugin.getDataManager().getPlayerConfig(uuid);
-                            if (config != null) {
-                                config.markDirty();
-                            }
-                        }
-                        return null;
-                    });
+            plugin.getDatabaseManager().savePlayerDataBatchAsync(dirtyDataMap).exceptionally(ex -> {
+                plugin.getLogger().warning("Failed to save player data: " + ex.getMessage());
+                for (UUID uuid : dirtyDataMap.keySet()) {
+                    PlayerConfig config = plugin.getDataManager().getPlayerConfig(uuid);
+                    if (config != null) {
+                        config.markDirty();
+                    }
+                }
+                return null;
+            });
         }
     }
 }
