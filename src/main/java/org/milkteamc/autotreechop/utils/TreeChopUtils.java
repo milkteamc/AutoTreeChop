@@ -95,11 +95,18 @@ public class TreeChopUtils {
             }
         }
 
+        if (damageToApply == 0) return;
+
         int currentDamage = damageableMeta.getDamage();
         int newDamage = currentDamage + damageToApply;
 
         if (newDamage >= tool.getType().getMaxDurability()) {
-            player.getInventory().setItemInMainHand(null);
+            tool.setAmount(0);
+
+            try {
+                XSound.ENTITY_ITEM_BREAK.play(player.getLocation(), 1.0f, 1.0f);
+            } catch (Exception ignored) {
+            }
         } else {
             damageableMeta.setDamage(newDamage);
             tool.setItemMeta(damageableMeta);
@@ -123,11 +130,16 @@ public class TreeChopUtils {
     public static boolean isTool(Player player) {
         ItemStack item = player.getInventory().getItemInMainHand();
 
-        if (item == null || XMaterial.matchXMaterial(item) == XMaterial.AIR) {
+        if (item == null) {
             return false;
         }
 
-        String materialName = item.getType().toString();
+        XMaterial xMat = XMaterial.matchXMaterial(item);
+        if (xMat == XMaterial.AIR) {
+            return false;
+        }
+
+        String materialName = xMat.name();
 
         if (materialName.endsWith("_AXE")
                 || materialName.endsWith("_HOE")
@@ -137,7 +149,6 @@ public class TreeChopUtils {
             return true;
         }
 
-        XMaterial xMat = XMaterial.matchXMaterial(item);
         return xMat == XMaterial.SHEARS || xMat == XMaterial.FISHING_ROD || xMat == XMaterial.FLINT_AND_STEEL;
     }
 

@@ -199,14 +199,17 @@ public class BlockBreakListener implements Listener {
         int cz = log.getZ();
         Map<Long, ChunkSnapshot> snapshots = new HashMap<>();
 
-        for (int dx = -radius; dx <= radius; dx++) {
-            for (int dz = -radius; dz <= radius; dz++) {
-                int chunkX = (cx + dx) >> 4;
-                int chunkZ = (cz + dz) >> 4;
+        int minChunkX = (cx - radius) >> 4;
+        int maxChunkX = (cx + radius) >> 4;
+        int minChunkZ = (cz - radius) >> 4;
+        int maxChunkZ = (cz + radius) >> 4;
+
+        for (int chunkX = minChunkX; chunkX <= maxChunkX; chunkX++) {
+            for (int chunkZ = minChunkZ; chunkZ <= maxChunkZ; chunkZ++) {
                 if (!world.isChunkLoaded(chunkX, chunkZ)) continue;
+
                 long key = chunkKey(chunkX, chunkZ);
-                snapshots.computeIfAbsent(
-                        key, k -> world.getChunkAt(chunkX, chunkZ).getChunkSnapshot(false, false, false));
+                snapshots.put(key, world.getChunkAt(chunkX, chunkZ).getChunkSnapshot(false, false, false));
             }
         }
         return snapshots;
