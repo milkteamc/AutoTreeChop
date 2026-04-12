@@ -39,15 +39,14 @@ public class PlayerQuitListener implements Listener {
         Player player = event.getPlayer();
         UUID playerUUID = player.getUniqueId();
 
-        PlayerConfig playerConfig = plugin.getAllPlayerConfigs().get(playerUUID);
+        PlayerConfig playerConfig =
+                plugin.getDataManager().getAllPlayerConfigs().get(playerUUID);
         if (playerConfig != null && playerConfig.isDirty()) {
             plugin.getDatabaseManager().savePlayerDataSync(playerConfig.getData());
         }
 
-        plugin.getAllPlayerConfigs().remove(playerUUID);
+        plugin.getDataManager().getAllPlayerConfigs().remove(playerUUID);
         SessionManager.getInstance().clearAllPlayerSessions(playerUUID);
-
-        // Clear all confirmation state so memory doesn't leak between sessions.
         plugin.getConfirmationManager().clearPlayer(playerUUID);
     }
 }

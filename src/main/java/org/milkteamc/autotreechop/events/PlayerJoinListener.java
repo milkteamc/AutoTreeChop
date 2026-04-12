@@ -45,10 +45,8 @@ public class PlayerJoinListener implements Listener {
                 .loadPlayerDataAsync(playerUUID, plugin.getPluginConfig().getDefaultTreeChop())
                 .thenAccept(data -> {
                     PlayerConfig playerConfig = new PlayerConfig(playerUUID, data);
-                    plugin.getAllPlayerConfigs().put(playerUUID, playerConfig);
+                    plugin.getDataManager().getAllPlayerConfigs().put(playerUUID, playerConfig);
 
-                    // markRejoin must be called here, after playerConfig is loaded,
-                    // so we know whether ATC was enabled for this player.
                     if (playerConfig.isAutoTreeChopEnabled()) {
                         plugin.getConfirmationManager().markRejoin(playerUUID);
                     }
@@ -59,8 +57,7 @@ public class PlayerJoinListener implements Listener {
                     DatabaseManager.PlayerData defaultData = new DatabaseManager.PlayerData(
                             playerUUID, plugin.getPluginConfig().getDefaultTreeChop(), 0, 0, java.time.LocalDate.now());
                     PlayerConfig fallback = new PlayerConfig(playerUUID, defaultData);
-                    plugin.getAllPlayerConfigs().put(playerUUID, fallback);
-                    // Default is disabled, so no markRejoin needed here.
+                    plugin.getDataManager().getAllPlayerConfigs().put(playerUUID, fallback);
                     return null;
                 });
         ModrinthUpdateChecker checker = plugin.getUpdateChecker();
