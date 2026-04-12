@@ -234,6 +234,14 @@ public class DatabaseManager {
             this.lastUseDate = lastUseDate;
         }
 
+        public PlayerData(PlayerData source) {
+            this.playerUUID = source.playerUUID;
+            this.autoTreeChopEnabled = source.autoTreeChopEnabled;
+            this.dailyUses = source.dailyUses;
+            this.dailyBlocksBroken = source.dailyBlocksBroken;
+            this.lastUseDate = source.lastUseDate;
+        }
+
         public UUID getPlayerUUID() {
             return playerUUID;
         }

@@ -19,9 +19,7 @@ package org.milkteamc.autotreechop.events;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import org.bukkit.ChunkSnapshot;
 import org.bukkit.Location;
@@ -54,8 +52,6 @@ public class BlockBreakListener implements Listener {
     private final AutoTreeChop plugin;
     private final AsyncTaskScheduler scheduler;
 
-    private final Set<UUID> leafCheckInProgress = ConcurrentHashMap.newKeySet();
-
     public BlockBreakListener(AutoTreeChop plugin) {
         this.plugin = plugin;
         this.scheduler = new AsyncTaskScheduler(plugin);
@@ -87,6 +83,17 @@ public class BlockBreakListener implements Listener {
             return;
         }
 
+        ConfirmationManager confirmationManager = plugin.getConfirmationManager();
+        ChopData pending = confirmationManager.consumePendingConfirmation(playerUUID);
+
+        if (pending != null) {
+            event.setCancelled(true);
+            confirmationManager.recordSuccessfulChop(playerUUID, pending.reason(), false);
+            AutoTreeChop.sendMessage(player, MessageKeys.CONFIRMATION_SUCCESS);
+            dispatchChop(player, playerConfig, block, tool, location, config);
+            return;
+        }
+
         if (plugin.getCooldownManager().isInCooldown(playerUUID)) {
             long remaining = plugin.getCooldownManager().getRemainingCooldown(playerUUID);
             AutoTreeChop.sendMessage(
@@ -108,19 +115,9 @@ public class BlockBreakListener implements Listener {
             return;
         }
 
-        ConfirmationManager confirmationManager = plugin.getConfirmationManager();
-        ChopData pending = confirmationManager.consumePendingConfirmation(playerUUID);
-
         event.setCancelled(true);
 
-        if (pending != null) {
-            confirmationManager.recordSuccessfulChop(playerUUID, pending.reason(), false);
-            AutoTreeChop.sendMessage(player, MessageKeys.CONFIRMATION_SUCCESS);
-            dispatchChop(player, playerConfig, block, tool, location, config);
-            return;
-        }
-
-        if (!leafCheckInProgress.add(playerUUID)) {
+        if (!SessionManager.getInstance().startLeafCheck(playerUUID)) {
             return;
         }
 
@@ -156,7 +153,7 @@ public class BlockBreakListener implements Listener {
                     confirmationManager.recordSuccessfulChop(playerUUID, null, hasLeaves);
                     dispatchChop(player, playerConfig, block, frozenTool, frozenLocation, config);
                 } finally {
-                    leafCheckInProgress.remove(playerUUID);
+                    SessionManager.getInstance().finishLeafCheck(playerUUID);
                 }
             });
         });

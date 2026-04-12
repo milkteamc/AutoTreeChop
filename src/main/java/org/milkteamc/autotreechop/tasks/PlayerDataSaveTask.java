@@ -50,7 +50,7 @@ public class PlayerDataSaveTask extends UniversalRunnable {
 
     private int countDirtyData() {
         int count = 0;
-        for (PlayerConfig config : plugin.getDataManager().getAllPlayerConfigs().values()) {
+        for (PlayerConfig config : plugin.getDataManager().getOnlinePlayersConfigs()) {
             if (config.isDirty()) {
                 count++;
             }
@@ -61,11 +61,11 @@ public class PlayerDataSaveTask extends UniversalRunnable {
     private void saveAllDirtyData() {
         Map<UUID, DatabaseManager.PlayerData> dirtyDataMap = new HashMap<>();
 
-        for (Map.Entry<UUID, PlayerConfig> entry :
-                plugin.getDataManager().getAllPlayerConfigs().entrySet()) {
-            PlayerConfig config = entry.getValue();
+        for (PlayerConfig config : plugin.getDataManager().getOnlinePlayersConfigs()) {
             if (config.isDirty()) {
-                dirtyDataMap.put(entry.getKey(), config.getData());
+                DatabaseManager.PlayerData snapshot = new DatabaseManager.PlayerData(config.getData());
+
+                dirtyDataMap.put(snapshot.getPlayerUUID(), snapshot);
                 config.clearDirty();
             }
         }
@@ -79,9 +79,7 @@ public class PlayerDataSaveTask extends UniversalRunnable {
                     .exceptionally(ex -> {
                         plugin.getLogger().warning("Failed to save player data: " + ex.getMessage());
                         for (UUID uuid : dirtyDataMap.keySet()) {
-                            PlayerConfig config = plugin.getDataManager()
-                                    .getAllPlayerConfigs()
-                                    .get(uuid);
+                            PlayerConfig config = plugin.getDataManager().getPlayerConfig(uuid);
                             if (config != null) {
                                 config.markDirty();
                             }

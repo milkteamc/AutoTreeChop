@@ -19,6 +19,8 @@ package org.milkteamc.autotreechop.database;
 
 import com.github.Anon8281.universalScheduler.UniversalScheduler;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -99,6 +101,14 @@ public class DataManager {
         }
     }
 
+    public void addPlayerConfig(UUID uuid, PlayerConfig config) {
+        this.playerConfigs.put(uuid, config);
+    }
+
+    public void removePlayerConfig(UUID uuid) {
+        this.playerConfigs.remove(uuid);
+    }
+
     public PlayerConfig getPlayerConfig(UUID playerUUID) {
         return playerConfigs.computeIfAbsent(playerUUID, k -> {
             DatabaseManager.PlayerData tempDefaultData =
@@ -107,15 +117,15 @@ public class DataManager {
         });
     }
 
+    public Collection<PlayerConfig> getOnlinePlayersConfigs() {
+        return Collections.unmodifiableCollection(playerConfigs.values());
+    }
+
     public int getPlayerDailyUses(UUID playerUUID) {
         return getPlayerConfig(playerUUID).getDailyUses();
     }
 
     public int getPlayerDailyBlocksBroken(UUID playerUUID) {
         return getPlayerConfig(playerUUID).getDailyBlocksBroken();
-    }
-
-    public Map<UUID, PlayerConfig> getAllPlayerConfigs() {
-        return playerConfigs;
     }
 }

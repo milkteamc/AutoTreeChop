@@ -18,7 +18,6 @@
 package org.milkteamc.autotreechop.events;
 
 import java.util.UUID;
-import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerQuitEvent;
@@ -36,17 +35,16 @@ public class PlayerQuitListener implements Listener {
 
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
-        Player player = event.getPlayer();
-        UUID playerUUID = player.getUniqueId();
+        UUID playerUUID = event.getPlayer().getUniqueId();
+        PlayerConfig playerConfig = plugin.getDataManager().getPlayerConfig(playerUUID);
 
-        PlayerConfig playerConfig =
-                plugin.getDataManager().getAllPlayerConfigs().get(playerUUID);
         if (playerConfig != null && playerConfig.isDirty()) {
             plugin.getDatabaseManager().savePlayerDataSync(playerConfig.getData());
         }
 
-        plugin.getDataManager().getAllPlayerConfigs().remove(playerUUID);
+        plugin.getDataManager().removePlayerConfig(playerUUID);
         SessionManager.getInstance().clearAllPlayerSessions(playerUUID);
+        SessionManager.getInstance().finishLeafCheck(playerUUID);
         plugin.getConfirmationManager().clearPlayer(playerUUID);
     }
 }
