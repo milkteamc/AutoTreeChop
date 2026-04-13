@@ -17,12 +17,10 @@
  
 package org.milkteamc.autotreechop.utils;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -30,47 +28,62 @@ import org.bukkit.Location;
 
 public class SessionManager {
 
-    private static SessionManager instance;
+    /*
+     * Singleton – double-checked locking with volatile field.
+     * The original non-volatile field was unsafe on the Java memory model:
+     * a second thread could see a partially-constructed instance.
+     */
+    private static volatile SessionManager instance;
+
+    /*
+     * Block locations obtained from block.getLocation() always carry
+     * yaw=0f / pitch=0f, so Location.equals / hashCode is consistent for
+     * them and Set.contains() is O(1) – no manual stream scan needed.
+     */
     private final Map<UUID, Set<Location>> treeChopProcessingLocations = new ConcurrentHashMap<>();
     private final Map<String, Set<Location>> leafRemovalRemovedLogs = new ConcurrentHashMap<>();
+
+    /*
+     * Reverse index: playerKey → active sessionId.
+     * Previously, trackRemovedLogForPlayer and clearAllPlayerSessions iterated
+     * every entry in leafRemovalRemovedLogs looking for a playerKey prefix –
+     * O(all active sessions) per call.  With this map both operations are O(1).
+     */
+    private final Map<String, String> playerKeyToSessionId = new ConcurrentHashMap<>();
+
     private final Set<String> activeLeafRemovalSessions = ConcurrentHashMap.newKeySet();
     private final Set<UUID> leafCheckInProgress = ConcurrentHashMap.newKeySet();
 
     private SessionManager() {}
 
     public static SessionManager getInstance() {
-        if (instance == null) {
-            instance = new SessionManager();
+        SessionManager result = instance;
+        if (result == null) {
+            synchronized (SessionManager.class) {
+                result = instance;
+                if (result == null) {
+                    instance = result = new SessionManager();
+                }
+            }
         }
-        return instance;
+        return result;
     }
 
     /**
-     * Check if a location is currently being processed in a TreeChop session
+     * O(1) – uses {@code Set.contains()} instead of the previous
+     * {@code stream().anyMatch()} with manual coordinate comparison.
      */
     public boolean isLocationProcessing(UUID playerUUID, Location location) {
         Set<Location> locations = treeChopProcessingLocations.get(playerUUID);
-        if (locations == null) return false;
-
-        return locations.stream()
-                .anyMatch(loc -> loc.getBlockX() == location.getBlockX()
-                        && loc.getBlockY() == location.getBlockY()
-                        && loc.getBlockZ() == location.getBlockZ()
-                        && Objects.equals(loc.getWorld(), location.getWorld()));
+        return locations != null && locations.contains(location);
     }
 
-    /**
-     * Add locations to TreeChop processing set
-     */
     public void addTreeChopLocations(UUID playerUUID, Collection<Location> locations) {
         treeChopProcessingLocations
                 .computeIfAbsent(playerUUID, k -> ConcurrentHashMap.newKeySet())
                 .addAll(locations);
     }
 
-    /**
-     * Remove locations from TreeChop processing set
-     */
     public void removeTreeChopLocations(UUID playerUUID, Collection<Location> locations) {
         Set<Location> playerLocations = treeChopProcessingLocations.get(playerUUID);
         if (playerLocations != null) {
@@ -81,39 +94,30 @@ public class SessionManager {
         }
     }
 
-    /**
-     * Clear all TreeChop locations for a player
-     */
     public void clearTreeChopSession(UUID playerUUID) {
         treeChopProcessingLocations.remove(playerUUID);
     }
 
-    /**
-     * Check if player has an active leaf removal session
-     */
     public boolean hasActiveLeafRemovalSession(String playerKey) {
         return activeLeafRemovalSessions.contains(playerKey);
     }
 
     /**
-     * Start a new leaf removal session
+     * Start a new leaf removal session.
      *
-     * @return session ID
+     * @return the session ID, or {@code null} if the player already has one
      */
     public String startLeafRemovalSession(String playerKey) {
         if (hasActiveLeafRemovalSession(playerKey)) {
-            return null; // Already has active session
+            return null;
         }
-
         String sessionId = playerKey + "_" + System.currentTimeMillis();
         leafRemovalRemovedLogs.put(sessionId, ConcurrentHashMap.newKeySet());
         activeLeafRemovalSessions.add(playerKey);
+        playerKeyToSessionId.put(playerKey, sessionId); // populate reverse index
         return sessionId;
     }
 
-    /**
-     * Track a removed log in a leaf removal session
-     */
     public void trackRemovedLog(String sessionId, Location location) {
         Set<Location> logs = leafRemovalRemovedLogs.get(sessionId);
         if (logs != null) {
@@ -122,35 +126,38 @@ public class SessionManager {
     }
 
     /**
-     * Track a removed log for all active sessions of a player
+     * O(1) via reverse index.
+     * Previously iterated {@code leafRemovalRemovedLogs.entrySet()} searching
+     * for entries whose key started with {@code playerKey + "_"} – O(all sessions).
+     * This is called for every broken log block, making the old cost significant.
      */
     public void trackRemovedLogForPlayer(String playerKey, Location location) {
-        for (Map.Entry<String, Set<Location>> entry : leafRemovalRemovedLogs.entrySet()) {
-            if (entry.getKey().startsWith(playerKey + "_")) {
-                entry.getValue().add(location.clone());
+        String sessionId = playerKeyToSessionId.get(playerKey);
+        if (sessionId != null) {
+            Set<Location> logs = leafRemovalRemovedLogs.get(sessionId);
+            if (logs != null) {
+                logs.add(location.clone());
             }
         }
     }
 
-    /**
-     * Get removed logs for a session
-     */
     public Set<Location> getRemovedLogs(String sessionId) {
         return leafRemovalRemovedLogs.getOrDefault(sessionId, Collections.emptySet());
     }
 
     /**
-     * Check if a location was removed in this session
+     * O(1) via {@code Set.contains()}.
+     * Previously used {@code stream().anyMatch()} with manual coordinate comparison.
      */
     public boolean isLogRemoved(String sessionId, Location location) {
         Set<Location> logs = leafRemovalRemovedLogs.get(sessionId);
-        if (logs == null) return false;
+        return logs != null && logs.contains(location);
+    }
 
-        return logs.stream()
-                .anyMatch(loc -> loc.getBlockX() == location.getBlockX()
-                        && loc.getBlockY() == location.getBlockY()
-                        && loc.getBlockZ() == location.getBlockZ()
-                        && Objects.equals(loc.getWorld(), location.getWorld()));
+    public void endLeafRemovalSession(String sessionId, String playerKey) {
+        leafRemovalRemovedLogs.remove(sessionId);
+        activeLeafRemovalSessions.remove(playerKey);
+        playerKeyToSessionId.remove(playerKey); // clean up reverse index
     }
 
     public boolean startLeafCheck(UUID uuid) {
@@ -161,44 +168,42 @@ public class SessionManager {
         leafCheckInProgress.remove(uuid);
     }
 
-    /**
-     * End a leaf removal session and cleanup
-     */
-    public void endLeafRemovalSession(String sessionId, String playerKey) {
-        leafRemovalRemovedLogs.remove(sessionId);
-        activeLeafRemovalSessions.remove(playerKey);
-    }
-
-    /**
-     * Check if player has any active session (TreeChop or LeafRemoval)
-     */
     public boolean hasAnyActiveSession(UUID playerUUID) {
         return treeChopProcessingLocations.containsKey(playerUUID)
                 || hasActiveLeafRemovalSession(playerUUID.toString());
     }
 
     /**
-     * Clear all sessions for a player (useful for cleanup on logout)
+     * Clears every session belonging to a player.
+     *
+     * <p>The leaf-removal cleanup now uses the reverse index ({@code playerKeyToSessionId})
+     * to locate the player's active session in O(1) instead of scanning all session
+     * keys with a prefix match.
      */
     public void clearAllPlayerSessions(UUID playerUUID) {
         clearTreeChopSession(playerUUID);
-
         finishLeafCheck(playerUUID);
 
         String playerKey = playerUUID.toString();
-        // Find and remove all leaf removal sessions for this player
-        List<String> toRemove = new ArrayList<>();
-        for (String sessionId : leafRemovalRemovedLogs.keySet()) {
-            if (sessionId.startsWith(playerKey + "_")) {
-                toRemove.add(sessionId);
+
+        // O(1) lookup via reverse index
+        String sessionId = playerKeyToSessionId.get(playerKey);
+        if (sessionId != null) {
+            endLeafRemovalSession(sessionId, playerKey);
+            return;
+        }
+
+        // Fallback: defensive linear scan in case the reverse index missed an entry
+        // (e.g. sessions started before the index existed during a hot-reload).
+        List<String> toRemove = new java.util.ArrayList<>();
+        for (String sid : leafRemovalRemovedLogs.keySet()) {
+            if (sid.startsWith(playerKey + "_")) {
+                toRemove.add(sid);
             }
         }
-        toRemove.forEach(sessionId -> endLeafRemovalSession(sessionId, playerKey));
+        toRemove.forEach(sid -> endLeafRemovalSession(sid, playerKey));
     }
 
-    /**
-     * Get statistics for debugging
-     */
     public String getStats() {
         return String.format(
                 "TreeChop sessions: %d, LeafRemoval sessions: %d",
