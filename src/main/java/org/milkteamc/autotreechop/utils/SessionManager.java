@@ -34,6 +34,7 @@ public class SessionManager {
     private final Map<UUID, Set<Location>> treeChopProcessingLocations = new ConcurrentHashMap<>();
     private final Map<String, Set<Location>> leafRemovalRemovedLogs = new ConcurrentHashMap<>();
     private final Set<String> activeLeafRemovalSessions = ConcurrentHashMap.newKeySet();
+    private final Set<UUID> leafCheckInProgress = ConcurrentHashMap.newKeySet();
 
     private SessionManager() {}
 
@@ -152,6 +153,14 @@ public class SessionManager {
                         && Objects.equals(loc.getWorld(), location.getWorld()));
     }
 
+    public boolean startLeafCheck(UUID uuid) {
+        return leafCheckInProgress.add(uuid);
+    }
+
+    public void finishLeafCheck(UUID uuid) {
+        leafCheckInProgress.remove(uuid);
+    }
+
     /**
      * End a leaf removal session and cleanup
      */
@@ -173,6 +182,8 @@ public class SessionManager {
      */
     public void clearAllPlayerSessions(UUID playerUUID) {
         clearTreeChopSession(playerUUID);
+
+        finishLeafCheck(playerUUID);
 
         String playerKey = playerUUID.toString();
         // Find and remove all leaf removal sessions for this player
