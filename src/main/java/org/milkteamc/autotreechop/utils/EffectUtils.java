@@ -1,7 +1,21 @@
+/*
+ * Copyright (C) 2026 MilkTeaMC and contributors
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+ 
 package org.milkteamc.autotreechop.utils;
-
-import static org.milkteamc.autotreechop.AutoTreeChop.HIT_MAX_BLOCK_MESSAGE;
-import static org.milkteamc.autotreechop.AutoTreeChop.sendMessage;
 
 import com.cryptomorin.xseries.XMaterial;
 import com.cryptomorin.xseries.particles.ParticleDisplay;
@@ -10,13 +24,15 @@ import java.awt.Color;
 import java.util.logging.Logger;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
+import org.milkteamc.autotreechop.AutoTreeChop;
+import org.milkteamc.autotreechop.MessageKeys;
 
 public class EffectUtils {
 
     private static final Logger LOGGER = Logger.getLogger("AutoTreeChop");
 
     public static void sendMaxBlockLimitReachedMessage(Player player, Block block) {
-        sendMessage(player, HIT_MAX_BLOCK_MESSAGE);
+        AutoTreeChop.sendMessage(player, MessageKeys.HIT_MAX_BLOCK);
         ParticleDisplay.of(XParticle.DUST)
                 .withLocation(block.getLocation().add(0.5, 0.5, 0.5))
                 .withColor(Color.RED, 1.0f)
@@ -69,25 +85,22 @@ public class EffectUtils {
                 .spawn();
 
         // Falling leaf-like block particles
-        if (XMaterial.supports(13)) {
-            try {
-                XMaterial blockMaterial = XMaterial.matchXMaterial(block.getType());
-                if (blockMaterial != null && blockMaterial.get() != null) {
-                    ParticleDisplay.of(XParticle.BLOCK)
-                            .withLocation(block.getLocation().add(0.5, 0.8, 0.5))
-                            .withBlock(blockMaterial.get().createBlockData())
-                            .withCount(10)
-                            .offset(0.2, 0.1, 0.2)
-                            .spawn();
-                }
-            } catch (NoSuchMethodError | UnsupportedOperationException e) {
-                // The BLOCK particle API changed between MC versions; XSeries could not
-                // provide a compatible implementation on this server.  The visual is
-                // purely cosmetic so we degrade gracefully, but log at FINE so server
-                // admins can diagnose version-compatibility issues if needed.
-                LOGGER.fine(
-                        "BLOCK particle unavailable for leaf removal effect on this server version: " + e.getMessage());
+        try {
+            XMaterial blockMaterial = XMaterial.matchXMaterial(block.getType());
+            if (blockMaterial != null && blockMaterial.get() != null) {
+                ParticleDisplay.of(XParticle.BLOCK)
+                        .withLocation(block.getLocation().add(0.5, 0.8, 0.5))
+                        .withBlock(blockMaterial.get().createBlockData())
+                        .withCount(10)
+                        .offset(0.2, 0.1, 0.2)
+                        .spawn();
             }
+        } catch (NoSuchMethodError | UnsupportedOperationException e) {
+            // The BLOCK particle API changed between MC versions; XSeries could not
+            // provide a compatible implementation on this server.  The visual is
+            // purely cosmetic so we degrade gracefully, but log at FINE so server
+            // admins can diagnose version-compatibility issues if needed.
+            LOGGER.fine("BLOCK particle unavailable for leaf removal effect on this server version: " + e.getMessage());
         }
     }
 }

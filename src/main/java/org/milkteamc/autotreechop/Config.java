@@ -1,3 +1,20 @@
+/*
+ * Copyright (C) 2026 MilkTeaMC and contributors
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+ 
 package org.milkteamc.autotreechop;
 
 import com.cryptomorin.xseries.XMaterial;
@@ -9,16 +26,17 @@ import dev.dejvokep.boostedyaml.settings.loader.LoaderSettings;
 import dev.dejvokep.boostedyaml.settings.updater.UpdaterSettings;
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.bukkit.Material;
@@ -95,6 +113,11 @@ public class Config {
     public void load() {
         File configFile = new File(plugin.getDataFolder(), "config.yml");
 
+        // Sanitize config file before parsing to remove illegal YAML characters
+        if (configFile.exists()) {
+            sanitizeConfigFile(configFile);
+        }
+
         try {
             config = YamlDocument.create(
                     configFile,
@@ -138,6 +161,32 @@ public class Config {
         }
 
         loadValues();
+    }
+
+    /**
+     * Removes illegal YAML characters from config.yml (e.g. UTF-8 BOM, null bytes, control characters).
+     */
+    private void sanitizeConfigFile(File file) {
+        try {
+            byte[] bytes = Files.readAllBytes(file.toPath());
+
+            // Remove UTF-8 BOM (EF BB BF) added by some Windows editors
+            if (bytes.length >= 3
+                    && (bytes[0] & 0xFF) == 0xEF
+                    && (bytes[1] & 0xFF) == 0xBB
+                    && (bytes[2] & 0xFF) == 0xBF) {
+                bytes = Arrays.copyOfRange(bytes, 3, bytes.length);
+            }
+
+            // Remove null bytes and other control characters (keep \t \n \r)
+            String content =
+                    new String(bytes, StandardCharsets.UTF_8).replaceAll("[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F\\x7F]", "");
+
+            Files.write(file.toPath(), content.getBytes(StandardCharsets.UTF_8));
+
+        } catch (IOException e) {
+            plugin.getLogger().warning("Failed to sanitize config.yml: " + e.getMessage());
+        }
     }
 
     private void loadValues() {
@@ -228,16 +277,8 @@ public class Config {
     }
 
     private Material parseMaterial(String name) {
-        Optional<XMaterial> xMat = XMaterial.matchXMaterial(name);
-        if (xMat.isPresent()) {
-            Material mat = xMat.get().get();
-            if (mat != null) {
-                return mat;
-            }
-        }
-
         try {
-            return Material.getMaterial(name);
+            return XMaterial.matchXMaterial(name).map(XMaterial::get).orElse(null);
         } catch (Exception e) {
             plugin.getLogger().fine("Material not available in this version: " + name);
             return null;
@@ -496,23 +537,14 @@ public class Config {
         return callBlockBreakEvent;
     }
 
-    /**
-     * Seconds of tree-chop inactivity before a confirmation is required.
-     */
     public int getIdleTimeoutSeconds() {
         return idleTimeoutSeconds;
     }
 
-    /**
-     * Seconds the player has to re-chop a log (or run /atc confirm) after the warning.
-     */
     public int getConfirmationWindowSeconds() {
         return confirmationWindowSeconds;
     }
 
-    /**
-     * Whether a confirmation is required when the target log has no nearby leaves.
-     */
     public boolean isNoLeavesConfirmationEnabled() {
         return noLeavesConfirmationEnabled;
     }

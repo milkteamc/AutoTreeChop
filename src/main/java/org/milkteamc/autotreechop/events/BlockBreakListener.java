@@ -1,3 +1,20 @@
+/*
+ * Copyright (C) 2026 MilkTeaMC and contributors
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+ 
 package org.milkteamc.autotreechop.events;
 
 import java.util.HashMap;
@@ -19,6 +36,7 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.inventory.ItemStack;
 import org.milkteamc.autotreechop.AutoTreeChop;
 import org.milkteamc.autotreechop.Config;
+import org.milkteamc.autotreechop.MessageKeys;
 import org.milkteamc.autotreechop.PlayerConfig;
 import org.milkteamc.autotreechop.utils.AsyncTaskScheduler;
 import org.milkteamc.autotreechop.utils.BlockDiscoveryUtils;
@@ -78,15 +96,11 @@ public class BlockBreakListener implements Listener {
             return;
         }
 
-        // Cancel the event now — from this point we own the block break.
-        // chopTree handles the actual breaking itself via breakNaturally().
-        event.setCancelled(true);
-
         if (plugin.getCooldownManager().isInCooldown(playerUUID)) {
             long remaining = plugin.getCooldownManager().getRemainingCooldown(playerUUID);
             AutoTreeChop.sendMessage(
                     player,
-                    AutoTreeChop.STILL_IN_COOLDOWN_MESSAGE,
+                    MessageKeys.STILL_IN_COOLDOWN,
                     Placeholder.parsed("cooldown_time", String.valueOf(remaining)));
             return;
         }
@@ -99,19 +113,21 @@ public class BlockBreakListener implements Listener {
 
         if (!PermissionUtils.hasVipUses(player, playerConfig, config)
                 && playerConfig.getDailyUses() >= config.getMaxUsesPerDay()) {
-            AutoTreeChop.sendMessage(player, AutoTreeChop.HIT_MAX_USAGE_MESSAGE);
+            AutoTreeChop.sendMessage(player, MessageKeys.HIT_MAX_USAGE);
             return;
         }
 
-        // Limits cleared — now check for a pending confirmation.
+        // Limits cleared — check for a pending confirmation first.
         ConfirmationManager confirmationManager = plugin.getConfirmationManager();
         ChopData pending = confirmationManager.consumePendingConfirmation(playerUUID);
+
+        event.setCancelled(true);
 
         if (pending != null) {
             // Player confirmed by breaking a log within the confirmation window.
             // Skip the leaf check entirely; grace is determined by the original reason.
             confirmationManager.recordSuccessfulChop(playerUUID, pending.reason(), false);
-            AutoTreeChop.sendMessage(player, AutoTreeChop.CONFIRMATION_SUCCESS_MESSAGE);
+            AutoTreeChop.sendMessage(player, MessageKeys.CONFIRMATION_SUCCESS);
             dispatchChop(player, playerConfig, block, tool, location, config);
             return;
         }
@@ -125,15 +141,15 @@ public class BlockBreakListener implements Listener {
 
         // Pre-capture chunk snapshots on the main/region thread (world access is required
         // here), then read them on an async thread (snapshots are immutable — thread-safe).
-        Map<Long, ChunkSnapshot> snapshots = captureLeafCheckSnapshots(block, config);
+        int radius = config.getNoLeavesDetectionRadius();
+        Map<Long, ChunkSnapshot> snapshots = captureLeafCheckSnapshots(block, radius);
 
-        // Clone location and tool now so we have stable values if the async path
-        // later needs them (block reference is live world state — not safe async).
-        Location frozenLocation = location.clone();
+        // Clone tool now so we have stable values for the async path.
         ItemStack frozenTool = tool.clone();
+        Location frozenLocation = location;
 
-        plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
-            boolean hasLeaves = hasNearbyLeaves(block, config, snapshots);
+        scheduler.runTaskAsync(() -> {
+            boolean hasLeaves = hasNearbyLeaves(block, radius, config, snapshots);
 
             // Return to the main/region thread to act on the result.
             scheduler.runTaskAtLocation(frozenLocation, () -> {
@@ -151,9 +167,9 @@ public class BlockBreakListener implements Listener {
                         String timeoutStr = String.valueOf(config.getConfirmationWindowSeconds());
                         String messageKey =
                                 switch (reason) {
-                                    case IDLE_OR_REJOIN -> AutoTreeChop.CONFIRMATION_REQUIRED_IDLE_MESSAGE;
-                                    case NO_LEAVES -> AutoTreeChop.CONFIRMATION_REQUIRED_NO_LEAVES_MESSAGE;
-                                    case BOTH -> AutoTreeChop.CONFIRMATION_REQUIRED_BOTH_MESSAGE;
+                                    case IDLE_OR_REJOIN -> MessageKeys.CONFIRMATION_REQUIRED_IDLE;
+                                    case NO_LEAVES -> MessageKeys.CONFIRMATION_REQUIRED_NO_LEAVES;
+                                    case BOTH -> MessageKeys.CONFIRMATION_REQUIRED_BOTH;
                                 };
                         AutoTreeChop.sendMessage(player, messageKey, Placeholder.parsed("timeout", timeoutStr));
                         return;
@@ -175,15 +191,7 @@ public class BlockBreakListener implements Listener {
             EffectUtils.showChopEffect(player, block);
         }
 
-        ProtectionHooks hooks = new ProtectionHooks(
-                plugin.isWorldGuardEnabled(),
-                plugin.getWorldGuardHook(),
-                plugin.isResidenceEnabled(),
-                plugin.getResidenceHook(),
-                plugin.isGriefPreventionEnabled(),
-                plugin.getGriefPreventionHook(),
-                plugin.isLandsEnabled(),
-                plugin.getLandsHook());
+        ProtectionHooks hooks = buildProtectionHooks();
 
         plugin.getTreeChopUtils()
                 .chopTree(
@@ -198,13 +206,30 @@ public class BlockBreakListener implements Listener {
     }
 
     /**
+     * Builds a {@link ProtectionHooks} snapshot from the plugin's current hook state.
+     *
+     * <p>Extracted from {@link #dispatchChop} so that the hook wiring lives in one
+     * place and future hook additions only need to be made here.
+     */
+    private ProtectionHooks buildProtectionHooks() {
+        return new ProtectionHooks(
+                plugin.isWorldGuardEnabled(),
+                plugin.getWorldGuardHook(),
+                plugin.isResidenceEnabled(),
+                plugin.getResidenceHook(),
+                plugin.isGriefPreventionEnabled(),
+                plugin.getGriefPreventionHook(),
+                plugin.isLandsEnabled(),
+                plugin.getLandsHook());
+    }
+
+    /**
      * Captures {@link ChunkSnapshot}s for all chunks within the leaf-detection radius.
      *
      * <p>Must be called on the main/region thread since it accesses live world state.
      * Once captured, the returned snapshots are immutable and safe to read on any thread.
      */
-    private Map<Long, ChunkSnapshot> captureLeafCheckSnapshots(Block log, Config config) {
-        int radius = config.getNoLeavesDetectionRadius();
+    private Map<Long, ChunkSnapshot> captureLeafCheckSnapshots(Block log, int radius) {
         World world = log.getWorld();
         int cx = log.getX();
         int cz = log.getZ();
@@ -215,7 +240,7 @@ public class BlockBreakListener implements Listener {
                 int chunkX = (cx + dx) >> 4;
                 int chunkZ = (cz + dz) >> 4;
                 if (!world.isChunkLoaded(chunkX, chunkZ)) continue;
-                long key = ((long) chunkX << 32) | (chunkZ & 0xFFFFFFFFL);
+                long key = chunkKey(chunkX, chunkZ);
                 snapshots.computeIfAbsent(
                         key, k -> world.getChunkAt(chunkX, chunkZ).getChunkSnapshot(false, false, false));
             }
@@ -231,8 +256,7 @@ public class BlockBreakListener implements Listener {
      * pre-captured {@code snapshots}, which are immutable. Short-circuits on the
      * first leaf found.
      */
-    private static boolean hasNearbyLeaves(Block log, Config config, Map<Long, ChunkSnapshot> snapshots) {
-        int radius = config.getNoLeavesDetectionRadius();
+    private static boolean hasNearbyLeaves(Block log, int radius, Config config, Map<Long, ChunkSnapshot> snapshots) {
         World world = log.getWorld();
         int cx = log.getX();
         int cy = log.getY();
@@ -248,7 +272,7 @@ public class BlockBreakListener implements Listener {
                     int z = cz + dz;
                     if (y < minY || y >= maxY) continue;
 
-                    long key = ((long) (x >> 4) << 32) | ((z >> 4) & 0xFFFFFFFFL);
+                    long key = chunkKey(x >> 4, z >> 4);
                     ChunkSnapshot snapshot = snapshots.get(key);
                     if (snapshot == null) continue;
 
@@ -259,5 +283,9 @@ public class BlockBreakListener implements Listener {
             }
         }
         return false;
+    }
+
+    private static long chunkKey(int chunkX, int chunkZ) {
+        return ((long) chunkX << 32) | (chunkZ & 0xFFFFFFFFL);
     }
 }

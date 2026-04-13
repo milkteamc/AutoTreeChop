@@ -1,3 +1,20 @@
+/*
+ * Copyright (C) 2026 MilkTeaMC and contributors
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+ 
 package org.milkteamc.autotreechop.translation;
 
 import java.io.*;
@@ -17,6 +34,18 @@ import org.milkteamc.autotreechop.AutoTreeChop;
  * Manages translations and message sending with per-player locale support
  */
 public class TranslationManager {
+
+    private static final boolean HAS_PAPER_LOCALE_API;
+
+    static {
+        boolean hasApi = false;
+        try {
+            Player.class.getMethod("locale");
+            hasApi = true;
+        } catch (NoSuchMethodException e) {
+        }
+        HAS_PAPER_LOCALE_API = hasApi;
+    }
 
     private final AutoTreeChop plugin;
     private final StyleRegistry styleRegistry;
@@ -126,11 +155,11 @@ public class TranslationManager {
      *
      * <p>Handles all characters that {@link Properties#load} treats specially:
      * <ul>
-     *   <li>{@code \} → {@code \\}</li>
-     *   <li>newline / carriage-return / tab → {@code \n} / {@code \r} / {@code \t}</li>
-     *   <li>Leading spaces and form-feeds — prefixed with {@code \} so that
-     *       {@code Properties.load()} does not strip them as whitespace before
-     *       the value.</li>
+     * <li>{@code \} → {@code \\}</li>
+     * <li>newline / carriage-return / tab → {@code \n} / {@code \r} / {@code \t}</li>
+     * <li>Leading spaces and form-feeds — prefixed with {@code \} so that
+     * {@code Properties.load()} does not strip them as whitespace before
+     * the value.</li>
      * </ul>
      *
      * <p>Note: {@code #} and {@code !} do <em>not</em> need escaping when they appear
@@ -232,17 +261,18 @@ public class TranslationManager {
         if (localeCode == null || localeCode.isEmpty()) {
             return null;
         }
+        String languageTag = localeCode.replace('_', '-');
+        return Locale.forLanguageTag(languageTag);
+    }
 
-        String[] parts = localeCode.split("_");
-        if (parts.length == 1) {
-            return new Locale(parts[0]);
-        } else if (parts.length == 2) {
-            return new Locale(parts[0], parts[1]);
-        } else if (parts.length == 3) {
-            return new Locale(parts[0], parts[1], parts[2]);
+    private Locale getPlayerLocale(Player player) {
+        if (HAS_PAPER_LOCALE_API) {
+            return player.locale();
+        } else {
+            @SuppressWarnings("deprecation")
+            String localeString = player.getLocale();
+            return parseLocale(localeString);
         }
-
-        return null;
     }
 
     /**
@@ -250,20 +280,16 @@ public class TranslationManager {
      */
     public Locale getLocale(CommandSender sender) {
         if (useClientLocale && sender instanceof Player player) {
-            String clientLocale = player.getLocale();
+            Locale clientLocale = getPlayerLocale(player);
 
-            // Try exact match first (e.g., zh_TW)
-            Locale locale = parseLocale(clientLocale);
-            if (locale != null && translations.containsKey(locale)) {
-                return locale;
-            }
+            if (clientLocale != null) {
+                if (translations.containsKey(clientLocale)) {
+                    return clientLocale;
+                }
 
-            // Try just the language part (e.g., "zh" from "zh_TW")
-            if (clientLocale.contains("_")) {
-                String language = clientLocale.split("_")[0];
-                locale = new Locale(language);
-                if (translations.containsKey(locale)) {
-                    return locale;
+                Locale languageOnly = Locale.forLanguageTag(clientLocale.getLanguage());
+                if (translations.containsKey(languageOnly)) {
+                    return languageOnly;
                 }
             }
         }
@@ -276,10 +302,10 @@ public class TranslationManager {
      *
      * <p>Fallback priority:
      * <ol>
-     *   <li>Requested locale</li>
-     *   <li>English ({@link Locale#ENGLISH}) — always the canonical reference translation</li>
-     *   <li>The configured default locale (if different from English)</li>
-     *   <li>Any loaded locale that contains the key</li>
+     * <li>Requested locale</li>
+     * <li>English ({@link Locale#ENGLISH}) — always the canonical reference translation</li>
+     * <li>The configured default locale (if different from English)</li>
+     * <li>Any loaded locale that contains the key</li>
      * </ol>
      */
     public String getMessage(String key, Locale locale) {

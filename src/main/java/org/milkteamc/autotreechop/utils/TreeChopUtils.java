@@ -1,5 +1,23 @@
+/*
+ * Copyright (C) 2026 MilkTeaMC and contributors
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+ 
 package org.milkteamc.autotreechop.utils;
 
+import com.cryptomorin.xseries.XEnchantment;
 import com.cryptomorin.xseries.XMaterial;
 import com.cryptomorin.xseries.XSound;
 import java.util.*;
@@ -7,13 +25,13 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
-import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.Damageable;
 import org.milkteamc.autotreechop.AutoTreeChop;
 import org.milkteamc.autotreechop.Config;
+import org.milkteamc.autotreechop.MessageKeys;
 import org.milkteamc.autotreechop.PlayerConfig;
 
 public class TreeChopUtils {
@@ -48,11 +66,12 @@ public class TreeChopUtils {
 
         int unbreakingLevel = getUnbreakingLevel(tool);
 
+        int damagePerHit = config.isToolDamage() ? config.getToolDamageDecrease() : 1;
         int estimatedDamage;
         if (config.getRespectUnbreaking() && unbreakingLevel > 0) {
-            estimatedDamage = blockCount / (unbreakingLevel + 1);
+            estimatedDamage = (blockCount * damagePerHit) / (unbreakingLevel + 1);
         } else {
-            estimatedDamage = blockCount * config.getToolDamageDecrease();
+            estimatedDamage = blockCount * damagePerHit;
         }
 
         return remainingDurability > estimatedDamage;
@@ -80,7 +99,7 @@ public class TreeChopUtils {
         int newDamage = currentDamage + damageToApply;
 
         if (newDamage >= tool.getType().getMaxDurability()) {
-            player.getInventory().removeItem(tool);
+            player.getInventory().setItemInMainHand(null);
         } else {
             damageableMeta.setDamage(newDamage);
             tool.setItemMeta(damageableMeta);
@@ -89,7 +108,7 @@ public class TreeChopUtils {
 
     private static int getUnbreakingLevel(ItemStack item) {
         if (item != null && item.hasItemMeta() && item.getItemMeta().hasEnchants()) {
-            return item.getEnchantmentLevel(Enchantment.UNBREAKING);
+            return item.getEnchantmentLevel(XEnchantment.UNBREAKING.get());
         }
         return 0;
     }
@@ -98,7 +117,7 @@ public class TreeChopUtils {
         if (unbreakingLevel <= 0 || !config.getRespectUnbreaking()) {
             return true;
         }
-        return random.nextInt(100) < (100.0 / (unbreakingLevel + 1));
+        return random.nextInt(unbreakingLevel + 1) == 0;
     }
 
     public static boolean isTool(Player player) {
@@ -122,10 +141,6 @@ public class TreeChopUtils {
         return xMat == XMaterial.SHEARS || xMat == XMaterial.FISHING_ROD || xMat == XMaterial.FLINT_AND_STEEL;
     }
 
-    /**
-     * Main entry point for tree chopping
-     * PHASE 1: Synchronous snapshot creation
-     */
     public void chopTree(
             Block block,
             Player player,
@@ -135,6 +150,11 @@ public class TreeChopUtils {
             Config config,
             PlayerConfig playerConfig,
             ProtectionCheckUtils.ProtectionHooks hooks) {
+
+        if (!player.hasPermission("autotreechop.use")) {
+            playerConfig.setAutoTreeChopEnabled(false);
+            return;
+        }
 
         // Initial protection check
         if (!ProtectionCheckUtils.canModifyBlock(player, location, hooks)) {
@@ -157,14 +177,12 @@ public class TreeChopUtils {
         // Mark location as processing
         sessionManager.addTreeChopLocations(playerUUID, Collections.singleton(block.getLocation()));
 
-        // PHASE 1: Synchronous - Capture block snapshot
         try {
             BlockSnapshot treeSnapshot = BlockSnapshotCreator.captureTreeRegion(
                     block, config, connectedBlocks, config.getMaxDiscoveryBlocks());
 
             Location startLocation = block.getLocation().clone();
 
-            // PHASE 2: Asynchronous - Calculate tree structure
             Runnable asyncDiscovery = () -> {
                 try {
                     Set<Location> treeBlocks = BlockDiscoveryUtils.discoverTreeBFS(
@@ -192,10 +210,6 @@ public class TreeChopUtils {
         }
     }
 
-    /**
-     * Validate tree and execute chopping
-     * This runs synchronously on the region thread
-     */
     private void validateAndExecuteChop(
             Set<Location> treeBlocks,
             Block originalBlock,
@@ -207,21 +221,25 @@ public class TreeChopUtils {
 
         UUID playerUUID = player.getUniqueId();
 
-        // Validation checks
+        if (!player.hasPermission("autotreechop.use")) {
+            sessionManager.clearTreeChopSession(playerUUID);
+            return;
+        }
+
         if (treeBlocks.isEmpty()) {
             sessionManager.clearTreeChopSession(playerUUID);
             return;
         }
 
         if (treeBlocks.size() > config.getMaxTreeSize()) {
-            AutoTreeChop.sendMessage(player, AutoTreeChop.HIT_MAX_BLOCK_MESSAGE);
+            AutoTreeChop.sendMessage(player, MessageKeys.HIT_MAX_BLOCK);
             sessionManager.clearTreeChopSession(playerUUID);
             return;
         }
 
         if (!PermissionUtils.hasVipBlock(player, playerConfig, config)) {
             if (playerConfig.getDailyBlocksBroken() + treeBlocks.size() > config.getMaxBlocksPerDay()) {
-                AutoTreeChop.sendMessage(player, AutoTreeChop.HIT_MAX_BLOCK_MESSAGE);
+                AutoTreeChop.sendMessage(player, MessageKeys.HIT_MAX_BLOCK);
                 sessionManager.clearTreeChopSession(playerUUID);
                 return;
             }
@@ -239,10 +257,6 @@ public class TreeChopUtils {
         executeTreeChop(treeBlocks, player, tool, config, playerConfig, hooks, originalBlock);
     }
 
-    /**
-     * Execute tree chopping in batches
-     * This runs synchronously with batch processing
-     */
     private void executeTreeChop(
             Set<Location> treeBlocks,
             Player player,
@@ -257,13 +271,10 @@ public class TreeChopUtils {
         int totalBlocks = blockList.size();
         UUID playerUUID = player.getUniqueId();
 
-        // Track the LOWEST log of each type for replanting (Y coordinate)
+        Location centerLocation = originalBlock.getLocation().clone();
         Map<Material, Location> logTypesForReplant = new HashMap<>();
-        // Use thread-safe set for actuallyRemovedLogs since it's accessed across batches
         Set<Location> actuallyRemovedLogs = ConcurrentHashMap.newKeySet();
 
-        // CRITICAL: Capture leaf snapshot BEFORE removing logs
-        // This ensures we can see which logs exist for proper leaf orphan detection
         BlockSnapshot leafSnapshot = null;
         if (config.isLeafRemovalEnabled()) {
             try {
@@ -283,7 +294,7 @@ public class TreeChopUtils {
                 (location, index) -> {
                     Block block = location.getBlock();
 
-                    // Re-check block type (may have changed)
+                    // Re-check block type (may have changed between phases)
                     if (!BlockDiscoveryUtils.isLog(block.getType(), config)) {
                         return;
                     }
@@ -295,7 +306,7 @@ public class TreeChopUtils {
 
                     Material originalLogType = block.getType();
 
-                    // Track the lowest Y coordinate log for each type (for proper replanting)
+                    // Track the lowest-Y log of each type for replanting
                     Location existingLoc = logTypesForReplant.get(originalLogType);
                     if (existingLoc == null || location.getBlockY() < existingLoc.getBlockY()) {
                         logTypesForReplant.put(originalLogType, location.clone());
@@ -327,20 +338,17 @@ public class TreeChopUtils {
                     // Handle leaf removal
                     if (config.isLeafRemovalEnabled() && finalLeafSnapshot != null) {
                         long delay = config.getLeafRemovalDelayTicks();
-                        Location leafProcessLocation = originalBlock.getLocation();
 
-                        Runnable leafTask = () -> {
-                            processLeafRemovalWithPreCapturedSnapshot(
-                                    finalLeafSnapshot,
-                                    originalBlock.getLocation(),
-                                    player,
-                                    config,
-                                    playerConfig,
-                                    hooks,
-                                    actuallyRemovedLogs);
-                        };
+                        Runnable leafTask = () -> processLeafRemovalWithPreCapturedSnapshot(
+                                finalLeafSnapshot,
+                                centerLocation,
+                                player,
+                                config,
+                                playerConfig,
+                                hooks,
+                                actuallyRemovedLogs);
 
-                        scheduler.scheduleDelayed(leafProcessLocation, leafTask, delay);
+                        scheduler.scheduleDelayed(centerLocation, leafTask, delay);
                     }
 
                     // Handle replanting
@@ -360,7 +368,8 @@ public class TreeChopUtils {
                                     hooks.lands,
                                     hooks.residence,
                                     hooks.griefPrevention,
-                                    hooks.worldGuard);
+                                    hooks.worldGuard,
+                                    actuallyRemovedLogs);
                         }
                     }
 
@@ -370,13 +379,6 @@ public class TreeChopUtils {
                 });
     }
 
-    /**
-     * Process leaf removal with PRE-CAPTURED snapshot
-     * The snapshot was taken BEFORE logs were removed
-     * PHASE 1: Already done (snapshot captured before log removal)
-     * PHASE 2: Async - Calculate leaves to remove
-     * PHASE 3: Sync - Remove leaves in batches
-     */
     private void processLeafRemovalWithPreCapturedSnapshot(
             BlockSnapshot leafSnapshot,
             Location centerLocation,
@@ -396,36 +398,28 @@ public class TreeChopUtils {
 
         String playerKey = player.getUniqueId().toString();
 
-        // Check if player already has an active leaf removal session
         if (sessionManager.hasActiveLeafRemovalSession(playerKey)) {
             return;
         }
 
-        // Start a new session
         String sessionId = sessionManager.startLeafRemovalSession(playerKey);
         if (sessionId == null) {
             return;
         }
 
-        // PHASE 2: Asynchronous - Calculate leaves to remove
         Runnable asyncLeafCalculation = () -> {
             try {
-                // Use the provided removedLogs directly
-                // (already contains all actually removed logs from executeTreeChop)
                 Set<Location> leavesToRemove;
                 int radius = config.getLeafRemovalRadius();
 
-                // Choose discovery method based on radius and mode
                 if ("smart".equalsIgnoreCase(config.getLeafRemovalMode())) {
                     leavesToRemove = BlockDiscoveryUtils.discoverLeavesBFS(
                             leafSnapshot, centerLocation, radius, config, removedLogs);
                 } else {
-                    // For "aggressive" or "radius" mode, radial is faster
                     leavesToRemove = BlockDiscoveryUtils.discoverLeavesRadial(
                             leafSnapshot, centerLocation, radius, config, removedLogs);
                 }
 
-                // PHASE 3: Back to sync for removal
                 Runnable removalTask = () ->
                         executeLeafRemoval(leavesToRemove, player, config, playerConfig, hooks, sessionId, playerKey);
 
@@ -441,15 +435,10 @@ public class TreeChopUtils {
         if (config.isLeafRemovalAsync()) {
             scheduler.runTaskAsync(asyncLeafCalculation);
         } else {
-            // Run synchronously if async is disabled
             asyncLeafCalculation.run();
         }
     }
 
-    /**
-     * Execute leaf removal in batches
-     * This runs synchronously on the region thread
-     */
     private void executeLeafRemoval(
             Set<Location> leavesToRemove,
             Player player,
@@ -472,31 +461,20 @@ public class TreeChopUtils {
                 0,
                 batchSize,
                 (location, index) -> {
-                    // Check daily limit if counting towards limit
                     if (config.getLeafRemovalCountsTowardsLimit()) {
                         if (!PermissionUtils.hasVipBlock(player, playerConfig, config)
                                 && playerConfig.getDailyBlocksBroken() >= config.getMaxBlocksPerDay()) {
-                            return false; // Stop processing - limit reached
+                            return false;
                         }
                     }
 
                     Block leafBlock = location.getBlock();
-
-                    // Remove the leaf block with all checks
                     removeLeafBlock(leafBlock, player, config, playerConfig, hooks);
-
-                    return true; // Continue processing
+                    return true;
                 },
-                () -> {
-                    // Leaf removal complete - end session
-                    sessionManager.endLeafRemovalSession(sessionId, playerKey);
-                });
+                () -> sessionManager.endLeafRemovalSession(sessionId, playerKey));
     }
 
-    /**
-     * Remove a single leaf block with all necessary checks
-     * This runs synchronously on the region thread
-     */
     private boolean removeLeafBlock(
             Block leafBlock,
             Player player,
@@ -506,26 +484,19 @@ public class TreeChopUtils {
 
         Location leafLocation = leafBlock.getLocation();
 
-        // Check if already processing this location
-        if (processingLeafLocations.contains(leafLocation)) {
+        if (!processingLeafLocations.add(leafLocation)) {
             return false;
         }
-
-        // Re-check if it's still a leaf
-        if (!BlockDiscoveryUtils.isLeafBlock(leafBlock.getType(), config)) {
-            return false;
-        }
-
-        // Re-check protection at execution time
-        if (!ProtectionCheckUtils.canModifyBlock(player, leafLocation, hooks)) {
-            return false;
-        }
-
-        // Mark as processing
-        processingLeafLocations.add(leafLocation);
 
         try {
-            // Call BlockBreakEvent if enabled
+            if (!BlockDiscoveryUtils.isLeafBlock(leafBlock.getType(), config)) {
+                return false;
+            }
+
+            if (!ProtectionCheckUtils.canModifyBlock(player, leafLocation, hooks)) {
+                return false;
+            }
+
             if (config.isCallBlockBreakEvent()) {
                 BlockBreakEvent breakEvent = new BlockBreakEvent(leafBlock, player);
                 plugin.getServer().getPluginManager().callEvent(breakEvent);
@@ -541,15 +512,9 @@ public class TreeChopUtils {
             if (config.getLeafRemovalDropItems()) {
                 leafBlock.breakNaturally();
             } else {
-                Material air = XMaterial.AIR.get();
-                if (air != null) {
-                    leafBlock.setType(air, false);
-                } else {
-                    leafBlock.setType(Material.AIR, false);
-                }
+                leafBlock.setType(XMaterial.AIR.get(), false);
             }
 
-            // Update daily blocks count if needed
             if (config.getLeafRemovalCountsTowardsLimit()) {
                 playerConfig.incrementDailyBlocksBroken();
             }
@@ -557,7 +522,6 @@ public class TreeChopUtils {
             return true;
 
         } finally {
-            // Always remove from processing set
             processingLeafLocations.remove(leafLocation);
         }
     }
