@@ -47,7 +47,8 @@ public class UsageCommand {
         }
 
         Player player = actor.asPlayer();
-        org.milkteamc.autotreechop.PlayerConfig pConfig = plugin.getPlayerConfig(player.getUniqueId());
+        org.milkteamc.autotreechop.PlayerConfig pConfig =
+                plugin.getDataManager().getPlayerConfig(player.getUniqueId());
 
         boolean isVip = player.hasPermission("autotreechop.vip");
         boolean limitVip = config.getLimitVipUsage();

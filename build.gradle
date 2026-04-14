@@ -8,7 +8,7 @@ plugins {
 }
 
 group = 'org.milkteamc'
-version = '1.7.4'
+version = '1.7.5'
 
 // Java Configuration
 java {
