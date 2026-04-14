@@ -81,7 +81,7 @@ dependencies {
 
     implementation 'com.github.Anon8281:UniversalScheduler:0.1.7'
     implementation 'com.zaxxer:HikariCP:7.0.2'
-    implementation 'org.bstats:bstats-bukkit:3.1.0'
+    implementation 'org.bstats:bstats-bukkit:3.2.1'
     implementation 'io.github.almighty-satan:XSeries:13.6.0+26.1'
     implementation 'dev.dejvokep:boosted-yaml:1.3.7'
 
