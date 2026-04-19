@@ -56,7 +56,10 @@ public class UsageCommand {
         String maxUsesStr;
         String maxBlocksStr;
 
-        if (!isVip) {
+        if (!config.getLimitUsage()) {
+            maxUsesStr = "∞";
+            maxBlocksStr = "∞";
+        } else if (!isVip) {
             maxUsesStr = String.valueOf(config.getMaxUsesPerDay());
             maxBlocksStr = String.valueOf(config.getMaxBlocksPerDay());
         } else if (limitVip) {

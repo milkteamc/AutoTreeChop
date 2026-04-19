@@ -1,5 +1,5 @@
 # AutoTreeChop by MilkTeaMC team
-# Discord support server: https://discord.gg/uQ4UXANnP2
+# Matrix Support Chat: https://matrix.to/#/#maoyue-dev:matrix.org
 # Modrinth Page: https://modrinth.com/plugin/autotreechop
 # Source code: https://github.com/milkteamc/AutoTreeChop
 # Default config file: https://github.com/milkteamc/AutoTreeChop/blob/master/src/main/resources/config.yml
@@ -14,11 +14,11 @@ locale: en
 use-player-locale: true
 
 # Tree Chopping setting
+# If disable, ALL players (including non-VIP) have unlimited usage
+limitUsage: true
 # The number of times non-VIP players can chop down trees per day,
-# you can give everyone "autotreechop.vip" permission to disable it.
 max-uses-per-day: 50
 # Tree blocks that non-VIP players can chop down every day,
-# you can give everyone "autotreechop.vip" permission to disable it.
 max-blocks-per-day: 500
 # Cooldown time (second), use 0 to disable
 cooldownTime: 5
@@ -174,4 +174,4 @@ valid-soil-types:
   - ROOTED_DIRT
 
 # Configuration file version - DO NOT MODIFY
-config-version: 1
+config-version: 2

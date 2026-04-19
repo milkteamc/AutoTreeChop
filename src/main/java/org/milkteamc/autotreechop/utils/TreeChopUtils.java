@@ -248,11 +248,13 @@ public class TreeChopUtils {
             return;
         }
 
-        if (!PermissionUtils.hasVipBlock(player, playerConfig, config)) {
-            if (playerConfig.getDailyBlocksBroken() + treeBlocks.size() > config.getMaxBlocksPerDay()) {
-                AutoTreeChop.sendMessage(player, MessageKeys.HIT_MAX_BLOCK);
-                sessionManager.clearTreeChopSession(playerUUID);
-                return;
+        if (config.getLimitUsage()) {
+            if (!PermissionUtils.hasVipBlock(player, playerConfig, config)) {
+                if (playerConfig.getDailyBlocksBroken() + treeBlocks.size() > config.getMaxBlocksPerDay()) {
+                    AutoTreeChop.sendMessage(player, MessageKeys.HIT_MAX_BLOCK);
+                    sessionManager.clearTreeChopSession(playerUUID);
+                    return;
+                }
             }
         }
 

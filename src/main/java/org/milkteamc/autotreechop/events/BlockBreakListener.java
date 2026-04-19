@@ -103,16 +103,18 @@ public class BlockBreakListener implements Listener {
             return;
         }
 
-        if (!PermissionUtils.hasVipBlock(player, playerConfig, config)
-                && playerConfig.getDailyBlocksBroken() >= config.getMaxBlocksPerDay()) {
-            EffectUtils.sendMaxBlockLimitReachedMessage(player, block);
-            return;
-        }
+        if (config.getLimitUsage()) {
+            if (!PermissionUtils.hasVipBlock(player, playerConfig, config)
+                    && playerConfig.getDailyBlocksBroken() >= config.getMaxBlocksPerDay()) {
+                EffectUtils.sendMaxBlockLimitReachedMessage(player, block);
+                return;
+            }
 
-        if (!PermissionUtils.hasVipUses(player, playerConfig, config)
-                && playerConfig.getDailyUses() >= config.getMaxUsesPerDay()) {
-            AutoTreeChop.sendMessage(player, MessageKeys.HIT_MAX_USAGE);
-            return;
+            if (!PermissionUtils.hasVipUses(player, playerConfig, config)
+                    && playerConfig.getDailyUses() >= config.getMaxUsesPerDay()) {
+                AutoTreeChop.sendMessage(player, MessageKeys.HIT_MAX_USAGE);
+                return;
+            }
         }
 
         event.setCancelled(true);
