@@ -104,6 +104,7 @@ public class Config {
     private int maxTreeSize;
     private int maxDiscoveryBlocks;
     private boolean callBlockBreakEvent;
+    private boolean limitUsage;
 
     public Config(AutoTreeChop plugin) {
         this.plugin = plugin;
@@ -192,6 +193,7 @@ public class Config {
     private void loadValues() {
         visualEffect = config.getBoolean("visual-effect", true);
         toolDamage = config.getBoolean("toolDamage", true);
+        limitUsage = config.getBoolean("limitUsage", true);
         maxUsesPerDay = config.getInt("max-uses-per-day", 50);
         maxBlocksPerDay = config.getInt("max-blocks-per-day", 500);
         cooldownTime = config.getInt("cooldownTime", 5);
@@ -403,6 +405,10 @@ public class Config {
 
     public String getPassword() {
         return password;
+    }
+
+    public boolean getLimitUsage() {
+        return limitUsage;
     }
 
     public boolean getLimitVipUsage() {

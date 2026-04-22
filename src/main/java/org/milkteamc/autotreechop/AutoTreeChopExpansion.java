@@ -54,11 +54,12 @@ public class AutoTreeChopExpansion extends PlaceholderExpansion {
         UUID playerUUID = player.getUniqueId();
 
         if (params.equalsIgnoreCase("daily_uses")) {
-            return String.valueOf(plugin.getPlayerDailyUses(playerUUID));
+            return String.valueOf(plugin.getDataManager().getPlayerDailyUses(playerUUID));
         } else if (params.equalsIgnoreCase("daily_blocks_broken")) {
-            return String.valueOf(plugin.getPlayerDailyBlocksBroken(playerUUID));
+            return String.valueOf(plugin.getDataManager().getPlayerDailyBlocksBroken(playerUUID));
         } else if (params.equalsIgnoreCase("status")) {
-            return String.valueOf(plugin.getPlayerConfig(playerUUID).isAutoTreeChopEnabled());
+            return String.valueOf(
+                    plugin.getDataManager().getPlayerConfig(playerUUID).isAutoTreeChopEnabled());
         }
 
         return null;
