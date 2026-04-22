@@ -51,7 +51,8 @@ public class TreeChopUtils {
         this.sessionManager = SessionManager.getInstance();
     }
 
-    private static boolean hasEnoughDurability(ItemStack tool, int blockCount, Config config) {
+    private static boolean hasEnoughDurability(Player player, int blockCount, Config config) {
+        ItemStack tool = player.getInventory().getItemInMainHand();
         if (tool == null || tool.getType().getMaxDurability() <= 0) {
             return true;
         }
@@ -77,7 +78,8 @@ public class TreeChopUtils {
         return remainingDurability > estimatedDamage;
     }
 
-    private static void applyToolDamage(ItemStack tool, Player player, int blocksBroken, Config config) {
+    private static void applyToolDamage(Player player, int blocksBroken, Config config) {
+        ItemStack tool = player.getInventory().getItemInMainHand();
         if (tool == null || tool.getType().getMaxDurability() <= 0) {
             return;
         }
@@ -102,7 +104,6 @@ public class TreeChopUtils {
 
         if (newDamage >= tool.getType().getMaxDurability()) {
             tool.setAmount(0);
-
             try {
                 XSound.ENTITY_ITEM_BREAK.play(player.getLocation(), 1.0f, 1.0f);
             } catch (Exception ignored) {
@@ -258,7 +259,7 @@ public class TreeChopUtils {
             }
         }
 
-        if (config.isToolDamage() && !hasEnoughDurability(tool, treeBlocks.size(), config)) {
+        if (config.isToolDamage() && !hasEnoughDurability(player, treeBlocks.size(), config)) {
             sessionManager.clearTreeChopSession(playerUUID);
             return;
         }
@@ -345,7 +346,7 @@ public class TreeChopUtils {
                 () -> {
                     // After all logs are removed
                     if (config.isToolDamage()) {
-                        applyToolDamage(tool, player, totalBlocks, config);
+                        applyToolDamage(player, totalBlocks, config);
                     }
 
                     // Handle leaf removal
