@@ -75,8 +75,8 @@ public class ModrinthUpdateChecker {
     @Nullable
     private String notifyPermission = null;
 
-    private int checkIntervalHours = 6;
-    private boolean suppressUpToDateMessage = false;
+    private int checkIntervalHours = 24;
+    private boolean suppressUpToDateMessage = true;
     private volatile UpdateCheckResult lastResult = UpdateCheckResult.UNKNOWN;
 
     public enum UpdateCheckResult {

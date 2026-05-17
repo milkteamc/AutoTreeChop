@@ -17,13 +17,14 @@
  
 package org.milkteamc.autotreechop.events;
 
+import java.util.Map;
 import java.util.UUID;
-import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.milkteamc.autotreechop.AutoTreeChop;
 import org.milkteamc.autotreechop.PlayerConfig;
+import org.milkteamc.autotreechop.database.DatabaseManager;
 import org.milkteamc.autotreechop.utils.SessionManager;
 
 public class PlayerQuitListener implements Listener {
@@ -36,18 +37,26 @@ public class PlayerQuitListener implements Listener {
 
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
-        Player player = event.getPlayer();
-        UUID playerUUID = player.getUniqueId();
+        UUID playerUUID = event.getPlayer().getUniqueId();
 
-        PlayerConfig playerConfig = plugin.getAllPlayerConfigs().get(playerUUID);
-        if (playerConfig != null && playerConfig.isDirty()) {
-            plugin.getDatabaseManager().savePlayerDataSync(playerConfig.getData());
+        PlayerConfig playerConfig = plugin.getDataManager().removePlayerConfig(playerUUID);
+
+        if (playerConfig != null) {
+            DatabaseManager.PlayerData snapshot = playerConfig.popSnapshotIfDirty();
+            if (snapshot != null) {
+                plugin.getDatabaseManager()
+                        .savePlayerDataBatchAsync(Map.of(playerUUID, snapshot))
+                        .exceptionally(ex -> {
+                            plugin.getLogger()
+                                    .warning("Failed to save final data for quitting player " + playerUUID + ": "
+                                            + ex.getMessage());
+                            return null;
+                        });
+            }
         }
 
-        plugin.getAllPlayerConfigs().remove(playerUUID);
         SessionManager.getInstance().clearAllPlayerSessions(playerUUID);
-
-        // Clear all confirmation state so memory doesn't leak between sessions.
+        SessionManager.getInstance().finishLeafCheck(playerUUID);
         plugin.getConfirmationManager().clearPlayer(playerUUID);
     }
 }
