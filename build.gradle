@@ -189,6 +189,8 @@ modrinth {
     versionNumber = fullVersion
     versionName = "v${fullVersion}"
     changelog = """
+        > **⚠️ Deprecation Notice:** Spigot support is deprecated and may be removed as early as v1.8.0. Please consider migrating to Paper or Folia.
+
         🚨 **This is an ALPHA version - Use at your own risk!**
 
         **Branch:** `${gitBranch}`
