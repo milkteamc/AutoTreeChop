@@ -71,6 +71,21 @@ public class AutoTreeChop extends JavaPlugin {
         }
     }
 
+    public static boolean isPaper() {
+        try {
+            Class.forName("io.papermc.paper.configuration.Configuration");
+            return true;
+        } catch (ClassNotFoundException ex) {
+            return false;
+        }
+    }
+
+    public static String getServerType() {
+        if (isFolia()) return "folia";
+        if (isPaper()) return "paper";
+        return "spigot";
+    }
+
     public static void sendMessage(CommandSender sender, String messageKey, TagResolver... resolvers) {
         if (instance != null && instance.translationManager != null) {
             instance.translationManager.sendMessage(sender, messageKey, resolvers);
@@ -179,7 +194,7 @@ public class AutoTreeChop extends JavaPlugin {
             getLogger().info("PlaceholderAPI expansion for AutoTreeChop has been registered.");
         }
 
-        this.updateChecker = new ModrinthUpdateChecker(this, "autotreechop", "paper")
+        this.updateChecker = new ModrinthUpdateChecker(this, "autotreechop", getServerType())
                 .setDonationLink("https://ko-fi.com/maoyue")
                 .setChangelogLink("https://modrinth.com/plugin/autotreechop/changelog")
                 .setDownloadLink("https://modrinth.com/plugin/autotreechop/versions")
