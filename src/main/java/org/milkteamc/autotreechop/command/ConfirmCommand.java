@@ -24,6 +24,7 @@ import org.milkteamc.autotreechop.AutoTreeChop;
 import org.milkteamc.autotreechop.Config;
 import org.milkteamc.autotreechop.MessageKeys;
 import org.milkteamc.autotreechop.PlayerConfig;
+import org.milkteamc.autotreechop.hooks.HookManager;
 import org.milkteamc.autotreechop.utils.BlockDiscoveryUtils;
 import org.milkteamc.autotreechop.utils.ConfirmationManager.ChopData;
 import org.milkteamc.autotreechop.utils.EffectUtils;
@@ -63,7 +64,7 @@ public class ConfirmCommand {
         }
 
         Config config = plugin.getPluginConfig();
-        PlayerConfig playerConfig = plugin.getPlayerConfig(uuid);
+        PlayerConfig playerConfig = plugin.getDataManager().getPlayerConfig(uuid);
 
         // The block may have been broken or replaced during the confirmation window
         // (e.g. another player cleared it). Re-validate before chopping.
@@ -82,15 +83,16 @@ public class ConfirmCommand {
             EffectUtils.showChopEffect(player, block);
         }
 
+        HookManager hookManager = plugin.getHookManager();
         ProtectionHooks hooks = new ProtectionHooks(
-                plugin.isWorldGuardEnabled(),
-                plugin.getWorldGuardHook(),
-                plugin.isResidenceEnabled(),
-                plugin.getResidenceHook(),
-                plugin.isGriefPreventionEnabled(),
-                plugin.getGriefPreventionHook(),
-                plugin.isLandsEnabled(),
-                plugin.getLandsHook());
+                hookManager.isWorldGuardEnabled(),
+                hookManager.getWorldGuardHook(),
+                hookManager.isResidenceEnabled(),
+                hookManager.getResidenceHook(),
+                hookManager.isGriefPreventionEnabled(),
+                hookManager.getGriefPreventionHook(),
+                hookManager.isLandsEnabled(),
+                hookManager.getLandsHook());
 
         plugin.getTreeChopUtils()
                 .chopTree(

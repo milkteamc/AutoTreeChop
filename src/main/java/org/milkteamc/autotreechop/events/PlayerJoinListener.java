@@ -44,11 +44,14 @@ public class PlayerJoinListener implements Listener {
         plugin.getDatabaseManager()
                 .loadPlayerDataAsync(playerUUID, plugin.getPluginConfig().getDefaultTreeChop())
                 .thenAccept(data -> {
-                    PlayerConfig playerConfig = new PlayerConfig(playerUUID, data);
-                    plugin.getAllPlayerConfigs().put(playerUUID, playerConfig);
+                    Player onlinePlayer = plugin.getServer().getPlayer(playerUUID);
+                    if (onlinePlayer == null || !onlinePlayer.isOnline()) {
+                        return;
+                    }
 
-                    // markRejoin must be called here, after playerConfig is loaded,
-                    // so we know whether ATC was enabled for this player.
+                    PlayerConfig playerConfig = new PlayerConfig(playerUUID, data);
+                    plugin.getDataManager().addPlayerConfig(playerUUID, playerConfig);
+
                     if (playerConfig.isAutoTreeChopEnabled()) {
                         plugin.getConfirmationManager().markRejoin(playerUUID);
                     }
@@ -56,11 +59,18 @@ public class PlayerJoinListener implements Listener {
                 .exceptionally(ex -> {
                     plugin.getLogger()
                             .warning("Failed to load data for player " + player.getName() + ": " + ex.getMessage());
-                    DatabaseManager.PlayerData defaultData = new DatabaseManager.PlayerData(
-                            playerUUID, plugin.getPluginConfig().getDefaultTreeChop(), 0, 0, java.time.LocalDate.now());
-                    PlayerConfig fallback = new PlayerConfig(playerUUID, defaultData);
-                    plugin.getAllPlayerConfigs().put(playerUUID, fallback);
-                    // Default is disabled, so no markRejoin needed here.
+
+                    Player onlinePlayer = plugin.getServer().getPlayer(playerUUID);
+                    if (onlinePlayer != null && onlinePlayer.isOnline()) {
+                        DatabaseManager.PlayerData defaultData = new DatabaseManager.PlayerData(
+                                playerUUID,
+                                plugin.getPluginConfig().getDefaultTreeChop(),
+                                0,
+                                0,
+                                java.time.LocalDate.now());
+                        PlayerConfig fallback = new PlayerConfig(playerUUID, defaultData);
+                        plugin.getDataManager().addPlayerConfig(playerUUID, fallback);
+                    }
                     return null;
                 });
         ModrinthUpdateChecker checker = plugin.getUpdateChecker();

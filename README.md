@@ -41,14 +41,19 @@ It's async-friendly, lightweight, and fully customizable — with built-in suppo
 - Compatible with Residence, WorldGuard, Lands, GriefPrevention
 - Supports **CoreProtect** for logging actions
 
-### 🌐 Multi-Language & Locale Support
-
-- Translations included: `en`, `zh`, `ja`, `de`, `es`, `fr`, `ru`, etc.
-- Automatically switches to player's locale if enabled
-
 ### 🗄️ MySQL & SQLite Support
 
 - Scale with MySQL or keep it simple with SQLite (default)
+
+---
+
+## Translations
+
+Automatically switches to the player's locale if enabled.
+
+<a href="https://translate.codeberg.org/engage/autotreechop/">
+  <img src="https://translate.codeberg.org/widget/autotreechop/autotreechop/multi-auto.svg" alt="Translation Status">
+</a>
 
 ---
 

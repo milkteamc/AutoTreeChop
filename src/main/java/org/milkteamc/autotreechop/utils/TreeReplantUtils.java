@@ -18,11 +18,11 @@
 package org.milkteamc.autotreechop.utils;
 
 import com.cryptomorin.xseries.XMaterial;
+import java.util.HashSet;
 import java.util.Set;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Player;
@@ -73,7 +73,6 @@ public class TreeReplantUtils {
                 if (anchorLocation == null) {
                     return;
                 }
-                // Check permission at all four sapling positions
                 Block anchor = anchorLocation.getBlock();
                 for (int[] offset : FORMATION_2X2) {
                     Location pos = anchor.getRelative(offset[0], 0, offset[1]).getLocation();
@@ -97,7 +96,6 @@ public class TreeReplantUtils {
                 if (plantLocation == null) {
                     return;
                 }
-                // Check permission at the actual plant location, not the original break point
                 if (!hasReplantPermission(
                         player,
                         plantLocation,
@@ -130,43 +128,50 @@ public class TreeReplantUtils {
     }
 
     /**
-     * Determines whether the chopped tree should be replanted as a 2x2 sapling
-     * formation.
+     * Determines whether the chopped tree should be replanted as a 2×2 formation.
      *
-     * <p>Dark Oak and Pale Oak are always 2x2. Spruce and Jungle are 2x2 only when
-     * the base of the chopped tree contained four logs arranged in a 2x2 square —
-     * detected by scanning the chopped-log set for a matching pattern at the Y
-     * level of the lowest broken log. All other tree types are always single.
+     * <p>Dark Oak and Pale Oak are always 2×2.  Spruce and Jungle are 2×2 only when
+     * the base of the chopped tree contained four logs arranged in a 2×2 square,
+     * detected by scanning the chopped-log set at the Y level of the lowest log.
+     *
+     * <p><b>Performance fix:</b> the old {@code containsBlockLocation} helper was an
+     * O(n) linear scan called up to 4 anchors × 4 offsets = 16 times.  We now
+     * convert {@code choppedLogs} to a {@link CoordKey} set once (O(n)) and all
+     * subsequent membership tests are O(1).
      */
     private static boolean isLikely2x2Tree(Material logType, Location lowestLogLocation, Set<Location> choppedLogs) {
 
         XMaterial xMat = XMaterial.matchXMaterial(logType);
 
-        // Dark Oak and Pale Oak are always planted as 2x2
         if (xMat == XMaterial.DARK_OAK_LOG || xMat == XMaterial.PALE_OAK_LOG) {
             return true;
         }
 
-        // Only Spruce and Jungle can be big (2x2) trees — everything else is always single
         if (xMat != XMaterial.SPRUCE_LOG && xMat != XMaterial.JUNGLE_LOG) {
             return false;
         }
 
-        // Detect 2x2 by checking whether four logs of this type form a square at
-        // the base Y level among the actually-chopped blocks.
+        // Build a CoordKey set once so all 16 membership tests below are O(1)
+        Set<CoordKey> choppedKeys = new HashSet<>(choppedLogs.size() * 2);
+        String worldName = lowestLogLocation.getWorld() != null
+                ? lowestLogLocation.getWorld().getName()
+                : "";
+        for (Location loc : choppedLogs) {
+            choppedKeys.add(CoordKey.of(loc));
+        }
+
         int baseY = lowestLogLocation.getBlockY();
         int baseX = lowestLogLocation.getBlockX();
         int baseZ = lowestLogLocation.getBlockZ();
-        World world = lowestLogLocation.getWorld();
 
-        // Try all four possible 2x2 anchors that include the base-log position as a corner
         int[][] candidateAnchors = {{0, 0}, {-1, 0}, {0, -1}, {-1, -1}};
         for (int[] ao : candidateAnchors) {
             int ax = baseX + ao[0];
             int az = baseZ + ao[1];
             boolean all4Present = true;
             for (int[] offset : FORMATION_2X2) {
-                if (!containsBlockLocation(choppedLogs, world, ax + offset[0], baseY, az + offset[1])) {
+                // O(1) CoordKey lookup – replaces the old O(n) containsBlockLocation scan
+                if (!choppedKeys.contains(CoordKey.of(ax + offset[0], baseY, az + offset[1], worldName))) {
                     all4Present = false;
                     break;
                 }
@@ -180,27 +185,12 @@ public class TreeReplantUtils {
     }
 
     /**
-     * Returns {@code true} if {@code locations} contains a block-coordinate match
-     * for the given world and integer coordinates. Uses integer comparison to avoid
-     * floating-point or yaw/pitch equality issues.
-     */
-    private static boolean containsBlockLocation(Set<Location> locations, World world, int x, int y, int z) {
-        for (Location loc : locations) {
-            if (loc.getWorld() == world && loc.getBlockX() == x && loc.getBlockY() == y && loc.getBlockZ() == z) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Finds an anchor location where all four blocks of a 2x2 formation are
-     * clear and sitting on valid soil. Returns null if no valid anchor is found.
+     * Finds an anchor location where all four blocks of a 2×2 formation are
+     * clear and sitting on valid soil.  Returns null if no valid anchor is found.
      */
     private static Location find2x2PlantLocation(Location originalLocation, Config config) {
         Block origin = originalLocation.getBlock();
 
-        // Try all four possible anchors that include the original position as a corner.
         int[][] originInclusiveAnchors = {{0, 0}, {-1, 0}, {0, -1}, {-1, -1}};
         for (int[] ao : originInclusiveAnchors) {
             Block anchor = origin.getRelative(ao[0], 0, ao[1]);
@@ -209,10 +199,8 @@ public class TreeReplantUtils {
             }
         }
 
-        // Widen search, skipping anchors already tested above
         for (int x = -2; x <= 2; x++) {
             for (int z = -2; z <= 2; z++) {
-                // Skip the four origin-inclusive anchors already tried
                 if ((x == 0 || x == -1) && (z == 0 || z == -1)) continue;
 
                 Block candidate = origin.getRelative(x, 0, z);
@@ -225,10 +213,6 @@ public class TreeReplantUtils {
         return null;
     }
 
-    /**
-     * Checks whether all four blocks of a 2x2 formation starting at anchor are
-     * clear and sit on valid soil.
-     */
     private static boolean is2x2FormationValid(Block anchor, Config config) {
         for (int[] offset : FORMATION_2X2) {
             Block target = anchor.getRelative(offset[0], 0, offset[1]);
@@ -240,17 +224,6 @@ public class TreeReplantUtils {
         return true;
     }
 
-    /**
-     * Plants a full 2x2 sapling formation at the given anchor location.
-     *
-     * <p>All four positions are re-validated before any sapling is placed. If any
-     * position became occupied between the time the anchor was chosen and now (race
-     * condition — another player placed a block), the entire formation is aborted
-     * rather than planting a partial 2x2, which would be useless for dark oak growth.
-     *
-     * <p>If require-sapling-in-inventory is true, all four saplings must be present
-     * before any are consumed.
-     */
     private static void plant2x2Saplings(Player player, Location anchorLocation, Material saplingType, Config config) {
 
         Block anchor = anchorLocation.getBlock();
@@ -259,11 +232,10 @@ public class TreeReplantUtils {
             Block target = anchor.getRelative(offset[0], 0, offset[1]);
             Block below = target.getRelative(BlockFace.DOWN);
             if (!isClearForSapling(target) || !isValidSoil(below.getType(), config)) {
-                return; // Abort — formation is no longer fully clear
+                return;
             }
         }
 
-        // Pre-check inventory has enough saplings before consuming any
         if (config.getRequireSaplingInInventory()) {
             int available = countSaplingsInInventory(player, saplingType);
             if (available < 4) {
@@ -271,7 +243,6 @@ public class TreeReplantUtils {
             }
         }
 
-        // All checks passed — place all four saplings
         for (int[] offset : FORMATION_2X2) {
             Block target = anchor.getRelative(offset[0], 0, offset[1]);
 
@@ -424,9 +395,6 @@ public class TreeReplantUtils {
         return true;
     }
 
-    /**
-     * Returns how many of the given sapling type the player currently holds.
-     */
     private static int countSaplingsInInventory(Player player, Material saplingType) {
         int count = 0;
         for (ItemStack item : player.getInventory().getStorageContents()) {

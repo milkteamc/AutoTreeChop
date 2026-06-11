@@ -1,14 +1,14 @@
 plugins {
     id 'java'
     id 'maven-publish'
-    id 'com.gradleup.shadow' version '9.4.1'
+    id 'com.gradleup.shadow' version '9.4.2'
     id 'xyz.jpenilla.run-paper' version '3.+'
     id 'com.modrinth.minotaur' version '2.+'
     id 'com.diffplug.spotless' version '8.+'
 }
 
 group = 'org.milkteamc'
-version = '1.7.4'
+version = '1.7.5'
 
 // Java Configuration
 java {
@@ -81,7 +81,7 @@ dependencies {
 
     implementation 'com.github.Anon8281:UniversalScheduler:0.1.7'
     implementation 'com.zaxxer:HikariCP:7.0.2'
-    implementation 'org.bstats:bstats-bukkit:3.1.0'
+    implementation 'org.bstats:bstats-bukkit:3.2.1'
     implementation 'io.github.almighty-satan:XSeries:13.6.0+26.1'
     implementation 'dev.dejvokep:boosted-yaml:1.3.7'
 
@@ -172,7 +172,7 @@ tasks.shadowJar {
 }
 
 tasks.runServer {
-    minecraftVersion('26.1.1')
+    minecraftVersion('26.1.2')
     def javaVersion = Math.max(25, JavaVersion.current().majorVersion.toInteger())
     javaLauncher = javaToolchains.launcherFor {
         languageVersion = JavaLanguageVersion.of(javaVersion)
@@ -189,6 +189,8 @@ modrinth {
     versionNumber = fullVersion
     versionName = "v${fullVersion}"
     changelog = """
+        > **⚠️ Deprecation Notice:** Spigot support is deprecated and may be removed as early as v1.8.0. Please consider migrating to Paper or Folia.
+
         🚨 **This is an ALPHA version - Use at your own risk!**
 
         **Branch:** `${gitBranch}`

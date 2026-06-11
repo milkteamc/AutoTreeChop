@@ -37,56 +37,60 @@ public class PlayerConfig {
             data.setDailyUses(0);
             data.setDailyBlocksBroken(0);
             data.setLastUseDate(LocalDate.now());
-            markDirty();
+            this.dirty = true;
         }
     }
 
-    public boolean isAutoTreeChopEnabled() {
+    public synchronized boolean isAutoTreeChopEnabled() {
         return data.isAutoTreeChopEnabled();
     }
 
-    public void setAutoTreeChopEnabled(boolean enabled) {
+    public synchronized void setAutoTreeChopEnabled(boolean enabled) {
         if (data.isAutoTreeChopEnabled() != enabled) {
             data.setAutoTreeChopEnabled(enabled);
-            markDirty();
+            this.dirty = true;
         }
     }
 
-    public int getDailyUses() {
+    public synchronized int getDailyUses() {
         checkAndUpdateDate();
         return data.getDailyUses();
     }
 
-    public void incrementDailyUses() {
+    public synchronized void incrementDailyUses() {
         checkAndUpdateDate();
         data.incrementDailyUses();
-        markDirty();
+        this.dirty = true;
     }
 
-    public int getDailyBlocksBroken() {
+    public synchronized int getDailyBlocksBroken() {
         checkAndUpdateDate();
         return data.getDailyBlocksBroken();
     }
 
-    public void incrementDailyBlocksBroken() {
+    public synchronized void incrementDailyBlocksBroken() {
         checkAndUpdateDate();
         data.incrementDailyBlocksBroken();
-        markDirty();
-    }
-
-    public void markDirty() {
         this.dirty = true;
     }
 
-    public void clearDirty() {
-        this.dirty = false;
+    public synchronized void markDirty() {
+        this.dirty = true;
     }
 
-    public boolean isDirty() {
+    public synchronized boolean isDirty() {
         return dirty;
     }
 
-    public DatabaseManager.PlayerData getData() {
+    public synchronized DatabaseManager.PlayerData popSnapshotIfDirty() {
+        if (this.dirty) {
+            this.dirty = false;
+            return new DatabaseManager.PlayerData(this.data);
+        }
+        return null;
+    }
+
+    public synchronized DatabaseManager.PlayerData getData() {
         return data;
     }
 

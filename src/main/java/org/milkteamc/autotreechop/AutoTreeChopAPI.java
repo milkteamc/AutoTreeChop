@@ -34,7 +34,7 @@ public class AutoTreeChopAPI {
      * @return boolean
      */
     public boolean isAutoTreeChopEnabled(Player player) {
-        PlayerConfig playerConfig = plugin.getPlayerConfig(player.getUniqueId());
+        PlayerConfig playerConfig = plugin.getDataManager().getPlayerConfig(player.getUniqueId());
         return playerConfig.isAutoTreeChopEnabled();
     }
 
@@ -42,7 +42,7 @@ public class AutoTreeChopAPI {
      * Set specific player AutoTreeChop as enabled
      */
     public void enableAutoTreeChop(Player player) {
-        PlayerConfig playerConfig = plugin.getPlayerConfig(player.getUniqueId());
+        PlayerConfig playerConfig = plugin.getDataManager().getPlayerConfig(player.getUniqueId());
         playerConfig.setAutoTreeChopEnabled(true);
     }
 
@@ -50,7 +50,7 @@ public class AutoTreeChopAPI {
      * Set specific player AutoTreeChop as disable
      */
     public void disableAutoTreeChop(Player player) {
-        PlayerConfig playerConfig = plugin.getPlayerConfig(player.getUniqueId());
+        PlayerConfig playerConfig = plugin.getDataManager().getPlayerConfig(player.getUniqueId());
         playerConfig.setAutoTreeChopEnabled(false);
     }
 
@@ -60,7 +60,7 @@ public class AutoTreeChopAPI {
      * @return int
      */
     public int getPlayerDailyUses(UUID playerUUID) {
-        return plugin.getPlayerDailyUses(playerUUID);
+        return plugin.getDataManager().getPlayerDailyUses(playerUUID);
     }
 
     /**
@@ -69,6 +69,6 @@ public class AutoTreeChopAPI {
      * @return int
      */
     public int getPlayerDailyBlocksBroken(UUID playerUUID) {
-        return plugin.getPlayerDailyBlocksBroken(playerUUID);
+        return plugin.getDataManager().getPlayerDailyBlocksBroken(playerUUID);
     }
 }

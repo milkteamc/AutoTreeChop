@@ -31,14 +31,21 @@ public class BatchProcessor {
     }
 
     /**
-     * Process a list of locations in batches
-     * IMPORTANT: All processing happens on REGION thread for Folia compatibility
+     * Process a list of locations in batches.
      *
-     * @param locations  List of locations to process
-     * @param startIndex Starting index
-     * @param batchSize  Number of items to process per batch
-     * @param processor  Function to process each location (location, index) -> void
-     * @param onComplete Callback when all batches are complete
+     * <p><b>Fast path:</b> when all locations fit within a single batch
+     * (i.e. {@code locations.size() <= batchSize}) the entire work is dispatched
+     * as one region task.  This avoids the recursive scheduling overhead that the
+     * general path incurs even when only one batch is needed (a very common case
+     * for small trees).
+     *
+     * <p>IMPORTANT: All processing happens on the REGION thread for Folia compatibility.
+     *
+     * @param locations  list of locations to process
+     * @param startIndex starting index
+     * @param batchSize  number of items to process per batch
+     * @param processor  function to process each location: (location, index) -&gt; void
+     * @param onComplete callback when all batches are complete
      */
     public void processBatch(
             List<Location> locations,
@@ -47,18 +54,39 @@ public class BatchProcessor {
             BiConsumer<Location, Integer> processor,
             Runnable onComplete) {
 
+        if (locations.isEmpty()) {
+            if (onComplete != null) {
+                scheduler.runTask(onComplete);
+            }
+            return;
+        }
+
+        // Fast path: everything fits in one batch – avoid recursive scheduling overhead
+        if (startIndex == 0 && locations.size() <= batchSize) {
+            Location first = locations.get(0);
+            scheduler.runTaskAtLocation(first, () -> {
+                for (int i = 0; i < locations.size(); i++) {
+                    processor.accept(locations.get(i), i);
+                }
+                if (onComplete != null) {
+                    onComplete.run();
+                }
+            });
+            return;
+        }
+
         processBatchInternal(locations, startIndex, batchSize, processor, onComplete, 1L);
     }
 
     /**
-     * Process batches with custom delay
+     * Process batches with a custom inter-batch delay.
      *
-     * @param locations  List of locations to process
-     * @param startIndex Starting index
-     * @param batchSize  Number of items to process per batch
-     * @param processor  Function to process each location (location, index) -> void
-     * @param onComplete Callback when all batches are complete
-     * @param delayTicks Delay between batches in ticks
+     * @param locations   list of locations to process
+     * @param startIndex  starting index
+     * @param batchSize   number of items to process per batch
+     * @param processor   function to process each location: (location, index) -&gt; void
+     * @param onComplete  callback when all batches are complete
+     * @param delayTicks  delay between batches in ticks
      */
     public void processBatchWithDelay(
             List<Location> locations,
@@ -68,12 +96,19 @@ public class BatchProcessor {
             Runnable onComplete,
             long delayTicks) {
 
+        if (locations.isEmpty()) {
+            if (onComplete != null) {
+                scheduler.runTask(onComplete);
+            }
+            return;
+        }
+
         processBatchInternal(locations, startIndex, batchSize, processor, onComplete, delayTicks);
     }
 
     /**
-     * Internal batch processing implementation
-     * Uses REGION scheduler to ensure Folia compatibility
+     * Internal batch processing implementation.
+     * Uses REGION scheduler to ensure Folia compatibility.
      */
     private void processBatchInternal(
             List<Location> locations,
@@ -85,7 +120,6 @@ public class BatchProcessor {
 
         if (locations.isEmpty() || startIndex >= locations.size()) {
             if (onComplete != null) {
-                // Run completion callback at first location's region
                 if (!locations.isEmpty()) {
                     scheduler.runTaskAtLocation(locations.get(0), onComplete);
                 } else {
@@ -98,23 +132,19 @@ public class BatchProcessor {
         int endIndex = Math.min(startIndex + batchSize, locations.size());
         boolean isLastBatch = endIndex >= locations.size();
 
-        // Get the first location in this batch for region scheduling
         Location batchLocation = locations.get(startIndex);
 
-        // Process current batch on REGION thread
         Runnable batchTask = () -> {
             for (int i = startIndex; i < endIndex; i++) {
                 Location location = locations.get(i);
                 processor.accept(location, i);
             }
 
-            // Schedule next batch or complete
             if (isLastBatch) {
                 if (onComplete != null) {
                     onComplete.run();
                 }
             } else {
-                // Schedule next batch at the next batch's first location
                 Location nextLocation = locations.get(endIndex);
                 Runnable nextBatch =
                         () -> processBatchInternal(locations, endIndex, batchSize, processor, onComplete, delayTicks);
@@ -122,19 +152,19 @@ public class BatchProcessor {
             }
         };
 
-        // Execute this batch at the batch location's region
         scheduler.runTaskAtLocation(batchLocation, batchTask);
     }
 
     /**
-     * Process batches with early termination support
-     * Uses REGION scheduler to ensure Folia compatibility
+     * Process batches with early-termination support.
      *
-     * @param locations  List of locations to process
-     * @param startIndex Starting index
-     * @param batchSize  Number of items to process per batch
-     * @param processor  Function to process each location, returns false to stop
-     * @param onComplete Callback when complete or stopped
+     * <p>Same single-batch fast path as {@link #processBatch} is applied here.
+     *
+     * @param locations  list of locations to process
+     * @param startIndex starting index
+     * @param batchSize  number of items to process per batch
+     * @param processor  function to process each location; return {@code false} to stop
+     * @param onComplete callback when complete or stopped
      */
     public void processBatchWithTermination(
             List<Location> locations,
@@ -143,35 +173,47 @@ public class BatchProcessor {
             java.util.function.BiFunction<Location, Integer, Boolean> processor,
             Runnable onComplete) {
 
-        if (locations.isEmpty() || startIndex >= locations.size()) {
+        if (locations.isEmpty()) {
             if (onComplete != null) {
-                if (!locations.isEmpty()) {
-                    scheduler.runTaskAtLocation(locations.get(0), onComplete);
-                } else {
-                    scheduler.runTask(onComplete);
-                }
+                scheduler.runTask(onComplete);
             }
             return;
         }
 
-        // Get the first location in this batch for region scheduling
+        // Fast path: single batch
+        if (startIndex == 0 && locations.size() <= batchSize) {
+            Location first = locations.get(0);
+            scheduler.runTaskAtLocation(first, () -> {
+                for (int i = 0; i < locations.size(); i++) {
+                    if (!processor.apply(locations.get(i), i)) break;
+                }
+                if (onComplete != null) {
+                    onComplete.run();
+                }
+            });
+            return;
+        }
+
+        if (startIndex >= locations.size()) {
+            if (onComplete != null) {
+                scheduler.runTaskAtLocation(locations.get(0), onComplete);
+            }
+            return;
+        }
+
         Location batchLocation = locations.get(startIndex);
 
-        // Process current batch on REGION thread
         Runnable batchTask = () -> {
             int endIndex = Math.min(startIndex + batchSize, locations.size());
 
-            // Process current batch with termination check
             boolean shouldContinue = true;
             int i = startIndex;
             for (; i < endIndex && shouldContinue; i++) {
-                Location location = locations.get(i);
-                shouldContinue = processor.apply(location, i);
+                shouldContinue = processor.apply(locations.get(i), i);
             }
 
             boolean isLastBatch = i >= locations.size();
 
-            // Schedule next batch, complete, or terminate early
             if (!shouldContinue || isLastBatch) {
                 if (onComplete != null) {
                     onComplete.run();
@@ -185,7 +227,6 @@ public class BatchProcessor {
             }
         };
 
-        // Execute this batch at the batch location's region
         scheduler.runTaskAtLocation(batchLocation, batchTask);
     }
 }

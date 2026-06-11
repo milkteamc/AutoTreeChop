@@ -50,7 +50,7 @@ public class PlayerDataSaveTask extends UniversalRunnable {
 
     private int countDirtyData() {
         int count = 0;
-        for (PlayerConfig config : plugin.getAllPlayerConfigs().values()) {
+        for (PlayerConfig config : plugin.getDataManager().getOnlinePlayersConfigs()) {
             if (config.isDirty()) {
                 count++;
             }
@@ -61,30 +61,24 @@ public class PlayerDataSaveTask extends UniversalRunnable {
     private void saveAllDirtyData() {
         Map<UUID, DatabaseManager.PlayerData> dirtyDataMap = new HashMap<>();
 
-        for (Map.Entry<UUID, PlayerConfig> entry : plugin.getAllPlayerConfigs().entrySet()) {
-            PlayerConfig config = entry.getValue();
-            if (config.isDirty()) {
-                dirtyDataMap.put(entry.getKey(), config.getData());
-                config.clearDirty();
+        for (PlayerConfig config : plugin.getDataManager().getOnlinePlayersConfigs()) {
+            DatabaseManager.PlayerData snapshot = config.popSnapshotIfDirty();
+            if (snapshot != null) {
+                dirtyDataMap.put(snapshot.getPlayerUUID(), snapshot);
             }
         }
 
         if (!dirtyDataMap.isEmpty()) {
-            plugin.getDatabaseManager()
-                    .savePlayerDataBatchAsync(dirtyDataMap)
-                    .thenRun(() -> {
-                        dirtyCount = 0;
-                    })
-                    .exceptionally(ex -> {
-                        plugin.getLogger().warning("Failed to save player data: " + ex.getMessage());
-                        for (UUID uuid : dirtyDataMap.keySet()) {
-                            PlayerConfig config = plugin.getPlayerConfig(uuid);
-                            if (config != null) {
-                                config.markDirty();
-                            }
-                        }
-                        return null;
-                    });
+            plugin.getDatabaseManager().savePlayerDataBatchAsync(dirtyDataMap).exceptionally(ex -> {
+                plugin.getLogger().warning("Failed to save player data: " + ex.getMessage());
+                for (UUID uuid : dirtyDataMap.keySet()) {
+                    PlayerConfig config = plugin.getDataManager().getPlayerConfig(uuid);
+                    if (config != null) {
+                        config.markDirty();
+                    }
+                }
+                return null;
+            });
         }
     }
 }

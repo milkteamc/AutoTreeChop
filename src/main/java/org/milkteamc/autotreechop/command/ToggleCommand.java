@@ -58,7 +58,7 @@ public class ToggleCommand {
         }
 
         UUID targetUUID = targetPlayer.getUniqueId();
-        PlayerConfig playerConfig = plugin.getPlayerConfig(targetUUID);
+        PlayerConfig playerConfig = plugin.getDataManager().getPlayerConfig(targetUUID);
         boolean autoTreeChopEnabled = !playerConfig.isAutoTreeChopEnabled();
         playerConfig.setAutoTreeChopEnabled(autoTreeChopEnabled);
 
@@ -96,7 +96,7 @@ public class ToggleCommand {
             AutoTreeChop.sendMessage(actor.sender(), MessageKeys.ONLY_PLAYERS);
             return;
         }
-        PlayerConfig playerConfig = plugin.getPlayerConfig(player.getUniqueId());
+        PlayerConfig playerConfig = plugin.getDataManager().getPlayerConfig(player.getUniqueId());
         if (playerConfig.isAutoTreeChopEnabled()) {
             AutoTreeChop.sendMessage(player, MessageKeys.ALREADY_ENABLED);
             return;
@@ -112,7 +112,7 @@ public class ToggleCommand {
         int count = 0;
         String lastName = null;
         for (Player targetPlayer : targetPlayers) {
-            PlayerConfig cfg = plugin.getPlayerConfig(targetPlayer.getUniqueId());
+            PlayerConfig cfg = plugin.getDataManager().getPlayerConfig(targetPlayer.getUniqueId());
             if (cfg.isAutoTreeChopEnabled()) continue; // skip already-enabled silently, or send per-player msg
             cfg.setAutoTreeChopEnabled(true);
             lastName = targetPlayer.getName();
@@ -144,7 +144,7 @@ public class ToggleCommand {
             return;
         }
         UUID playerUUID = player.getUniqueId();
-        PlayerConfig playerConfig = plugin.getPlayerConfig(playerUUID);
+        PlayerConfig playerConfig = plugin.getDataManager().getPlayerConfig(playerUUID);
         if (!playerConfig.isAutoTreeChopEnabled()) {
             AutoTreeChop.sendMessage(player, MessageKeys.ALREADY_DISABLED);
             return;
@@ -162,7 +162,7 @@ public class ToggleCommand {
         String lastName = null;
         for (Player targetPlayer : targetPlayers) {
             UUID targetUUID = targetPlayer.getUniqueId();
-            PlayerConfig cfg = plugin.getPlayerConfig(targetUUID);
+            PlayerConfig cfg = plugin.getDataManager().getPlayerConfig(targetUUID);
             if (!cfg.isAutoTreeChopEnabled()) continue;
             cfg.setAutoTreeChopEnabled(false);
             plugin.getConfirmationManager().clearPlayer(targetUUID);
@@ -194,7 +194,7 @@ public class ToggleCommand {
         }
 
         UUID playerUUID = player.getUniqueId();
-        PlayerConfig playerConfig = plugin.getPlayerConfig(playerUUID);
+        PlayerConfig playerConfig = plugin.getDataManager().getPlayerConfig(playerUUID);
         boolean autoTreeChopEnabled = !playerConfig.isAutoTreeChopEnabled();
         playerConfig.setAutoTreeChopEnabled(autoTreeChopEnabled);
 

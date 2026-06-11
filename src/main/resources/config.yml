@@ -1,5 +1,5 @@
 # AutoTreeChop by MilkTeaMC team
-# Discord support server: https://discord.gg/uQ4UXANnP2
+# Matrix Support Chat: https://matrix.to/#/#maoyue-dev:matrix.org
 # Modrinth Page: https://modrinth.com/plugin/autotreechop
 # Source code: https://github.com/milkteamc/AutoTreeChop
 # Default config file: https://github.com/milkteamc/AutoTreeChop/blob/master/src/main/resources/config.yml
@@ -10,15 +10,16 @@
 # Want to help translate? Get started here: https://translate.codeberg.org/projects/autotreechop/autotreechop/
 locale: en
 
-# If set to true, the plugin will automatically translate to the locale of the player (if there are translations present)
+# If set to true, the plugin will automatically translate to the locale of the player
+# (if there are translations present)
 use-player-locale: true
 
 # Tree Chopping setting
+# If disable, ALL players (including non-VIP) have unlimited usage
+limitUsage: true
 # The number of times non-VIP players can chop down trees per day,
-# you can give everyone "autotreechop.vip" permission to disable it.
 max-uses-per-day: 50
 # Tree blocks that non-VIP players can chop down every day,
-# you can give everyone "autotreechop.vip" permission to disable it.
 max-blocks-per-day: 500
 # Cooldown time (second), use 0 to disable
 cooldownTime: 5
@@ -87,7 +88,8 @@ call-block-break-event: true
 # Protection plugins setting
 # If you are using Residence, you can set which Flag players have access to AutoTreeChop in residence.
 residenceFlag: build
-# If you are using GriefPrevention, you can set which Flag players have access to AutoTreeChop in GriefPrevention.
+# If you are using GriefPrevention,
+# you can set which Flag players have access to AutoTreeChop in GriefPrevention.
 griefPreventionFlag: Build
 # Stop chopping if the blocks are not connected (not part of the same tree)
 stopChoppingIfNotConnected: false
@@ -174,4 +176,4 @@ valid-soil-types:
   - ROOTED_DIRT
 
 # Configuration file version - DO NOT MODIFY
-config-version: 1
+config-version: 2
