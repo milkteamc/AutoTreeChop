@@ -123,6 +123,15 @@ public class AutoTreeChop extends JavaPlugin {
 
         setupIntegrations();
 
+        if (getServerType().equals("spigot")) {
+            getLogger().warning("=====================================================");
+            getLogger().warning(" You are running AutoTreeChop on Spigot.");
+            getLogger().warning(" Spigot support is deprecated and may be removed");
+            getLogger().warning(" as early as v1.8.0.");
+            getLogger().warning(" Please consider migrating to Paper or Folia.");
+            getLogger().warning("=====================================================");
+        }
+
         getLogger().info("AutoTreeChop enabled!");
     }
 
