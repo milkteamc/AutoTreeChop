@@ -50,6 +50,11 @@ public class UsageCommand {
         org.milkteamc.autotreechop.PlayerConfig pConfig =
                 plugin.getDataManager().getPlayerConfig(player.getUniqueId());
 
+        if (pConfig == null) {
+            AutoTreeChop.sendMessage(player, MessageKeys.PLAYER_DATA_UNAVAILABLE);
+            return;
+        }
+
         boolean isVip = player.hasPermission("autotreechop.vip");
         boolean limitVip = config.getLimitVipUsage();
 

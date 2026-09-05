@@ -39,6 +39,8 @@ public class DataManager {
     private final ConfirmationManager confirmationManager;
     private final Map<UUID, PlayerConfig> playerConfigs = new ConcurrentHashMap<>();
 
+    private final Map<UUID, Object> loadSessions = new HashMap<>();
+
     private PlayerDataSaveTask saveTask;
     private boolean shuttingDown;
 
@@ -56,6 +58,7 @@ public class DataManager {
     public void shutdown() {
         synchronized (this) {
             shuttingDown = true;
+            loadSessions.clear();
             plugin.getLogger().info("Saving all player data before shutdown...");
             if (saveTask != null) saveTask.cancel();
 
@@ -94,9 +97,28 @@ public class DataManager {
 
     public synchronized CompletableFuture<Void> saveAndRemovePlayer(UUID uuid) {
         if (shuttingDown) return CompletableFuture.completedFuture(null);
+        loadSessions.remove(uuid);
         PlayerConfig config = playerConfigs.remove(uuid);
         DatabaseManager.PlayerData data = config == null ? null : config.popSnapshotIfDirty();
         return databaseManager.savePlayerDataBatchAsync(data == null ? Map.of() : Map.of(uuid, data));
+    }
+
+    /** Only the current login may publish its asynchronously loaded data. */
+    public synchronized CompletableFuture<Void> loadPlayerConfig(UUID uuid, boolean defaultTreeChop) {
+        if (shuttingDown) return CompletableFuture.completedFuture(null);
+        Object session = new Object();
+        loadSessions.put(uuid, session);
+        return databaseManager.loadPlayerDataAsync(uuid, defaultTreeChop).thenAccept(data -> {
+            synchronized (this) {
+                if (shuttingDown || loadSessions.get(uuid) != session) return;
+                PlayerConfig config = new PlayerConfig(uuid, data);
+                if (config.isAutoTreeChopEnabled() && confirmationManager != null) {
+                    confirmationManager.markRejoin(uuid);
+                }
+                playerConfigs.put(uuid, config);
+                loadSessions.remove(uuid);
+            }
+        });
     }
 
     public synchronized void addPlayerConfig(UUID uuid, PlayerConfig config) {
@@ -104,7 +126,8 @@ public class DataManager {
         playerConfigs.put(uuid, config);
     }
 
-    public PlayerConfig removePlayerConfig(UUID uuid) {
+    public synchronized PlayerConfig removePlayerConfig(UUID uuid) {
+        loadSessions.remove(uuid);
         return playerConfigs.remove(uuid);
     }
 

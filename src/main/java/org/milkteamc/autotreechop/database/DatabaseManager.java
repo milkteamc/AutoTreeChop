@@ -114,8 +114,7 @@ public class DatabaseManager {
                     }
                 }
             } catch (SQLException e) {
-                plugin.getLogger().warning("Error loading player data: " + e.getMessage());
-                return new PlayerData(playerUUID, defaultTreeChop, 0, 0, LocalDate.now());
+                throw new CompletionException("Failed to load player data for " + playerUUID, e);
             }
         });
     }

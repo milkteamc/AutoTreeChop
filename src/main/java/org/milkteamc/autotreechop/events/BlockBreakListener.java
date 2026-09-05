@@ -62,6 +62,7 @@ public class BlockBreakListener implements Listener {
         Player player = event.getPlayer();
         UUID playerUUID = player.getUniqueId();
         PlayerConfig playerConfig = plugin.getDataManager().getPlayerConfig(playerUUID);
+        if (playerConfig == null) return;
         Block block = event.getBlock();
         ItemStack tool = player.getInventory().getItemInMainHand();
         Location location = block.getLocation();
@@ -129,7 +130,8 @@ public class BlockBreakListener implements Listener {
 
             scheduler.runTaskAtLocation(frozenLocation, () -> {
                 try {
-                    if (!player.isOnline()) return;
+                    if (!player.isOnline() || plugin.getDataManager().getPlayerConfig(playerUUID) != playerConfig)
+                        return;
 
                     if (config.isPreventNoLeavesChopping() && !hasLeaves) {
                         return;

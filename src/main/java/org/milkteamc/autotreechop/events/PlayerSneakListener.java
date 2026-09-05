@@ -44,6 +44,7 @@ public class PlayerSneakListener implements Listener {
         if (!player.hasPermission("autotreechop.use")) return;
 
         PlayerConfig playerConfig = plugin.getDataManager().getPlayerConfig(playerUUID);
+        if (playerConfig == null) return;
 
         if (event.isSneaking()) {
             playerConfig.setAutoTreeChopEnabled(true);

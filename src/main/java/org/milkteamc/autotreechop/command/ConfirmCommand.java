@@ -52,6 +52,11 @@ public class ConfirmCommand {
         }
 
         UUID uuid = player.getUniqueId();
+        PlayerConfig playerConfig = plugin.getDataManager().getPlayerConfig(uuid);
+        if (playerConfig == null) {
+            AutoTreeChop.sendMessage(player, MessageKeys.PLAYER_DATA_UNAVAILABLE);
+            return;
+        }
 
         // consumePendingConfirmation atomically reads and removes the pending entry in
         // one step, avoiding the TOCTOU race that would exist with separate
@@ -64,7 +69,6 @@ public class ConfirmCommand {
         }
 
         Config config = plugin.getPluginConfig();
-        PlayerConfig playerConfig = plugin.getDataManager().getPlayerConfig(uuid);
 
         if (config.isPreventNoLeavesChopping() && !chop.hasLeaves()) {
             return;

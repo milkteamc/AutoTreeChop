@@ -20,6 +20,7 @@ package org.milkteamc.autotreechop;
 import java.util.UUID;
 import org.bukkit.entity.Player;
 
+/** While player data is unavailable, queries return false/zero and setters do nothing. */
 public class AutoTreeChopAPI {
 
     private final AutoTreeChop plugin;
@@ -35,7 +36,7 @@ public class AutoTreeChopAPI {
      */
     public boolean isAutoTreeChopEnabled(Player player) {
         PlayerConfig playerConfig = plugin.getDataManager().getPlayerConfig(player.getUniqueId());
-        return playerConfig.isAutoTreeChopEnabled();
+        return playerConfig != null && playerConfig.isAutoTreeChopEnabled();
     }
 
     /**
@@ -43,6 +44,7 @@ public class AutoTreeChopAPI {
      */
     public void enableAutoTreeChop(Player player) {
         PlayerConfig playerConfig = plugin.getDataManager().getPlayerConfig(player.getUniqueId());
+        if (playerConfig == null) return;
         playerConfig.setAutoTreeChopEnabled(true);
     }
 
@@ -51,6 +53,7 @@ public class AutoTreeChopAPI {
      */
     public void disableAutoTreeChop(Player player) {
         PlayerConfig playerConfig = plugin.getDataManager().getPlayerConfig(player.getUniqueId());
+        if (playerConfig == null) return;
         playerConfig.setAutoTreeChopEnabled(false);
     }
 

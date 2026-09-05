@@ -24,8 +24,6 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.milkteamc.autotreechop.AutoTreeChop;
-import org.milkteamc.autotreechop.PlayerConfig;
-import org.milkteamc.autotreechop.database.DatabaseManager;
 import org.milkteamc.autotreechop.updater.ModrinthUpdateChecker;
 
 public class PlayerJoinListener implements Listener {
@@ -41,36 +39,12 @@ public class PlayerJoinListener implements Listener {
         Player player = event.getPlayer();
         UUID playerUUID = player.getUniqueId();
 
-        plugin.getDatabaseManager()
-                .loadPlayerDataAsync(playerUUID, plugin.getPluginConfig().getDefaultTreeChop())
-                .thenAccept(data -> {
-                    Player onlinePlayer = plugin.getServer().getPlayer(playerUUID);
-                    if (onlinePlayer == null || !onlinePlayer.isOnline()) {
-                        return;
-                    }
-
-                    PlayerConfig playerConfig = new PlayerConfig(playerUUID, data);
-                    plugin.getDataManager().addPlayerConfig(playerUUID, playerConfig);
-
-                    if (playerConfig.isAutoTreeChopEnabled()) {
-                        plugin.getConfirmationManager().markRejoin(playerUUID);
-                    }
-                })
+        plugin.getDataManager()
+                .loadPlayerConfig(playerUUID, plugin.getPluginConfig().getDefaultTreeChop())
                 .exceptionally(ex -> {
                     plugin.getLogger()
-                            .warning("Failed to load data for player " + player.getName() + ": " + ex.getMessage());
-
-                    Player onlinePlayer = plugin.getServer().getPlayer(playerUUID);
-                    if (onlinePlayer != null && onlinePlayer.isOnline()) {
-                        DatabaseManager.PlayerData defaultData = new DatabaseManager.PlayerData(
-                                playerUUID,
-                                plugin.getPluginConfig().getDefaultTreeChop(),
-                                0,
-                                0,
-                                java.time.LocalDate.now());
-                        PlayerConfig fallback = new PlayerConfig(playerUUID, defaultData);
-                        plugin.getDataManager().addPlayerConfig(playerUUID, fallback);
-                    }
+                            .warning("Failed to load data for player " + playerUUID
+                                    + "; AutoTreeChop remains unavailable until they reconnect: " + ex.getMessage());
                     return null;
                 });
         ModrinthUpdateChecker checker = plugin.getUpdateChecker();

@@ -59,6 +59,10 @@ public class ToggleCommand {
 
         UUID targetUUID = targetPlayer.getUniqueId();
         PlayerConfig playerConfig = plugin.getDataManager().getPlayerConfig(targetUUID);
+        if (playerConfig == null) {
+            AutoTreeChop.sendMessage(actor.sender(), MessageKeys.PLAYER_DATA_UNAVAILABLE);
+            return;
+        }
         boolean autoTreeChopEnabled = !playerConfig.isAutoTreeChopEnabled();
         playerConfig.setAutoTreeChopEnabled(autoTreeChopEnabled);
 
@@ -97,6 +101,10 @@ public class ToggleCommand {
             return;
         }
         PlayerConfig playerConfig = plugin.getDataManager().getPlayerConfig(player.getUniqueId());
+        if (playerConfig == null) {
+            AutoTreeChop.sendMessage(actor.sender(), MessageKeys.PLAYER_DATA_UNAVAILABLE);
+            return;
+        }
         if (playerConfig.isAutoTreeChopEnabled()) {
             AutoTreeChop.sendMessage(player, MessageKeys.ALREADY_ENABLED);
             return;
@@ -110,9 +118,14 @@ public class ToggleCommand {
     @CommandPermission("autotreechop.other")
     public void enable(BukkitCommandActor actor, EntitySelector<Player> targetPlayers) {
         int count = 0;
+        boolean unavailable = false;
         String lastName = null;
         for (Player targetPlayer : targetPlayers) {
             PlayerConfig cfg = plugin.getDataManager().getPlayerConfig(targetPlayer.getUniqueId());
+            if (cfg == null) {
+                unavailable = true;
+                continue;
+            }
             if (cfg.isAutoTreeChopEnabled()) continue; // skip already-enabled silently, or send per-player msg
             cfg.setAutoTreeChopEnabled(true);
             lastName = targetPlayer.getName();
@@ -122,12 +135,13 @@ public class ToggleCommand {
                     MessageKeys.ENABLED_BY_OTHER,
                     Placeholder.parsed("player", actor.sender().getName()));
         }
+        if (unavailable) AutoTreeChop.sendMessage(actor.sender(), MessageKeys.PLAYER_DATA_UNAVAILABLE);
         if (count == 1 && lastName != null) {
             AutoTreeChop.sendMessage(
                     actor.sender(), MessageKeys.ENABLED_FOR_OTHER, Placeholder.parsed("player", lastName));
         } else if (count > 1) {
             AutoTreeChop.sendMessage(
-                    actor.sender(), MessageKeys.ENABLED_FOR_OTHER, Placeholder.parsed("player", "everyone"));
+                    actor.sender(), MessageKeys.ENABLED_FOR_OTHER, Placeholder.parsed("player", String.valueOf(count)));
         }
     }
 
@@ -145,6 +159,10 @@ public class ToggleCommand {
         }
         UUID playerUUID = player.getUniqueId();
         PlayerConfig playerConfig = plugin.getDataManager().getPlayerConfig(playerUUID);
+        if (playerConfig == null) {
+            AutoTreeChop.sendMessage(actor.sender(), MessageKeys.PLAYER_DATA_UNAVAILABLE);
+            return;
+        }
         if (!playerConfig.isAutoTreeChopEnabled()) {
             AutoTreeChop.sendMessage(player, MessageKeys.ALREADY_DISABLED);
             return;
@@ -159,10 +177,15 @@ public class ToggleCommand {
     @CommandPermission("autotreechop.other")
     public void disable(BukkitCommandActor actor, EntitySelector<Player> targetPlayers) {
         int count = 0;
+        boolean unavailable = false;
         String lastName = null;
         for (Player targetPlayer : targetPlayers) {
             UUID targetUUID = targetPlayer.getUniqueId();
             PlayerConfig cfg = plugin.getDataManager().getPlayerConfig(targetUUID);
+            if (cfg == null) {
+                unavailable = true;
+                continue;
+            }
             if (!cfg.isAutoTreeChopEnabled()) continue;
             cfg.setAutoTreeChopEnabled(false);
             plugin.getConfirmationManager().clearPlayer(targetUUID);
@@ -173,12 +196,15 @@ public class ToggleCommand {
                     MessageKeys.DISABLED_BY_OTHER,
                     Placeholder.parsed("player", actor.sender().getName()));
         }
+        if (unavailable) AutoTreeChop.sendMessage(actor.sender(), MessageKeys.PLAYER_DATA_UNAVAILABLE);
         if (count == 1 && lastName != null) {
             AutoTreeChop.sendMessage(
                     actor.sender(), MessageKeys.DISABLED_FOR_OTHER, Placeholder.parsed("player", lastName));
         } else if (count > 1) {
             AutoTreeChop.sendMessage(
-                    actor.sender(), MessageKeys.DISABLED_FOR_OTHER, Placeholder.parsed("player", "everyone"));
+                    actor.sender(),
+                    MessageKeys.DISABLED_FOR_OTHER,
+                    Placeholder.parsed("player", String.valueOf(count)));
         }
     }
 
@@ -195,6 +221,10 @@ public class ToggleCommand {
 
         UUID playerUUID = player.getUniqueId();
         PlayerConfig playerConfig = plugin.getDataManager().getPlayerConfig(playerUUID);
+        if (playerConfig == null) {
+            AutoTreeChop.sendMessage(actor.sender(), MessageKeys.PLAYER_DATA_UNAVAILABLE);
+            return;
+        }
         boolean autoTreeChopEnabled = !playerConfig.isAutoTreeChopEnabled();
         playerConfig.setAutoTreeChopEnabled(autoTreeChopEnabled);
 

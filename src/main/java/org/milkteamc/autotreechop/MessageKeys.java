@@ -25,6 +25,7 @@ public final class MessageKeys {
     public static final String ENABLED = "enabled";
     public static final String DISABLED = "disabled";
     public static final String NO_PERMISSION = "no-permission";
+    public static final String PLAYER_DATA_UNAVAILABLE = "playerDataUnavailable";
     public static final String ONLY_PLAYERS = "only-players";
     public static final String HIT_MAX_USAGE = "hitmaxusage";
     public static final String HIT_MAX_BLOCK = "hitmaxblock";
