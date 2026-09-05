@@ -72,6 +72,8 @@ public class TranslationManager {
         this.defaultLocale = defaultLocale;
         this.useClientLocale = useClientLocale;
 
+        plugin.saveBundledLanguages();
+
         // Load styles first
         styleRegistry.loadStyles();
 
@@ -87,8 +89,9 @@ public class TranslationManager {
             return;
         }
 
-        File[] files =
-                langFolder.listFiles((dir, name) -> name.endsWith(".properties") && !name.equals("styles.properties"));
+        File[] files = langFolder.listFiles(file -> file.isFile()
+                && file.getName().endsWith(".properties")
+                && !file.getName().equals("styles.properties"));
 
         if (files == null || files.length == 0) {
             return;
@@ -144,7 +147,7 @@ public class TranslationManager {
                     }
                 }
 
-            } catch (IOException e) {
+            } catch (IOException | IllegalArgumentException e) {
                 plugin.getLogger().log(Level.WARNING, "Failed to update translation file: " + fileName, e);
             }
         }
@@ -227,16 +230,18 @@ public class TranslationManager {
             return;
         }
 
-        File[] files =
-                langFolder.listFiles((dir, name) -> name.endsWith(".properties") && !name.equals("styles.properties"));
+        File[] files = langFolder.listFiles(file -> file.isFile()
+                && file.getName().endsWith(".properties")
+                && !file.getName().equals("styles.properties"));
         if (files == null || files.length == 0) {
             plugin.getLogger().warning("No translation files found in lang folder");
             return;
         }
 
+        Arrays.sort(files, Comparator.comparing(File::getName));
         for (File file : files) {
             String fileName = file.getName();
-            String localeCode = fileName.replace(".properties", "");
+            String localeCode = fileName.substring(0, fileName.length() - ".properties".length());
 
             Locale locale = parseLocale(localeCode);
             if (locale == null) {
@@ -247,8 +252,10 @@ public class TranslationManager {
             Properties properties = new Properties();
             try (InputStreamReader reader = new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8)) {
                 properties.load(reader);
-                translations.put(locale, properties);
-            } catch (IOException e) {
+                if (translations.putIfAbsent(locale, properties) != null) {
+                    plugin.getLogger().warning("Duplicate locale file ignored: " + fileName + " (" + locale + ")");
+                }
+            } catch (IOException | IllegalArgumentException e) {
                 plugin.getLogger().log(Level.SEVERE, "Failed to load translation file: " + fileName, e);
             }
         }
@@ -262,7 +269,12 @@ public class TranslationManager {
             return null;
         }
         String languageTag = localeCode.replace('_', '-');
-        return Locale.forLanguageTag(languageTag);
+        try {
+            Locale locale = new Locale.Builder().setLanguageTag(languageTag).build();
+            return locale.getLanguage().isEmpty() ? null : locale;
+        } catch (IllformedLocaleException e) {
+            return null;
+        }
     }
 
     private Locale getPlayerLocale(Player player) {
@@ -395,6 +407,7 @@ public class TranslationManager {
         this.defaultLocale = defaultLocale;
         this.useClientLocale = useClientLocale;
 
+        plugin.saveBundledLanguages();
         styleRegistry.reload();
         updateTranslationFiles();
         loadAllTranslations();

@@ -17,8 +17,9 @@
  
 package org.milkteamc.autotreechop;
 
-import java.io.File;
+import java.io.IOException;
 import java.util.Locale;
+import java.util.logging.Level;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import org.bstats.bukkit.Metrics;
 import org.bukkit.Bukkit;
@@ -38,6 +39,7 @@ import org.milkteamc.autotreechop.events.PlayerJoinListener;
 import org.milkteamc.autotreechop.events.PlayerQuitListener;
 import org.milkteamc.autotreechop.events.PlayerSneakListener;
 import org.milkteamc.autotreechop.hooks.HookManager;
+import org.milkteamc.autotreechop.translation.BundledLanguages;
 import org.milkteamc.autotreechop.translation.TranslationManager;
 import org.milkteamc.autotreechop.updater.ModrinthUpdateChecker;
 import org.milkteamc.autotreechop.utils.ConfirmationManager;
@@ -163,17 +165,17 @@ public class AutoTreeChop extends JavaPlugin {
 
     private void setupTranslation() {
         this.translationManager = new TranslationManager(this);
-        String[] langs = {"styles", "en", "de", "es", "fr", "ja", "ru", "zh", "ms"};
-        for (String lang : langs) {
-            saveResourceIfNotExists("lang/" + lang + ".properties");
-        }
         Locale defaultLocale = config.getLocale() == null ? Locale.getDefault() : config.getLocale();
         translationManager.initialize(defaultLocale, config.isUseClientLocale());
     }
 
-    private void saveResourceIfNotExists(String resourcePath) {
-        if (!new File(getDataFolder(), resourcePath).exists()) {
-            saveResource(resourcePath, false);
+    /** Export newly bundled language files without replacing administrator customizations. */
+    public void saveBundledLanguages() {
+        try {
+            BundledLanguages.copyMissing(
+                    getFile().toPath(), getDataFolder().toPath().resolve("lang"));
+        } catch (IOException e) {
+            getLogger().log(Level.WARNING, "Failed to export bundled language files", e);
         }
     }
 

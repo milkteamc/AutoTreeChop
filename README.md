@@ -51,6 +51,24 @@ It's async-friendly, lightweight, and fully customizable — with built-in suppo
 
 Automatically switches to the player's locale if enabled.
 
+Bundled languages are discovered automatically from the plugin JAR's `lang/` folder.
+To add a custom language, place a UTF-8 `<locale>.properties` file directly in
+`plugins/AutoTreeChop/lang/` and run `/atc reload`. Both `pt-BR.properties` and
+`pt_BR.properties` are accepted; use only one filename per locale. No Java changes are needed.
+For bundled translations, add the file to `src/main/resources/lang/` and rebuild.
+
+Startup and reload export missing bundled files, including `styles.properties`, without
+replacing existing files. Missing bundled message keys are appended to matching user files;
+customized values are preserved. Deleted bundled files are restored on reload, while deleted
+custom-only languages are unloaded. `styles.properties` is reserved for message styling.
+Invalid locale names or malformed language files are logged and skipped; duplicate normalized
+locales use the first filename in lexicographic order and log a warning.
+
+Player locales first match the exact locale, then the language-only file, then the configured
+locale. Missing message keys retain the existing fallback order: selected locale, English,
+configured locale, then any other loaded language containing the key.
+
+
 <a href="https://translate.codeberg.org/engage/autotreechop/">
   <img src="https://translate.codeberg.org/widget/autotreechop/autotreechop/multi-auto.svg" alt="Translation Status">
 </a>
