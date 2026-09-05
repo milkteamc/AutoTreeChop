@@ -232,3 +232,18 @@ modrinth {
         optional.project 'placeholderapi'
     }
 }
+
+// Verify the documented consumer against the distributable JAR, not loose project classes.
+tasks.register('compileApiExample', JavaCompile) {
+    dependsOn tasks.shadowJar
+    source = fileTree('docs/examples') { include '**/*.java' }
+    classpath = files(tasks.shadowJar.archiveFile) + configurations.compileClasspath
+    destinationDirectory = layout.buildDirectory.dir('api-example')
+    javaCompiler = tasks.compileJava.javaCompiler
+    options.release = 17
+    options.encoding = 'UTF-8'
+}
+
+tasks.check {
+    dependsOn tasks.named('compileApiExample')
+}

@@ -17,61 +17,122 @@
  
 package org.milkteamc.autotreechop;
 
+import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import org.bukkit.entity.Player;
+import org.milkteamc.autotreechop.database.DataManager;
 
-/** While player data is unavailable, queries return false/zero and setters do nothing. */
+/**
+ * Public integration API, available through Bukkit's ServicesManager after AutoTreeChop enables.
+ * UUID operations access only synchronized in-memory data and may be called from any thread.
+ * No method loads offline data, blocks on SQL, sends messages, or grants chopping permissions.
+ * See docs/API.md for setup, lifecycle, and compatibility examples.
+ */
 public class AutoTreeChopAPI {
-
     private final AutoTreeChop plugin;
+    private volatile boolean active = true;
 
+    /** Prefer the registered service or {@link AutoTreeChop#getAutoTreeChopAPI()}. */
     public AutoTreeChopAPI(AutoTreeChop plugin) {
-        this.plugin = plugin;
+        this.plugin = Objects.requireNonNull(plugin, "plugin");
+    }
+
+    /** Result of setting a loaded player's preference; success is not an SQL durability guarantee. */
+    public enum ChangeResult {
+        /** The preference changed and is queued for the normal save cycle. */
+        UPDATED,
+        /** The preference already had the requested value. */
+        UNCHANGED,
+        /** Loading, failed loading, offline, or the plugin is unavailable. No change was made. */
+        UNAVAILABLE
+    }
+
+    /** Immutable snapshot. Daily counters follow the server's local date and reset on access. */
+    public record PlayerState(boolean enabled, int dailyUses, int dailyBlocksBroken) {}
+
+    /**
+     * Returns a snapshot, or empty when player data/the plugin is unavailable.
+     * Does not expose mutable internal PlayerConfig or database objects.
+     *
+     * @param playerUUID non-null player UUID
+     * @return current state, distinguishing unavailable data from disabled/zero usage
+     */
+    public Optional<PlayerState> getPlayerState(UUID playerUUID) {
+        Objects.requireNonNull(playerUUID, "playerUUID");
+        DataManager manager = plugin.getDataManager();
+        if (manager == null) return Optional.empty();
+        synchronized (manager) {
+            if (!active || !plugin.isEnabled()) return Optional.empty();
+            PlayerConfig config = manager.getPlayerConfig(playerUUID);
+            if (config == null) return Optional.empty();
+            synchronized (config) {
+                return Optional.of(new PlayerState(
+                        config.isAutoTreeChopEnabled(), config.getDailyUses(), config.getDailyBlocksBroken()));
+            }
+        }
+    }
+
+    /** Returns whether a state snapshot is available now; re-check the result of later mutations. */
+    public boolean isPlayerDataReady(UUID playerUUID) {
+        return getPlayerState(playerUUID).isPresent();
     }
 
     /**
-     * Get if AutoTreeChop is enabled
+     * Sets a loaded player's preference atomically with respect to quit/save processing.
+     * Disabling also clears pending confirmations. Existing chopping jobs are not cancelled.
+     * This is a privileged integration operation: the caller must authorize its own commands.
+     * Actual chopping still uses AutoTreeChop's permission, quota, cooldown and protection checks.
      *
-     * @return boolean
+     * @param playerUUID non-null player UUID
+     * @param enabled desired preference
+     * @return UPDATED, UNCHANGED, or UNAVAILABLE; never queues a toggle for a future login
      */
+    public ChangeResult setAutoTreeChopEnabled(UUID playerUUID, boolean enabled) {
+        Objects.requireNonNull(playerUUID, "playerUUID");
+        DataManager manager = plugin.getDataManager();
+        if (manager == null) return ChangeResult.UNAVAILABLE;
+        synchronized (manager) {
+            if (!active || !plugin.isEnabled()) return ChangeResult.UNAVAILABLE;
+            PlayerConfig config = manager.getPlayerConfig(playerUUID);
+            if (config == null) return ChangeResult.UNAVAILABLE;
+            synchronized (config) {
+                boolean changed = config.isAutoTreeChopEnabled() != enabled;
+                config.setAutoTreeChopEnabled(enabled);
+                if (!enabled) plugin.getConfirmationManager().clearPlayer(playerUUID);
+                return changed ? ChangeResult.UPDATED : ChangeResult.UNCHANGED;
+            }
+        }
+    }
+
+    void deactivate() {
+        active = false;
+    }
+
+    /** Legacy convenience method: unavailable data returns false. Prefer getPlayerState(UUID). */
     public boolean isAutoTreeChopEnabled(Player player) {
-        PlayerConfig playerConfig = plugin.getDataManager().getPlayerConfig(player.getUniqueId());
-        return playerConfig != null && playerConfig.isAutoTreeChopEnabled();
+        return getPlayerState(Objects.requireNonNull(player, "player").getUniqueId())
+                .map(PlayerState::enabled)
+                .orElse(false);
     }
 
-    /**
-     * Set specific player AutoTreeChop as enabled
-     */
+    /** Legacy setter: unavailable data is a no-op. Prefer setAutoTreeChopEnabled(UUID, boolean). */
     public void enableAutoTreeChop(Player player) {
-        PlayerConfig playerConfig = plugin.getDataManager().getPlayerConfig(player.getUniqueId());
-        if (playerConfig == null) return;
-        playerConfig.setAutoTreeChopEnabled(true);
+        setAutoTreeChopEnabled(Objects.requireNonNull(player, "player").getUniqueId(), true);
     }
 
-    /**
-     * Set specific player AutoTreeChop as disable
-     */
+    /** Legacy setter: unavailable data is a no-op. Prefer setAutoTreeChopEnabled(UUID, boolean). */
     public void disableAutoTreeChop(Player player) {
-        PlayerConfig playerConfig = plugin.getDataManager().getPlayerConfig(player.getUniqueId());
-        if (playerConfig == null) return;
-        playerConfig.setAutoTreeChopEnabled(false);
+        setAutoTreeChopEnabled(Objects.requireNonNull(player, "player").getUniqueId(), false);
     }
 
-    /**
-     * Get how many times player use AutoTreeChop today
-     *
-     * @return int
-     */
+    /** Legacy counter: unavailable data returns zero. Prefer getPlayerState(UUID). */
     public int getPlayerDailyUses(UUID playerUUID) {
-        return plugin.getDataManager().getPlayerDailyUses(playerUUID);
+        return getPlayerState(playerUUID).map(PlayerState::dailyUses).orElse(0);
     }
 
-    /**
-     * Get how many blocks player break via AutoTreeChop today
-     *
-     * @return int
-     */
+    /** Legacy counter: unavailable data returns zero. Prefer getPlayerState(UUID). */
     public int getPlayerDailyBlocksBroken(UUID playerUUID) {
-        return plugin.getDataManager().getPlayerDailyBlocksBroken(playerUUID);
+        return getPlayerState(playerUUID).map(PlayerState::dailyBlocksBroken).orElse(0);
     }
 }

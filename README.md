@@ -112,6 +112,14 @@ Automatically switches to the player's locale if enabled.
 
 ---
 
+## Developer API
+
+Integrate through Bukkit ServicesManager to read player state and change the ATC preference.
+See the [API guide](docs/API.md) for dependency setup, lifecycle and threading rules,
+explicit operation results, and a compiled example plugin.
+
+---
+
 ## Support & Contribute
 
 - Need help? Join our [Matrix](https://matrix.to/#/#maoyue-dev:matrix.org)

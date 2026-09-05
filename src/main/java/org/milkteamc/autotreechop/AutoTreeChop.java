@@ -24,6 +24,7 @@ import org.bstats.bukkit.Metrics;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.plugin.PluginDescriptionFile;
+import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.milkteamc.autotreechop.command.AboutCommand;
 import org.milkteamc.autotreechop.command.ConfirmCommand;
@@ -110,7 +111,6 @@ public class AutoTreeChop extends JavaPlugin {
         this.cooldownManager = new CooldownManager();
         this.confirmationManager = new ConfirmationManager(this);
         this.treeChopUtils = new TreeChopUtils(this);
-        this.autoTreeChopAPI = new AutoTreeChopAPI(this);
 
         this.hookManager = new HookManager(this, config);
 
@@ -132,11 +132,15 @@ public class AutoTreeChop extends JavaPlugin {
             getLogger().warning("=====================================================");
         }
 
+        registerApi();
         getLogger().info("AutoTreeChop enabled!");
     }
 
     @Override
     public void onDisable() {
+        if (autoTreeChopAPI != null) autoTreeChopAPI.deactivate();
+        getServer().getServicesManager().unregisterAll(this);
+        autoTreeChopAPI = null;
         if (dataManager != null) {
             dataManager.shutdown();
         }
@@ -150,6 +154,11 @@ public class AutoTreeChop extends JavaPlugin {
         }
 
         getLogger().info("AutoTreeChop disabled!");
+    }
+
+    void registerApi() {
+        this.autoTreeChopAPI = new AutoTreeChopAPI(this);
+        getServer().getServicesManager().register(AutoTreeChopAPI.class, autoTreeChopAPI, this, ServicePriority.Normal);
     }
 
     private void setupTranslation() {
