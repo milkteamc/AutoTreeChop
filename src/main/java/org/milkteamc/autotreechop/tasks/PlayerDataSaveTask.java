@@ -18,12 +18,8 @@
 package org.milkteamc.autotreechop.tasks;
 
 import com.github.Anon8281.universalScheduler.UniversalRunnable;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
 import org.milkteamc.autotreechop.AutoTreeChop;
 import org.milkteamc.autotreechop.PlayerConfig;
-import org.milkteamc.autotreechop.database.DatabaseManager;
 
 public class PlayerDataSaveTask extends UniversalRunnable {
 
@@ -59,26 +55,9 @@ public class PlayerDataSaveTask extends UniversalRunnable {
     }
 
     private void saveAllDirtyData() {
-        Map<UUID, DatabaseManager.PlayerData> dirtyDataMap = new HashMap<>();
-
-        for (PlayerConfig config : plugin.getDataManager().getOnlinePlayersConfigs()) {
-            DatabaseManager.PlayerData snapshot = config.popSnapshotIfDirty();
-            if (snapshot != null) {
-                dirtyDataMap.put(snapshot.getPlayerUUID(), snapshot);
-            }
-        }
-
-        if (!dirtyDataMap.isEmpty()) {
-            plugin.getDatabaseManager().savePlayerDataBatchAsync(dirtyDataMap).exceptionally(ex -> {
-                plugin.getLogger().warning("Failed to save player data: " + ex.getMessage());
-                for (UUID uuid : dirtyDataMap.keySet()) {
-                    PlayerConfig config = plugin.getDataManager().getPlayerConfig(uuid);
-                    if (config != null) {
-                        config.markDirty();
-                    }
-                }
-                return null;
-            });
-        }
+        plugin.getDataManager().saveDirtyPlayerData().exceptionally(ex -> {
+            plugin.getLogger().warning("Failed to save player data; retained for retry: " + ex.getMessage());
+            return null;
+        });
     }
 }

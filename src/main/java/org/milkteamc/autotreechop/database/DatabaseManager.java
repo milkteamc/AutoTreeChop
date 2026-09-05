@@ -26,9 +26,11 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.LocalDate;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import org.bukkit.plugin.Plugin;
 
 public class DatabaseManager {
@@ -36,6 +38,7 @@ public class DatabaseManager {
     private final Plugin plugin;
     private final HikariDataSource dataSource;
     private final boolean useMysql;
+    private final PlayerDataWriteQueue writes;
 
     public DatabaseManager(
             Plugin plugin,
@@ -49,6 +52,7 @@ public class DatabaseManager {
         this.useMysql = useMysql;
         this.dataSource = initializeDataSource(useMysql, hostname, port, database, username, password);
         createTable();
+        this.writes = new PlayerDataWriteQueue(this::writePlayerDataBatch);
     }
 
     private HikariDataSource initializeDataSource(
@@ -88,7 +92,9 @@ public class DatabaseManager {
     }
 
     public CompletableFuture<PlayerData> loadPlayerDataAsync(UUID playerUUID, boolean defaultTreeChop) {
-        return CompletableFuture.supplyAsync(() -> {
+        return writes.read(() -> {
+            PlayerData pending = writes.getPending(playerUUID);
+            if (pending != null) return pending;
             try (Connection conn = dataSource.getConnection();
                     PreparedStatement stmt = conn.prepareStatement("SELECT * FROM player_data WHERE uuid = ?")) {
 
@@ -115,17 +121,15 @@ public class DatabaseManager {
     }
 
     public void savePlayerDataSync(PlayerData data) {
-        String sql = buildUpsertSql();
-        try (Connection conn = dataSource.getConnection();
-                PreparedStatement stmt = conn.prepareStatement(sql)) {
-            bindUpsertParams(stmt, data);
-            stmt.executeUpdate();
-        } catch (SQLException e) {
-            plugin.getLogger().warning("Error saving player data: " + e.getMessage());
-        }
+        savePlayerDataBatchSync(List.of(data));
     }
 
     public void savePlayerDataBatchSync(Collection<PlayerData> dataCollection) {
+        writes.save(dataCollection).join();
+    }
+
+    private void writePlayerDataBatch(Collection<PlayerData> dataCollection) {
+
         if (dataCollection == null || dataCollection.isEmpty()) return;
 
         String sql = buildUpsertSql();
@@ -144,19 +148,22 @@ public class DatabaseManager {
                 conn.commit();
 
             } catch (SQLException e) {
-                conn.rollback();
-                plugin.getLogger().severe("Failed to batch save player data: " + e.getMessage());
-                throw e; // 如果是嚴重錯誤，可能需要往上拋或在這裡單純記錄
+                try {
+                    conn.rollback();
+                } catch (SQLException rollbackFailure) {
+                    e.addSuppressed(rollbackFailure);
+                }
+                throw e;
             } finally {
                 conn.setAutoCommit(originalAutoCommit);
             }
         } catch (SQLException e) {
-            plugin.getLogger().severe("Database connection error during batch save: " + e.getMessage());
+            throw new CompletionException("Failed to save player data", e);
         }
     }
 
     public CompletableFuture<Void> savePlayerDataBatchAsync(Map<UUID, PlayerData> dataMap) {
-        return CompletableFuture.runAsync(() -> savePlayerDataBatchSync(dataMap.values()));
+        return writes.save(dataMap.values());
     }
 
     /**
@@ -209,7 +216,9 @@ public class DatabaseManager {
     }
 
     public void close() {
-        if (dataSource != null && !dataSource.isClosed()) {
+        try {
+            writes.close();
+        } finally {
             dataSource.close();
         }
     }

@@ -17,12 +17,11 @@
  
 package org.milkteamc.autotreechop.database;
 
-import com.github.Anon8281.universalScheduler.UniversalScheduler;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import org.milkteamc.autotreechop.AutoTreeChop;
 import org.milkteamc.autotreechop.PlayerConfig;
@@ -41,6 +40,7 @@ public class DataManager {
     private final Map<UUID, PlayerConfig> playerConfigs = new ConcurrentHashMap<>();
 
     private PlayerDataSaveTask saveTask;
+    private boolean shuttingDown;
 
     public DataManager(AutoTreeChop plugin, DatabaseManager databaseManager, ConfirmationManager confirmationManager) {
         this.plugin = plugin;
@@ -50,59 +50,57 @@ public class DataManager {
 
     public void startSaveTask() {
         this.saveTask = new PlayerDataSaveTask(plugin, SAVE_THRESHOLD);
-        UniversalScheduler.getScheduler(plugin).runTaskTimerAsynchronously(saveTask, SAVE_INTERVAL, SAVE_INTERVAL);
+        saveTask.runTaskTimerAsynchronously(plugin, SAVE_INTERVAL, SAVE_INTERVAL);
     }
 
     public void shutdown() {
-        plugin.getLogger().info("Saving all player data before shutdown...");
+        synchronized (this) {
+            shuttingDown = true;
+            plugin.getLogger().info("Saving all player data before shutdown...");
+            if (saveTask != null) saveTask.cancel();
 
-        if (saveTask != null) {
-            try {
-                saveTask.cancel();
-            } catch (IllegalStateException ignored) {
-                // Task was never scheduled or already cancelled (e.g. Folia shutdown)
-            }
-        }
-
-        if (!playerConfigs.isEmpty()) {
             SessionManager sessionManager = SessionManager.getInstance();
-            List<DatabaseManager.PlayerData> dirtyDataList = new ArrayList<>();
-
+            Map<UUID, DatabaseManager.PlayerData> finalData = new HashMap<>();
             for (Map.Entry<UUID, PlayerConfig> entry : playerConfigs.entrySet()) {
                 UUID uuid = entry.getKey();
-                PlayerConfig pConfig = entry.getValue();
-
-                if (confirmationManager != null) {
-                    confirmationManager.clearPlayer(uuid);
-                }
-
-                if (sessionManager != null) {
-                    sessionManager.clearAllPlayerSessions(uuid);
-                }
-
-                DatabaseManager.PlayerData snapshot = pConfig.popSnapshotIfDirty();
-                if (snapshot != null) {
-                    dirtyDataList.add(snapshot);
-                }
+                if (confirmationManager != null) confirmationManager.clearPlayer(uuid);
+                if (sessionManager != null) sessionManager.clearAllPlayerSessions(uuid);
+                DatabaseManager.PlayerData snapshot = entry.getValue().popSnapshotIfDirty();
+                if (snapshot != null) finalData.put(uuid, snapshot);
             }
-
-            if (!dirtyDataList.isEmpty() && databaseManager != null) {
-                long startTime = System.currentTimeMillis();
-                databaseManager.savePlayerDataBatchSync(dirtyDataList);
-                long duration = System.currentTimeMillis() - startTime;
-                plugin.getLogger()
-                        .info("Successfully saved " + dirtyDataList.size() + " player records in " + duration + "ms.");
-            }
-
-            playerConfigs.clear();
+            // close() waits for queued work, retries retained failures, then closes the pool.
+            databaseManager.savePlayerDataBatchAsync(finalData);
         }
-
-        if (databaseManager != null) {
+        try {
             databaseManager.close();
+            plugin.getLogger().info("All queued player data saved successfully.");
+        } catch (RuntimeException e) {
+            plugin.getLogger().severe("Player data remains unsaved at shutdown: " + e.getMessage());
+        } finally {
+            playerConfigs.clear();
         }
     }
 
-    public void addPlayerConfig(UUID uuid, PlayerConfig config) {
+    /** Snapshot extraction and submission share a lock with quit and shutdown. */
+    public synchronized CompletableFuture<Void> saveDirtyPlayerData() {
+        if (shuttingDown) return CompletableFuture.completedFuture(null);
+        Map<UUID, DatabaseManager.PlayerData> snapshots = new HashMap<>();
+        for (PlayerConfig config : playerConfigs.values()) {
+            DatabaseManager.PlayerData data = config.popSnapshotIfDirty();
+            if (data != null) snapshots.put(data.getPlayerUUID(), data);
+        }
+        return databaseManager.savePlayerDataBatchAsync(snapshots);
+    }
+
+    public synchronized CompletableFuture<Void> saveAndRemovePlayer(UUID uuid) {
+        if (shuttingDown) return CompletableFuture.completedFuture(null);
+        PlayerConfig config = playerConfigs.remove(uuid);
+        DatabaseManager.PlayerData data = config == null ? null : config.popSnapshotIfDirty();
+        return databaseManager.savePlayerDataBatchAsync(data == null ? Map.of() : Map.of(uuid, data));
+    }
+
+    public synchronized void addPlayerConfig(UUID uuid, PlayerConfig config) {
+        if (shuttingDown) return;
         playerConfigs.put(uuid, config);
     }
 

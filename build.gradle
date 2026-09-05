@@ -71,6 +71,9 @@ repositories {
 }
 
 dependencies {
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.2'
+
     compileOnly 'io.papermc.paper:paper-api:1.20.4-R0.1-SNAPSHOT'
 
     implementation 'net.kyori:adventure-platform-bukkit:4.4.1'
@@ -90,6 +93,10 @@ dependencies {
     compileOnly 'com.github.angeschossen:LandsAPI:7.17.2'
     compileOnly 'com.sk89q.worldguard:worldguard-bukkit:7.0.9'
     compileOnly 'com.github.GriefPrevention:GriefPrevention:16.18.4'
+}
+
+test {
+    useJUnitPlatform()
 }
 
 compileJava {
