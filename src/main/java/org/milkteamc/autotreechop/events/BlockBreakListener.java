@@ -77,6 +77,10 @@ public class BlockBreakListener implements Listener {
             return;
         }
 
+        if (event.isCancelled()) {
+            return;
+        }
+
         Material material = block.getType();
 
         if (!playerConfig.isAutoTreeChopEnabled() || !BlockDiscoveryUtils.isLog(material, config)) {
@@ -84,15 +88,6 @@ public class BlockBreakListener implements Listener {
         }
 
         ConfirmationManager confirmationManager = plugin.getConfirmationManager();
-        ChopData pending = confirmationManager.consumePendingConfirmation(playerUUID);
-
-        if (pending != null) {
-            event.setCancelled(true);
-            confirmationManager.recordSuccessfulChop(playerUUID, pending.reason(), false);
-            AutoTreeChop.sendMessage(player, MessageKeys.CONFIRMATION_SUCCESS);
-            dispatchChop(player, playerConfig, block, tool, location, config);
-            return;
-        }
 
         if (plugin.getCooldownManager().isInCooldown(playerUUID)) {
             long remaining = plugin.getCooldownManager().getRemainingCooldown(playerUUID);
@@ -136,10 +131,23 @@ public class BlockBreakListener implements Listener {
                 try {
                     if (!player.isOnline()) return;
 
+                    if (config.isPreventNoLeavesChopping() && !hasLeaves) {
+                        return;
+                    }
+
+                    ChopData pending = confirmationManager.consumePendingConfirmation(playerUUID);
+                    if (pending != null) {
+                        confirmationManager.recordSuccessfulChop(playerUUID, pending.reason(), hasLeaves);
+                        AutoTreeChop.sendMessage(player, MessageKeys.CONFIRMATION_SUCCESS);
+                        dispatchChop(player, playerConfig, block, frozenTool, frozenLocation, config);
+                        return;
+                    }
+
                     ConfirmReason reason = confirmationManager.getConfirmationReason(playerUUID, hasLeaves);
 
                     if (reason != null) {
-                        confirmationManager.setPendingConfirmation(playerUUID, reason, frozenLocation, frozenTool);
+                        confirmationManager.setPendingConfirmation(
+                                playerUUID, reason, frozenLocation, frozenTool, hasLeaves);
 
                         String timeoutStr = String.valueOf(config.getConfirmationWindowSeconds());
                         String messageKey =

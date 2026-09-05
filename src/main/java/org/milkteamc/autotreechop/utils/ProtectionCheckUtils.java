@@ -88,6 +88,10 @@ public class ProtectionCheckUtils {
         return !enabled || hook.checkBuild(player, location);
     }
 
+    public static boolean checkWorldGuardPlace(Player player, Location location, boolean enabled, WorldGuardHook hook) {
+        return !enabled || hook.checkPlace(player, location);
+    }
+
     public static boolean checkResidence(Player player, Location location, boolean enabled, ResidenceHook hook) {
         return !enabled || hook.checkBuild(player, location);
     }

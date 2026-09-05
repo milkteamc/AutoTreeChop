@@ -56,6 +56,8 @@ confirmation-window: 10
 # Require confirmation when the broken log has no leaf blocks nearby.
 # Helps prevent accidentally chopping placed or stripped logs.
 enable-no-leaves-confirmation: true
+# Prevent AutoTreeChop from chopping logs with no nearby leaves without showing a confirmation prompt.
+prevent-no-leaves-chopping: false
 # Require confirmation after the player has been idle or rejoined with ATC enabled.
 enable-idle-confirmation: true
 # Radius (blocks) used to check whether a log has nearby leaves.

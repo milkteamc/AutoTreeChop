@@ -98,6 +98,7 @@ public class Config {
     private int idleTimeoutSeconds;
     private int confirmationWindowSeconds;
     private boolean noLeavesConfirmationEnabled;
+    private boolean preventNoLeavesChopping;
     private boolean enableIdleConfirmation;
     private int noLeavesDetectionRadius;
     private int chopBatchSize;
@@ -248,6 +249,7 @@ public class Config {
         idleTimeoutSeconds = config.getInt("idle-timeout", 300);
         confirmationWindowSeconds = config.getInt("confirmation-window", 10);
         noLeavesConfirmationEnabled = config.getBoolean("enable-no-leaves-confirmation", true);
+        preventNoLeavesChopping = config.getBoolean("prevent-no-leaves-chopping", false);
         enableIdleConfirmation = config.getBoolean("enable-idle-confirmation", true);
         noLeavesDetectionRadius = config.getInt("no-leaves-detection-radius", 6);
 
@@ -553,6 +555,10 @@ public class Config {
 
     public boolean isNoLeavesConfirmationEnabled() {
         return noLeavesConfirmationEnabled;
+    }
+
+    public boolean isPreventNoLeavesChopping() {
+        return preventNoLeavesChopping;
     }
 
     public boolean isIdleConfirmationEnabled() {

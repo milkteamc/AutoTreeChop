@@ -432,7 +432,7 @@ public class TreeReplantUtils {
                 && ProtectionCheckUtils.checkLands(player, location, landsEnabled, landsHook)
                 && ProtectionCheckUtils.checkGriefPrevention(
                         player, location, griefPreventionEnabled, griefPreventionHook)
-                && ProtectionCheckUtils.checkWorldGuard(player, location, worldGuardEnabled, worldGuardHook);
+                && ProtectionCheckUtils.checkWorldGuardPlace(player, location, worldGuardEnabled, worldGuardHook);
     }
 
     public static boolean isReplantEnabledForPlayer(Player player, Config config) {

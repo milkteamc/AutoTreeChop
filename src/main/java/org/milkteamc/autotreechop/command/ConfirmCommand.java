@@ -66,6 +66,10 @@ public class ConfirmCommand {
         Config config = plugin.getPluginConfig();
         PlayerConfig playerConfig = plugin.getDataManager().getPlayerConfig(uuid);
 
+        if (config.isPreventNoLeavesChopping() && !chop.hasLeaves()) {
+            return;
+        }
+
         // The block may have been broken or replaced during the confirmation window
         // (e.g. another player cleared it). Re-validate before chopping.
         Block block = chop.blockLocation().getBlock();

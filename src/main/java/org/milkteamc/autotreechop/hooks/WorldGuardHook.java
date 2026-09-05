@@ -31,10 +31,6 @@ import org.bukkit.entity.Player;
 
 public class WorldGuardHook {
     public boolean checkBuild(Player player, Location location) {
-        if (player.hasPermission("autotreechop.op") || player.isOp()) {
-            return true;
-        }
-
         com.sk89q.worldedit.util.Location loc = BukkitAdapter.adapt(location);
         RegionContainer container = WorldGuard.getInstance().getPlatform().getRegionContainer();
         RegionQuery query = container.createQuery();
@@ -42,5 +38,15 @@ public class WorldGuardHook {
         LocalPlayer localPlayer = WorldGuardPlugin.inst().wrapPlayer(player);
         return !(set.queryState(localPlayer, Flags.BUILD) == StateFlag.State.DENY)
                 && !(set.queryState(localPlayer, Flags.BLOCK_BREAK) == StateFlag.State.DENY);
+    }
+
+    public boolean checkPlace(Player player, Location location) {
+        com.sk89q.worldedit.util.Location loc = BukkitAdapter.adapt(location);
+        RegionContainer container = WorldGuard.getInstance().getPlatform().getRegionContainer();
+        RegionQuery query = container.createQuery();
+        ApplicableRegionSet set = query.getApplicableRegions(loc);
+        LocalPlayer localPlayer = WorldGuardPlugin.inst().wrapPlayer(player);
+        return !(set.queryState(localPlayer, Flags.BUILD) == StateFlag.State.DENY)
+                && !(set.queryState(localPlayer, Flags.BLOCK_PLACE) == StateFlag.State.DENY);
     }
 }

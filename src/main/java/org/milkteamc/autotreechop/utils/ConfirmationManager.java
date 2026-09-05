@@ -43,10 +43,11 @@ public class ConfirmationManager {
      * {@code blockLocation} and {@code tool} are used by {@code /atc confirm} to fire
      * the chop without requiring the player to physically re-break the log.
      */
-    public record ChopData(ConfirmReason reason, Location blockLocation, ItemStack tool) {}
+    public record ChopData(ConfirmReason reason, Location blockLocation, ItemStack tool, boolean hasLeaves) {}
 
     // Internal record — not exposed; callers receive ChopData instead.
-    private record PendingConfirmation(long expiryMs, ConfirmReason reason, Location blockLocation, ItemStack tool) {}
+    private record PendingConfirmation(
+            long expiryMs, ConfirmReason reason, Location blockLocation, ItemStack tool, boolean hasLeaves) {}
 
     private final AutoTreeChop plugin;
 
@@ -100,10 +101,12 @@ public class ConfirmationManager {
      * @param reason        the reason that triggered the confirmation requirement
      * @param blockLocation location of the log that was blocked (cloned by caller)
      * @param tool          the tool held at break time (cloned by caller)
+     * @param hasLeaves     whether the target log had nearby leaves
      */
-    public void setPendingConfirmation(UUID uuid, ConfirmReason reason, Location blockLocation, ItemStack tool) {
+    public void setPendingConfirmation(
+            UUID uuid, ConfirmReason reason, Location blockLocation, ItemStack tool, boolean hasLeaves) {
         long expiryMs = System.currentTimeMillis() + plugin.getPluginConfig().getConfirmationWindowSeconds() * 1000L;
-        pendingConfirmations.put(uuid, new PendingConfirmation(expiryMs, reason, blockLocation, tool));
+        pendingConfirmations.put(uuid, new PendingConfirmation(expiryMs, reason, blockLocation, tool, hasLeaves));
     }
 
     /**
@@ -128,7 +131,8 @@ public class ConfirmationManager {
                 return null; // expired — remove and return null to caller
             }
             // valid — capture data and remove the entry
-            result[0] = new ChopData(existing.reason(), existing.blockLocation(), existing.tool());
+            result[0] =
+                    new ChopData(existing.reason(), existing.blockLocation(), existing.tool(), existing.hasLeaves());
             return null;
         });
         return result[0];
