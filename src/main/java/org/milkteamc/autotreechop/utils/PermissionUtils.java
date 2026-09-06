@@ -23,17 +23,30 @@ import org.milkteamc.autotreechop.PlayerConfig;
 
 public class PermissionUtils {
 
-    // VIP limit checker
+    /** Whether the player has room for the proposed operation, including VIP limits. */
+    public static boolean canUse(Player player, PlayerConfig playerConfig, Config config) {
+        if (!config.getLimitUsage()) return true;
+        boolean vip = player.hasPermission("autotreechop.vip");
+        if (vip && !config.getLimitVipUsage()) return true;
+        int limit = vip ? config.getVipUsesPerDay() : config.getMaxUsesPerDay();
+        return playerConfig.getDailyUses() < limit;
+    }
+
+    public static boolean canBreakBlocks(Player player, PlayerConfig playerConfig, Config config, int count) {
+        if (count < 0) throw new IllegalArgumentException("count must be nonnegative");
+        if (!config.getLimitUsage()) return true;
+        boolean vip = player.hasPermission("autotreechop.vip");
+        if (vip && !config.getLimitVipUsage()) return true;
+        int limit = vip ? config.getVipBlocksPerDay() : config.getMaxBlocksPerDay();
+        return (long) playerConfig.getDailyBlocksBroken() + count <= limit;
+    }
+
+    /** Legacy helpers: true only for unlimited VIP usage. Use canUse/canBreakBlocks for quotas. */
     public static boolean hasVipUses(Player player, PlayerConfig playerConfig, Config config) {
-        if (!config.getLimitVipUsage()) return player.hasPermission("autotreechop.vip");
-        if (player.hasPermission("autotreechop.vip")) return playerConfig.getDailyUses() <= config.getVipUsesPerDay();
-        return false;
+        return player.hasPermission("autotreechop.vip") && !config.getLimitVipUsage();
     }
 
     public static boolean hasVipBlock(Player player, PlayerConfig playerConfig, Config config) {
-        if (!config.getLimitVipUsage()) return player.hasPermission("autotreechop.vip");
-        if (player.hasPermission("autotreechop.vip"))
-            return playerConfig.getDailyBlocksBroken() <= config.getVipBlocksPerDay();
-        return false;
+        return hasVipUses(player, playerConfig, config);
     }
 }

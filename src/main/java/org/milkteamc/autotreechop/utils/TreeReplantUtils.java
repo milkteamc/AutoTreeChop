@@ -67,7 +67,11 @@ public class TreeReplantUtils {
         Location originalLocation = brokenLogBlock.getLocation().clone();
         boolean needs2x2 = isLikely2x2Tree(originalLogType, originalLocation, choppedLogs);
 
+        var playerConfig = plugin.getDataManager().getPlayerConfig(player.getUniqueId());
+        if (playerConfig == null) return;
         Runnable replantTask = () -> {
+            if (!player.isOnline() || plugin.getDataManager().getPlayerConfig(player.getUniqueId()) != playerConfig)
+                return;
             if (needs2x2) {
                 Location anchorLocation = find2x2PlantLocation(originalLocation, config);
                 if (anchorLocation == null) {

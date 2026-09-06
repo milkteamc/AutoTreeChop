@@ -111,7 +111,7 @@ public class SessionManager {
         if (hasActiveLeafRemovalSession(playerKey)) {
             return null;
         }
-        String sessionId = playerKey + "_" + System.currentTimeMillis();
+        String sessionId = playerKey + "_" + UUID.randomUUID();
         leafRemovalRemovedLogs.put(sessionId, ConcurrentHashMap.newKeySet());
         activeLeafRemovalSessions.add(playerKey);
         playerKeyToSessionId.put(playerKey, sessionId); // populate reverse index
@@ -156,8 +156,10 @@ public class SessionManager {
 
     public void endLeafRemovalSession(String sessionId, String playerKey) {
         leafRemovalRemovedLogs.remove(sessionId);
-        activeLeafRemovalSessions.remove(playerKey);
-        playerKeyToSessionId.remove(playerKey); // clean up reverse index
+        // A delayed callback from an old login must not clear the new login's session.
+        if (playerKeyToSessionId.remove(playerKey, sessionId)) {
+            activeLeafRemovalSessions.remove(playerKey);
+        }
     }
 
     public boolean startLeafCheck(UUID uuid) {

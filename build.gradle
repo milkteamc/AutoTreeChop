@@ -190,6 +190,11 @@ tasks.runServer {
 
 runPaper.folia.registerTask()
 
+tasks.named('runFolia') {
+    javaLauncher = tasks.runServer.javaLauncher
+    runDirectory = layout.projectDirectory.dir('run/folia')
+}
+
 modrinth {
     token = System.getenv('MODRINTH_TOKEN')
     projectId = 'autotreechop'

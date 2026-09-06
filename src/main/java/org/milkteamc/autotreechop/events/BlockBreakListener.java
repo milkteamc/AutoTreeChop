@@ -100,14 +100,12 @@ public class BlockBreakListener implements Listener {
         }
 
         if (config.getLimitUsage()) {
-            if (!PermissionUtils.hasVipBlock(player, playerConfig, config)
-                    && playerConfig.getDailyBlocksBroken() >= config.getMaxBlocksPerDay()) {
+            if (!PermissionUtils.canBreakBlocks(player, playerConfig, config, 1)) {
                 EffectUtils.sendMaxBlockLimitReachedMessage(player, block);
                 return;
             }
 
-            if (!PermissionUtils.hasVipUses(player, playerConfig, config)
-                    && playerConfig.getDailyUses() >= config.getMaxUsesPerDay()) {
+            if (!PermissionUtils.canUse(player, playerConfig, config)) {
                 AutoTreeChop.sendMessage(player, MessageKeys.HIT_MAX_USAGE);
                 return;
             }

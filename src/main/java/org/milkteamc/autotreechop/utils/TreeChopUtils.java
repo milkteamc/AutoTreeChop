@@ -51,6 +51,10 @@ public class TreeChopUtils {
         this.sessionManager = SessionManager.getInstance();
     }
 
+    private boolean isCurrentPlayer(Player player, PlayerConfig playerConfig) {
+        return player.isOnline() && plugin.getDataManager().getPlayerConfig(player.getUniqueId()) == playerConfig;
+    }
+
     private static boolean hasEnoughDurability(Player player, int blockCount, Config config) {
         ItemStack tool = player.getInventory().getItemInMainHand();
         if (tool == null || tool.getType().getMaxDurability() <= 0) {
@@ -78,8 +82,7 @@ public class TreeChopUtils {
         return remainingDurability > estimatedDamage;
     }
 
-    private static void applyToolDamage(Player player, int blocksBroken, Config config) {
-        ItemStack tool = player.getInventory().getItemInMainHand();
+    private static void applyToolDamage(Player player, ItemStack tool, int blocksBroken, Config config) {
         if (tool == null || tool.getType().getMaxDurability() <= 0) {
             return;
         }
@@ -163,6 +166,8 @@ public class TreeChopUtils {
             PlayerConfig playerConfig,
             ProtectionCheckUtils.ProtectionHooks hooks) {
 
+        if (!isCurrentPlayer(player, playerConfig)) return;
+
         if (!player.hasPermission("autotreechop.use")) {
             playerConfig.setAutoTreeChopEnabled(false);
             return;
@@ -233,6 +238,8 @@ public class TreeChopUtils {
 
         UUID playerUUID = player.getUniqueId();
 
+        if (!isCurrentPlayer(player, playerConfig)) return;
+
         if (!player.hasPermission("autotreechop.use")) {
             sessionManager.clearTreeChopSession(playerUUID);
             return;
@@ -249,14 +256,20 @@ public class TreeChopUtils {
             return;
         }
 
-        if (config.getLimitUsage()) {
-            if (!PermissionUtils.hasVipBlock(player, playerConfig, config)) {
-                if (playerConfig.getDailyBlocksBroken() + treeBlocks.size() > config.getMaxBlocksPerDay()) {
-                    AutoTreeChop.sendMessage(player, MessageKeys.HIT_MAX_BLOCK);
-                    sessionManager.clearTreeChopSession(playerUUID);
-                    return;
-                }
-            }
+        if (!PermissionUtils.canUse(player, playerConfig, config)) {
+            AutoTreeChop.sendMessage(player, MessageKeys.HIT_MAX_USAGE);
+            sessionManager.clearTreeChopSession(playerUUID);
+            return;
+        }
+        if (!PermissionUtils.canBreakBlocks(player, playerConfig, config, treeBlocks.size())) {
+            AutoTreeChop.sendMessage(player, MessageKeys.HIT_MAX_BLOCK);
+            sessionManager.clearTreeChopSession(playerUUID);
+            return;
+        }
+
+        if (!Objects.equals(tool, player.getInventory().getItemInMainHand())) {
+            sessionManager.clearTreeChopSession(playerUUID);
+            return;
         }
 
         if (config.isToolDamage() && !hasEnoughDurability(player, treeBlocks.size(), config)) {
@@ -282,7 +295,9 @@ public class TreeChopUtils {
 
         List<Location> blockList = new ArrayList<>(treeBlocks);
         int batchSize = config.getChopBatchSize();
-        int totalBlocks = blockList.size();
+        int toolSlot = player.getInventory().getHeldItemSlot();
+        ItemStack[] expectedTool = {tool};
+        boolean[] stopped = {false};
         UUID playerUUID = player.getUniqueId();
 
         Location centerLocation = originalBlock.getLocation().clone();
@@ -306,6 +321,15 @@ public class TreeChopUtils {
                 0,
                 batchSize,
                 (location, index) -> {
+                    if (stopped[0]) return;
+                    if (!isCurrentPlayer(player, playerConfig)
+                            || player.getInventory().getHeldItemSlot() != toolSlot
+                            || !Objects.equals(
+                                    expectedTool[0], player.getInventory().getItemInMainHand())) {
+                        stopped[0] = true;
+                        return;
+                    }
+                    if (!PermissionUtils.canBreakBlocks(player, playerConfig, config, 1)) return;
                     Block block = location.getBlock();
 
                     // Re-check block type (may have changed between phases)
@@ -320,12 +344,6 @@ public class TreeChopUtils {
 
                     Material originalLogType = block.getType();
 
-                    // Track the lowest-Y log of each type for replanting
-                    Location existingLoc = logTypesForReplant.get(originalLogType);
-                    if (existingLoc == null || location.getBlockY() < existingLoc.getBlockY()) {
-                        logTypesForReplant.put(originalLogType, location.clone());
-                    }
-
                     if (config.isCallBlockBreakEvent()) {
                         BlockBreakEvent breakEvent = new BlockBreakEvent(block, player);
                         plugin.getServer().getPluginManager().callEvent(breakEvent);
@@ -337,18 +355,38 @@ public class TreeChopUtils {
                     if (config.getPlayBreakSound()) {
                         XSound.BLOCK_WOOD_BREAK.play(location, 1.0f, 1.0f);
                     }
-                    block.breakNaturally();
+                    // Event listeners may change the player inventory or disconnect them.
+                    if (!isCurrentPlayer(player, playerConfig)
+                            || player.getInventory().getHeldItemSlot() != toolSlot
+                            || !Objects.equals(
+                                    expectedTool[0], player.getInventory().getItemInMainHand())) {
+                        stopped[0] = true;
+                        return;
+                    }
+                    if (!PermissionUtils.canBreakBlocks(player, playerConfig, config, 1)) return;
+                    ItemStack heldTool = player.getInventory().getItemInMainHand();
+                    if (!block.breakNaturally()) return;
+                    // Charge on the same tick as each removal, before the player can swap items.
+                    if (config.isToolDamage()) {
+                        applyToolDamage(player, heldTool, 1, config);
+                        expectedTool[0] = heldTool.clone();
+                        if (heldTool.getAmount() == 0) stopped[0] = true;
+                    }
+
+                    // Track the lowest-Y log of each type for replanting
+                    Location existingLoc = logTypesForReplant.get(originalLogType);
+                    if (existingLoc == null || location.getBlockY() < existingLoc.getBlockY()) {
+                        logTypesForReplant.put(originalLogType, location.clone());
+                    }
 
                     actuallyRemovedLogs.add(location);
                     sessionManager.trackRemovedLogForPlayer(playerUUID.toString(), location);
                     playerConfig.incrementDailyBlocksBroken();
                 },
                 () -> {
-                    // After all logs are removed
-                    if (config.isToolDamage()) {
-                        applyToolDamage(player, totalBlocks, config);
-                    }
-
+                    if (!isCurrentPlayer(player, playerConfig)) return;
+                    sessionManager.removeTreeChopLocations(playerUUID, blockList);
+                    if (actuallyRemovedLogs.isEmpty()) return;
                     // Handle leaf removal
                     if (config.isLeafRemovalEnabled() && finalLeafSnapshot != null) {
                         long delay = config.getLeafRemovalDelayTicks();
@@ -388,8 +426,6 @@ public class TreeChopUtils {
                     }
 
                     plugin.getCooldownManager().setCooldown(player, playerUUID, config);
-
-                    sessionManager.removeTreeChopLocations(playerUUID, blockList);
                 });
     }
 
@@ -401,6 +437,8 @@ public class TreeChopUtils {
             PlayerConfig playerConfig,
             ProtectionCheckUtils.ProtectionHooks hooks,
             Set<Location> removedLogs) {
+
+        if (!isCurrentPlayer(player, playerConfig)) return;
 
         if (!config.isLeafRemovalEnabled()) {
             return;
@@ -462,7 +500,7 @@ public class TreeChopUtils {
             String sessionId,
             String playerKey) {
 
-        if (leavesToRemove.isEmpty()) {
+        if (!isCurrentPlayer(player, playerConfig) || leavesToRemove.isEmpty()) {
             sessionManager.endLeafRemovalSession(sessionId, playerKey);
             return;
         }
@@ -475,9 +513,9 @@ public class TreeChopUtils {
                 0,
                 batchSize,
                 (location, index) -> {
+                    if (!isCurrentPlayer(player, playerConfig)) return false;
                     if (config.getLeafRemovalCountsTowardsLimit()) {
-                        if (!PermissionUtils.hasVipBlock(player, playerConfig, config)
-                                && playerConfig.getDailyBlocksBroken() >= config.getMaxBlocksPerDay()) {
+                        if (!PermissionUtils.canBreakBlocks(player, playerConfig, config, 1)) {
                             return false;
                         }
                     }
@@ -518,6 +556,10 @@ public class TreeChopUtils {
                     return false;
                 }
             }
+
+            if (!isCurrentPlayer(player, playerConfig)) return false;
+            if (config.getLeafRemovalCountsTowardsLimit()
+                    && !PermissionUtils.canBreakBlocks(player, playerConfig, config, 1)) return false;
 
             if (config.getLeafRemovalVisualEffects()) {
                 EffectUtils.showLeafRemovalEffect(player, leafBlock);
