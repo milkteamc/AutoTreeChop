@@ -17,14 +17,14 @@
  
 package org.milkteamc.autotreechop.utils;
 
-import java.util.HashMap;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import org.bukkit.entity.Player;
 import org.milkteamc.autotreechop.Config;
 
 public class CooldownManager {
 
-    private final HashMap<UUID, Long> cooldowns = new HashMap<>();
+    private final ConcurrentHashMap<UUID, Long> cooldowns = new ConcurrentHashMap<>();
 
     public CooldownManager() {}
 

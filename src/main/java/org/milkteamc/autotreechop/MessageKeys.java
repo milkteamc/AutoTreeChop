@@ -28,6 +28,7 @@ public final class MessageKeys {
     public static final String PLAYER_DATA_UNAVAILABLE = "playerDataUnavailable";
     public static final String ONLY_PLAYERS = "only-players";
     public static final String HIT_MAX_USAGE = "hitmaxusage";
+    public static final String TREE_SCAN_INCOMPLETE = "tree_scan_incomplete";
     public static final String HIT_MAX_BLOCK = "hitmaxblock";
     public static final String USAGE = "usage";
     public static final String BLOCKS_BROKEN = "blocks-broken";

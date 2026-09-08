@@ -29,6 +29,7 @@ import org.milkteamc.autotreechop.utils.BlockDiscoveryUtils;
 import org.milkteamc.autotreechop.utils.ConfirmationManager.ChopData;
 import org.milkteamc.autotreechop.utils.EffectUtils;
 import org.milkteamc.autotreechop.utils.ProtectionCheckUtils.ProtectionHooks;
+import org.milkteamc.autotreechop.utils.RegionAccess;
 import revxrsal.commands.annotation.Command;
 import revxrsal.commands.annotation.Subcommand;
 import revxrsal.commands.bukkit.actor.BukkitCommandActor;
@@ -76,6 +77,10 @@ public class ConfirmCommand {
 
         // The block may have been broken or replaced during the confirmation window
         // (e.g. another player cleared it). Re-validate before chopping.
+        if (!RegionAccess.owns(player) || !RegionAccess.owns(chop.blockLocation())) {
+            AutoTreeChop.sendMessage(player, MessageKeys.NO_PENDING_CONFIRMATION);
+            return;
+        }
         Block block = chop.blockLocation().getBlock();
         if (!BlockDiscoveryUtils.isLog(block.getType(), config)) {
             // Log is gone — treat as if there was no pending confirmation so the
@@ -84,7 +89,7 @@ public class ConfirmCommand {
             return;
         }
 
-        plugin.getConfirmationManager().recordSuccessfulChop(uuid, chop.reason(), false);
+        plugin.getConfirmationManager().recordSuccessfulChop(uuid, chop.reason(), chop.hasLeaves());
         AutoTreeChop.sendMessage(player, MessageKeys.CONFIRMATION_SUCCESS);
 
         if (config.isVisualEffect()) {

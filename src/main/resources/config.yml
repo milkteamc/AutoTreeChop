@@ -114,6 +114,12 @@ log-types:
   - WARPED_STEM
   - CRIMSON_STEM
 
+# Mangrove roots participate in the same tree as MANGROVE_LOG.
+# Use an empty list to disable root removal. ROOTED_DIRT is soil, not a tree root.
+root-types:
+  - MANGROVE_ROOTS
+  - MUDDY_MANGROVE_ROOTS
+
 # Leaf removal setting
 enable-leaf-removal: true
 # smart (recommended), radius (faster, less accurate)
@@ -147,6 +153,12 @@ leaf-types:
   - WARPED_WART_BLOCK
   - NETHER_WART_BLOCK
 
+# Additional foliage kept separate so upgrading preserves customized leaf-types lists.
+# Set to [] if these blocks should not be removed.
+additional-leaf-types:
+  - AZALEA_LEAVES
+  - FLOWERING_AZALEA_LEAVES
+
 # Replanting setting
 # Enable automatic sapling replanting after tree chopping
 enable-auto-replant: true
@@ -178,4 +190,4 @@ valid-soil-types:
   - ROOTED_DIRT
 
 # Configuration file version - DO NOT MODIFY
-config-version: 2
+config-version: 3

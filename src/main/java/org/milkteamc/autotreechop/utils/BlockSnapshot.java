@@ -18,7 +18,6 @@
 package org.milkteamc.autotreechop.utils;
 
 import com.cryptomorin.xseries.XMaterial;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import org.bukkit.Location;
@@ -31,13 +30,23 @@ import org.bukkit.World;
 public class BlockSnapshot {
     private final Map<LocationKey, Material> blockData;
     private final World world;
+    private final boolean complete;
     private final Location centerLocation;
     private static final Material AIR_MATERIAL = XMaterial.AIR.get() != null ? XMaterial.AIR.get() : Material.AIR;
 
     public BlockSnapshot(Map<LocationKey, Material> blockData, World world, Location centerLocation) {
-        this.blockData = new HashMap<>(blockData);
+        this(blockData, world, centerLocation, true);
+    }
+
+    public BlockSnapshot(Map<LocationKey, Material> blockData, World world, Location centerLocation, boolean complete) {
+        this.complete = complete;
+        this.blockData = Map.copyOf(blockData);
         this.world = world;
         this.centerLocation = centerLocation.clone();
+    }
+
+    public boolean isComplete() {
+        return complete;
     }
 
     public Material getBlockType(Location loc) {

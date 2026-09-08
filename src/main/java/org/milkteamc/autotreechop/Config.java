@@ -216,7 +216,7 @@ public class Config {
         vipUsesPerDay = config.getInt("vip-uses-per-day", 100);
         vipBlocksPerDay = config.getInt("vip-blocks-per-day", 1000);
 
-        toolDamageDecrease = config.getInt("toolDamageDecrease", 1);
+        toolDamageDecrease = Math.max(0, config.getInt("toolDamageDecrease", 1));
         mustUseTool = config.getBoolean("mustUseTool", false);
         respectUnbreaking = config.getBoolean("respectUnbreaking", true);
 
@@ -226,23 +226,23 @@ public class Config {
         commandToggle = config.getBoolean("enable-command-toggle", true);
         sneakMessage = config.getBoolean("sneak-message", false);
 
-        chopBatchSize = config.getInt("chop-batch-size", 50);
-        maxTreeSize = config.getInt("max-tree-size", 500);
-        maxDiscoveryBlocks = config.getInt("max-discovery-blocks", 1000);
+        chopBatchSize = Math.max(1, config.getInt("chop-batch-size", 50));
+        maxTreeSize = Math.max(1, config.getInt("max-tree-size", 500));
+        maxDiscoveryBlocks = Math.max(1, config.getInt("max-discovery-blocks", 1000));
         callBlockBreakEvent = config.getBoolean("call-block-break-event", true);
 
         autoReplantEnabled = config.getBoolean("enable-auto-replant", true);
-        replantDelayTicks = config.getLong("replant-delay-ticks", 15L);
+        replantDelayTicks = Math.max(0, config.getLong("replant-delay-ticks", 15L));
         requireSaplingInInventory = config.getBoolean("require-sapling-in-inventory", false);
         replantVisualEffect = config.getBoolean("replant-visual-effect", true);
 
         leafRemovalEnabled = config.getBoolean("enable-leaf-removal", true);
-        leafRemovalDelayTicks = config.getLong("leaf-removal-delay-ticks", 5L);
-        leafRemovalRadius = config.getInt("leaf-removal-radius", 10);
+        leafRemovalDelayTicks = Math.max(0, config.getLong("leaf-removal-delay-ticks", 5L));
+        leafRemovalRadius = Math.max(0, config.getInt("leaf-removal-radius", 10));
         leafRemovalDropItems = config.getBoolean("leaf-removal-drop-items", false);
         leafRemovalVisualEffects = config.getBoolean("leaf-removal-visual-effects", true);
         leafRemovalAsync = config.getBoolean("leaf-removal-async", true);
-        leafRemovalBatchSize = config.getInt("leaf-removal-batch-size", 20);
+        leafRemovalBatchSize = Math.max(1, config.getInt("leaf-removal-batch-size", 20));
         leafRemovalCountsTowardsLimit = config.getBoolean("leaf-removal-counts-towards-limit", false);
         leafRemovalMode = config.getString("leaf-removal-mode", "smart");
 
@@ -251,7 +251,7 @@ public class Config {
         noLeavesConfirmationEnabled = config.getBoolean("enable-no-leaves-confirmation", true);
         preventNoLeavesChopping = config.getBoolean("prevent-no-leaves-chopping", false);
         enableIdleConfirmation = config.getBoolean("enable-idle-confirmation", true);
-        noLeavesDetectionRadius = config.getInt("no-leaves-detection-radius", 6);
+        noLeavesDetectionRadius = Math.max(0, config.getInt("no-leaves-detection-radius", 6));
 
         String localeStr = config.getString("locale", "en");
         try {
@@ -262,7 +262,13 @@ public class Config {
         }
 
         logTypes = loadMaterialSet("log-types");
+        logTypes.addAll(loadMaterialSet("root-types"));
         leafTypes = loadMaterialSet("leaf-types");
+        for (String name :
+                config.getStringList("additional-leaf-types", List.of("AZALEA_LEAVES", "FLOWERING_AZALEA_LEAVES"))) {
+            Material material = parseMaterial(name);
+            if (material != null) leafTypes.add(material);
+        }
         validSoilTypes = loadMaterialSet("valid-soil-types");
 
         logSaplingMapping = loadLogSaplingMapping();
@@ -486,7 +492,7 @@ public class Config {
     }
 
     public Material getSaplingForLog(Material logType) {
-        return logSaplingMapping.get(logType);
+        return logSaplingMapping.get(org.milkteamc.autotreechop.utils.BlockDiscoveryUtils.treeFamily(logType));
     }
 
     public boolean isLeafRemovalEnabled() {

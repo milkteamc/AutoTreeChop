@@ -170,6 +170,10 @@ public class SessionManager {
         leafCheckInProgress.remove(uuid);
     }
 
+    public boolean hasActiveTreeChopSession(UUID playerUUID) {
+        return treeChopProcessingLocations.containsKey(playerUUID);
+    }
+
     public boolean hasAnyActiveSession(UUID playerUUID) {
         return treeChopProcessingLocations.containsKey(playerUUID)
                 || hasActiveLeafRemovalSession(playerUUID.toString());

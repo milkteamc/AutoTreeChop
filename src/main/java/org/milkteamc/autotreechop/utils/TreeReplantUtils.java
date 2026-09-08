@@ -70,6 +70,7 @@ public class TreeReplantUtils {
         var playerConfig = plugin.getDataManager().getPlayerConfig(player.getUniqueId());
         if (playerConfig == null) return;
         Runnable replantTask = () -> {
+            if (!RegionAccess.owns(player) || !RegionAccess.ownsArea(originalLocation, 4)) return;
             if (!player.isOnline() || plugin.getDataManager().getPlayerConfig(player.getUniqueId()) != playerConfig)
                 return;
             if (needs2x2) {
@@ -125,9 +126,9 @@ public class TreeReplantUtils {
         if (AutoTreeChop.isFolia()) {
             plugin.getServer()
                     .getRegionScheduler()
-                    .runDelayed(plugin, originalLocation, (task) -> replantTask.run(), delayTicks);
+                    .runDelayed(plugin, originalLocation, (task) -> replantTask.run(), Math.max(1L, delayTicks));
         } else {
-            Bukkit.getScheduler().runTaskLater(plugin, replantTask, delayTicks);
+            Bukkit.getScheduler().runTaskLater(plugin, replantTask, Math.max(1L, delayTicks));
         }
     }
 
@@ -330,8 +331,11 @@ public class TreeReplantUtils {
         }
 
         String matName = type.toString();
-        if (matName.endsWith("_LOG") || matName.endsWith("_WOOD")) {
-            return true;
+        if (matName.endsWith("_LOG")
+                || matName.endsWith("_WOOD")
+                || matName.endsWith("_STEM")
+                || matName.endsWith("_HYPHAE")) {
+            return false;
         }
 
         switch (xMat) {

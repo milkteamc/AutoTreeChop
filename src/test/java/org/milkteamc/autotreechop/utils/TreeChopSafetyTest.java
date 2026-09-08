@@ -57,6 +57,7 @@ class TreeChopSafetyTest {
     void setup() {
         when(player.getInventory()).thenReturn(mock(PlayerInventory.class));
         when(plugin.getDataManager()).thenReturn(manager);
+        when(plugin.getCooldownManager()).thenReturn(mock(CooldownManager.class));
         when(player.getUniqueId()).thenReturn(uuid);
         when(player.isOnline()).thenReturn(true);
         when(player.hasPermission("autotreechop.use")).thenReturn(true);
@@ -163,6 +164,7 @@ class TreeChopSafetyTest {
         blockProcessor().accept(location, 0);
         verify((Damageable) tool.getItemMeta(), never()).setDamage(anyInt());
         verify(data, never()).incrementDailyBlocksBroken();
+        verify(data, never()).incrementDailyUses();
     }
 
     @Test
@@ -201,6 +203,7 @@ class TreeChopSafetyTest {
         verify(block, never()).breakNaturally();
         verify((Damageable) tool.getItemMeta(), never()).setDamage(anyInt());
         verify(data, never()).incrementDailyBlocksBroken();
+        verify(data, never()).incrementDailyUses();
     }
 
     @Test
@@ -214,5 +217,71 @@ class TreeChopSafetyTest {
         assertTrue(sessions.hasActiveLeafRemovalSession(key));
         sessions.endLeafRemovalSession(currentSession, key);
         assertFalse(sessions.hasActiveLeafRemovalSession(key));
+    }
+
+    @Test
+    void unbreakableToolRemainsUndamaged() throws Exception {
+        ItemStack tool = prepareTool();
+        when(((Damageable) tool.getItemMeta()).isUnbreakable()).thenReturn(true);
+        when(block.breakNaturally()).thenReturn(true);
+        validate(tool);
+        blockProcessor().accept(location, 0);
+        verify((Damageable) tool.getItemMeta(), never()).setDamage(anyInt());
+        verify(data).incrementDailyBlocksBroken();
+        verify(data).incrementDailyUses();
+    }
+
+    @Test
+    void successfulBlocksCountOnlyOneUse() throws Exception {
+        ItemStack tool = prepareTool();
+        when(block.breakNaturally()).thenReturn(true);
+        validate(tool);
+        blockProcessor().accept(location, 0);
+        blockProcessor().accept(location, 1);
+        verify(data).incrementDailyUses();
+        verify(data, times(2)).incrementDailyBlocksBroken();
+    }
+
+    @Test
+    void cooldownIsCheckedEvenWhenBypassingBlockListener() throws Exception {
+        when(plugin.getCooldownManager().isInCooldown(uuid)).thenReturn(true);
+        validate(null);
+        verifyNoInteractions(batches.constructed().get(0));
+        verify(data, never()).incrementDailyUses();
+    }
+
+    @Test
+    void playerTeleportToDifferentRegionDoesNotAccessInventory() throws Exception {
+        ItemStack tool = prepareTool();
+        validate(tool);
+        try (var access = mockStatic(RegionAccess.class)) {
+            access.when(() -> RegionAccess.owns(location)).thenReturn(true);
+            access.when(() -> RegionAccess.owns(player)).thenReturn(false);
+            clearInvocations(player.getInventory(), block);
+            blockProcessor().accept(location, 0);
+            verifyNoInteractions(player.getInventory(), block);
+        }
+    }
+
+    @Test
+    void incompleteCanopyAbortsBeforeChangingBlocks() throws Exception {
+        when(config.isLeafRemovalEnabled()).thenReturn(true);
+        when(player.hasPermission("autotreechop.leaves")).thenReturn(true);
+        try (var snapshots = mockStatic(BlockSnapshotCreator.class)) {
+            validate(null);
+            verifyNoInteractions(batches.constructed().get(0));
+            verify(block, never()).breakNaturally();
+            assertFalse(SessionManager.getInstance().hasActiveTreeChopSession(uuid));
+        }
+    }
+
+    @Test
+    void teleportDuringDiscoveryReleasesTheTreeSession() throws Exception {
+        SessionManager.getInstance().addTreeChopLocations(uuid, Set.of(location));
+        try (var access = mockStatic(RegionAccess.class)) {
+            access.when(() -> RegionAccess.owns(player)).thenReturn(false);
+            validate(null);
+            assertFalse(SessionManager.getInstance().hasActiveTreeChopSession(uuid));
+        }
     }
 }

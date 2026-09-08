@@ -17,9 +17,11 @@
  
 package org.milkteamc.autotreechop.utils;
 
-import java.util.Collections;
+import java.util.ArrayDeque;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 import org.bukkit.Location;
@@ -27,41 +29,7 @@ import org.bukkit.Material;
 import org.bukkit.World;
 import org.milkteamc.autotreechop.Config;
 
-/**
- * Block-discovery utilities – all methods work with {@link BlockSnapshot} and
- * are safe to call from async threads.
- *
- * <h3>Leaf-removal performance improvements</h3>
- * <ul>
- *   <li><b>Smart mode (was critical bottleneck):</b> the old implementation
- *       called {@code isOrphanedLeaf} → {@code hasNearbyActiveLog} (O(r³) snapshot
- *       scan) → {@code isConnectedToActiveLog} (recursive DFS, depth 8) for
- *       <em>every leaf</em>.  A large tree with 200 leaves and radius 6 triggered
- *       ~200 × 216 = 43 000 snapshot accesses plus up to 200 DFS traversals.
- *       The replacement is a two-pass BFS: one O(r³) sphere scan to collect all
- *       leaves and active log seeds, then one BFS from those seeds to mark
- *       connected leaves – total work is O(r³ + leaves × 26), done exactly once.
- *   </li>
- *   <li><b>Radius mode:</b> pre-builds an {@code activeLogSet} with one O(r³)
- *       scan so the per-leaf proximity check becomes O(4³) set lookups instead of
- *       O(4³) snapshot {@code getBlockType} calls (~10–50× cheaper per lookup).
- *   </li>
- *   <li><b>Air-block BFS expansion fixed:</b> the old {@code discoverLeavesBFS}
- *       expanded neighbours for every AIR/other block it encountered, causing the
- *       visited set to balloon to O(r³) even when most of the sphere was empty.
- *       The new two-pass approach never walks the air at all.
- *   </li>
- *   <li><b>Unnecessary Location allocation in addNeighborsToQueue:</b>
- *       {@code snapshot.hasBlock(neighborKey.toLocation(world))} created one
- *       {@link Location} per neighbour (26 per queued node).  The call is now
- *       skipped by relying on {@link BlockSnapshot#getBlockType} returning a
- *       non-log material for out-of-range positions, which the existing
- *       {@code !isLog()} guard in {@code discoverTreeBFS} already handles.
- *       TODO: add {@code BlockSnapshot.hasBlock(int, int, int)} to make this
- *       explicit and fully allocation-free.
- *   </li>
- * </ul>
- */
+/** Discovers connected tree blocks and canopy from immutable snapshots. */
 public class BlockDiscoveryUtils {
 
     // ── Tree discovery ────────────────────────────────────────────────────────
@@ -90,7 +58,7 @@ public class BlockDiscoveryUtils {
         queue.add(startKey);
         visited.add(startKey);
 
-        while (!queue.isEmpty() && treeBlocks.size() < maxBlocks) {
+        while (!queue.isEmpty() && treeBlocks.size() <= maxBlocks) {
             BlockSnapshot.LocationKey currentKey = queue.poll();
             Material type = snapshot.getBlockType(currentKey.getX(), currentKey.getY(), currentKey.getZ());
 
@@ -98,7 +66,7 @@ public class BlockDiscoveryUtils {
                 continue;
             }
 
-            if (config.isStopChoppingIfDifferentTypes() && type != originalType) {
+            if (config.isStopChoppingIfDifferentTypes() && treeFamily(type) != treeFamily(originalType)) {
                 continue;
             }
 
@@ -110,204 +78,82 @@ public class BlockDiscoveryUtils {
         return treeBlocks;
     }
 
-    // ── Leaf discovery – smart mode (two-pass BFS) ───────────────────────────
-
     /**
-     * Discovers orphaned leaf blocks using a two-pass BFS (smart mode only).
-     *
-     * <p><b>Algorithm:</b>
-     * <ol>
-     *   <li>Scan the sphere once to collect all leaf positions and all
-     *       <em>active</em> (not removed) log positions.</li>
-     *   <li>BFS outward from the active log seeds through leaves and logs.
-     *       Any leaf reached is "connected" to a living log.</li>
-     *   <li>Leaves not reached = orphaned = scheduled for removal.</li>
-     * </ol>
-     *
-     * <p>This is O(r³ + leaves × 26) total – done once, not once per leaf.
-     *
-     * @param snapshot        block snapshot captured synchronously
-     * @param centerLocation  centre of the removal sphere
-     * @param radius          removal radius
-     * @param config          plugin configuration
-     * @param removedLogs     locations of logs that were (or will be) removed
-     * @return set of leaf locations that should be removed
+     * Multi-source canopy ownership: remove leaves reached from chopped logs only when
+     * no surviving log supports them at an equal or shorter leaf-path distance.
+     * Shared-canopy ties are preserved. Radius is measured from every chopped log/root.
      */
     public static Set<Location> discoverLeavesBFS(
             BlockSnapshot snapshot, Location centerLocation, int radius, Config config, Set<Location> removedLogs) {
-
-        World world = snapshot.getWorld();
-        BlockSnapshot.LocationKey centerKey = new BlockSnapshot.LocationKey(centerLocation);
-        int radiusSq = radius * radius;
-
-        // Convert removed-log set once for O(1) membership tests throughout
-        Set<BlockSnapshot.LocationKey> removedLogKeys = toLocationKeySet(removedLogs);
-
-        // ── Pass 1: collect leaves and active log seeds in the sphere ─────────
-        // We include a 2-block buffer for log seeds so that logs just outside the
-        // removal sphere (e.g. neighbouring trees) are recognised as anchors and
-        // prevent their connected leaves from being incorrectly removed.
-        int logScanRadius = radius + 2;
-        int logScanSq = logScanRadius * logScanRadius;
-
-        Set<BlockSnapshot.LocationKey> allLeaves = new HashSet<>();
-        Set<BlockSnapshot.LocationKey> activeLogSeeds = new HashSet<>();
-
-        for (int dx = -logScanRadius; dx <= logScanRadius; dx++) {
-            for (int dy = -logScanRadius; dy <= logScanRadius; dy++) {
-                for (int dz = -logScanRadius; dz <= logScanRadius; dz++) {
-                    int distSq = dx * dx + dy * dy + dz * dz;
-                    if (distSq > logScanSq) continue;
-
-                    BlockSnapshot.LocationKey key = new BlockSnapshot.LocationKey(
-                            centerKey.getX() + dx, centerKey.getY() + dy, centerKey.getZ() + dz);
-                    Material type = snapshot.getBlockType(key.getX(), key.getY(), key.getZ());
-
-                    if (distSq <= radiusSq && isLeafBlock(type, config)) {
-                        allLeaves.add(key);
-                    } else if (isLog(type, config) && !removedLogKeys.contains(key)) {
-                        activeLogSeeds.add(key);
-                    }
-                }
+        Set<BlockSnapshot.LocationKey> removed = toLocationKeySet(removedLogs);
+        Map<BlockSnapshot.LocationKey, Integer> choppedDistances = leafDistances(snapshot, removed, radius, config);
+        Set<BlockSnapshot.LocationKey> surviving = new HashSet<>();
+        for (BlockSnapshot.LocationKey key : snapshot.getAllLocations()) {
+            if (!removed.contains(key) && isLog(snapshot.getBlockType(key.getX(), key.getY(), key.getZ()), config)) {
+                surviving.add(key);
             }
         }
-
-        if (allLeaves.isEmpty()) {
-            return Collections.emptySet();
-        }
-
-        // If no living logs remain nearby, every leaf in the sphere is orphaned
-        if (activeLogSeeds.isEmpty()) {
-            Set<Location> all = new HashSet<>(allLeaves.size() * 2);
-            for (BlockSnapshot.LocationKey key : allLeaves) {
-                all.add(key.toLocation(world));
+        Map<BlockSnapshot.LocationKey, Integer> survivingDistances = leafDistances(snapshot, surviving, radius, config);
+        Set<Location> leaves = new HashSet<>();
+        choppedDistances.forEach((key, distance) -> {
+            if (distance > 0 && survivingDistances.getOrDefault(key, Integer.MAX_VALUE) > distance) {
+                leaves.add(key.toLocation(snapshot.getWorld()));
             }
-            return all;
+        });
+        return leaves;
+    }
+
+    /** Radius/aggressive modes share whole-tree coverage with smart mode. */
+    public static Set<Location> discoverLeavesRadial(
+            BlockSnapshot snapshot, Location centerLocation, int radius, Config config, Set<Location> removedLogs) {
+        Set<BlockSnapshot.LocationKey> removed = toLocationKeySet(removedLogs);
+        Map<BlockSnapshot.LocationKey, Integer> candidates = leafDistances(snapshot, removed, radius, config);
+        Set<BlockSnapshot.LocationKey> surviving = new HashSet<>();
+        for (BlockSnapshot.LocationKey key : snapshot.getAllLocations()) {
+            if (!removed.contains(key) && isLog(snapshot.getBlockType(key.getX(), key.getY(), key.getZ()), config)) {
+                surviving.add(key);
+            }
         }
+        boolean protectNearby = !"aggressive".equalsIgnoreCase(config.getLeafRemovalMode());
+        Set<Location> leaves = new HashSet<>();
+        candidates.forEach((key, distance) -> {
+            if (distance > 0 && (!protectNearby || !hasNearbyActiveLogInSet(key, surviving, 4))) {
+                leaves.add(key.toLocation(snapshot.getWorld()));
+            }
+        });
+        return leaves;
+    }
 
-        // ── Pass 2: BFS from active logs to mark connected leaves ─────────────
-        Set<BlockSnapshot.LocationKey> connected = new HashSet<>();
-        Queue<BlockSnapshot.LocationKey> queue = new LinkedList<>(activeLogSeeds);
-        Set<BlockSnapshot.LocationKey> visited = new HashSet<>(activeLogSeeds);
-
+    private static Map<BlockSnapshot.LocationKey, Integer> leafDistances(
+            BlockSnapshot snapshot, Set<BlockSnapshot.LocationKey> sources, int radius, Config config) {
+        Map<BlockSnapshot.LocationKey, Integer> distance = new HashMap<>();
+        Queue<BlockSnapshot.LocationKey> queue = new ArrayDeque<>();
+        for (BlockSnapshot.LocationKey source : sources) {
+            distance.put(source, 0);
+            queue.add(source);
+        }
         while (!queue.isEmpty()) {
-            BlockSnapshot.LocationKey cur = queue.poll();
+            BlockSnapshot.LocationKey current = queue.remove();
+            int nextDistance = distance.get(current) + 1;
+            if (nextDistance > radius) continue;
             for (int dx = -1; dx <= 1; dx++) {
                 for (int dy = -1; dy <= 1; dy++) {
                     for (int dz = -1; dz <= 1; dz++) {
                         if (dx == 0 && dy == 0 && dz == 0) continue;
-                        BlockSnapshot.LocationKey nb =
-                                new BlockSnapshot.LocationKey(cur.getX() + dx, cur.getY() + dy, cur.getZ() + dz);
-                        if (visited.contains(nb)) continue;
-                        visited.add(nb);
-
-                        if (allLeaves.contains(nb)) {
-                            connected.add(nb);
-                            queue.add(nb); // continue BFS through leaves
-                        } else {
-                            // Also traverse active logs to discover leaves behind them
-                            Material type = snapshot.getBlockType(nb.getX(), nb.getY(), nb.getZ());
-                            if (isLog(type, config) && !removedLogKeys.contains(nb)) {
-                                queue.add(nb);
-                            }
-                        }
+                        BlockSnapshot.LocationKey next = new BlockSnapshot.LocationKey(
+                                current.getX() + dx, current.getY() + dy, current.getZ() + dz);
+                        if (distance.containsKey(next)
+                                || !isLeafBlock(snapshot.getBlockType(next.getX(), next.getY(), next.getZ()), config))
+                            continue;
+                        distance.put(next, nextDistance);
+                        queue.add(next);
                     }
                 }
             }
         }
-
-        // Leaves not reachable from any active log are orphaned
-        Set<Location> toRemove = new HashSet<>();
-        for (BlockSnapshot.LocationKey leaf : allLeaves) {
-            if (!connected.contains(leaf)) {
-                toRemove.add(leaf.toLocation(world));
-            }
-        }
-        return toRemove;
+        return distance;
     }
 
-    // ── Leaf discovery – radius / aggressive modes ────────────────────────────
-
-    /**
-     * Discovers leaves using a radial scan for {@code radius} and
-     * {@code aggressive} modes (async-safe).
-     *
-     * <p><b>Radius-mode optimisation:</b> the old code called
-     * {@code snapshot.getBlockType()} 4³ = 64 times per leaf for the
-     * proximity check.  This version pre-builds a {@code Set} of active log
-     * positions in one O((r+4)³) pass; the per-leaf check then becomes 64
-     * hash-set lookups which are 10–50× cheaper than snapshot accesses.
-     */
-    public static Set<Location> discoverLeavesRadial(
-            BlockSnapshot snapshot, Location centerLocation, int radius, Config config, Set<Location> removedLogs) {
-
-        Set<Location> leaves = new HashSet<>();
-        World world = snapshot.getWorld();
-        BlockSnapshot.LocationKey centerKey = new BlockSnapshot.LocationKey(centerLocation);
-        String mode = config.getLeafRemovalMode().toLowerCase();
-        int radiusSq = radius * radius;
-
-        // Convert removed logs once
-        Set<BlockSnapshot.LocationKey> removedLogKeys = toLocationKeySet(removedLogs);
-
-        // For radius mode: build active-log set once so per-leaf checks are O(4³)
-        // set lookups rather than O(4³) snapshot.getBlockType() calls.
-        Set<BlockSnapshot.LocationKey> activeLogSet = null;
-        if ("radius".equals(mode)) {
-            final int CHECK_RADIUS = 4; // matches original hasNearbyActiveLog radius
-            int extRadius = radius + CHECK_RADIUS;
-            int extSq = extRadius * extRadius;
-            activeLogSet = new HashSet<>();
-            for (int dx = -extRadius; dx <= extRadius; dx++) {
-                for (int dy = -extRadius; dy <= extRadius; dy++) {
-                    for (int dz = -extRadius; dz <= extRadius; dz++) {
-                        if (dx * dx + dy * dy + dz * dz > extSq) continue;
-                        BlockSnapshot.LocationKey key = new BlockSnapshot.LocationKey(
-                                centerKey.getX() + dx, centerKey.getY() + dy, centerKey.getZ() + dz);
-                        Material type = snapshot.getBlockType(key.getX(), key.getY(), key.getZ());
-                        if (isLog(type, config) && !removedLogKeys.contains(key)) {
-                            activeLogSet.add(key);
-                        }
-                    }
-                }
-            }
-        }
-
-        // Scan leaves in sphere
-        for (int dx = -radius; dx <= radius; dx++) {
-            for (int dy = -radius; dy <= radius; dy++) {
-                for (int dz = -radius; dz <= radius; dz++) {
-                    if (dx * dx + dy * dy + dz * dz > radiusSq) continue;
-
-                    BlockSnapshot.LocationKey key = new BlockSnapshot.LocationKey(
-                            centerKey.getX() + dx, centerKey.getY() + dy, centerKey.getZ() + dz);
-                    Material type = snapshot.getBlockType(key.getX(), key.getY(), key.getZ());
-
-                    if (!isLeafBlock(type, config)) continue;
-
-                    if ("radius".equals(mode)) {
-                        // O(4³) set lookups – no snapshot accesses
-                        if (!hasNearbyActiveLogInSet(key, activeLogSet, 4)) {
-                            leaves.add(key.toLocation(world));
-                        }
-                    } else {
-                        // "aggressive" or any unrecognised mode: remove unconditionally
-                        leaves.add(key.toLocation(world));
-                    }
-                }
-            }
-        }
-
-        return leaves;
-    }
-
-    // ── Private helpers ───────────────────────────────────────────────────────
-
-    /**
-     * Checks whether any entry in {@code activeLogSet} lies within
-     * {@code checkRadius} blocks of {@code leafKey}.
-     * All lookups are O(1) hash-set membership tests.
-     */
     private static boolean hasNearbyActiveLogInSet(
             BlockSnapshot.LocationKey leafKey, Set<BlockSnapshot.LocationKey> activeLogSet, int checkRadius) {
 
@@ -378,6 +224,13 @@ public class BlockDiscoveryUtils {
     }
 
     // ── Public accessors ──────────────────────────────────────────────────────
+
+    /** Roots and mangrove logs are one species even with same-type-only chopping enabled. */
+    public static Material treeFamily(Material type) {
+        if (type.name().equals("MANGROVE_ROOTS") || type.name().equals("MUDDY_MANGROVE_ROOTS"))
+            return Material.valueOf("MANGROVE_LOG");
+        return type;
+    }
 
     public static boolean isLog(Material material, Config config) {
         return config.getLogTypes().contains(material);

@@ -45,6 +45,7 @@ import org.milkteamc.autotreechop.utils.ConfirmationManager.ConfirmReason;
 import org.milkteamc.autotreechop.utils.EffectUtils;
 import org.milkteamc.autotreechop.utils.PermissionUtils;
 import org.milkteamc.autotreechop.utils.ProtectionCheckUtils.ProtectionHooks;
+import org.milkteamc.autotreechop.utils.RegionAccess;
 import org.milkteamc.autotreechop.utils.SessionManager;
 
 public class BlockBreakListener implements Listener {
@@ -118,18 +119,31 @@ public class BlockBreakListener implements Listener {
         }
 
         int radius = config.getNoLeavesDetectionRadius();
-        Map<Long, ChunkSnapshot> snapshots = captureLeafCheckSnapshots(block, radius);
+        if (!RegionAccess.ownsArea(location, radius)) {
+            SessionManager.getInstance().finishLeafCheck(playerUUID);
+            return;
+        }
+        Map<Long, ChunkSnapshot> snapshots;
+        try {
+            snapshots = captureLeafCheckSnapshots(block, radius);
+        } catch (RuntimeException failure) {
+            SessionManager.getInstance().finishLeafCheck(playerUUID);
+            throw failure;
+        }
+        int minY = block.getWorld().getMinHeight();
+        int maxY = block.getWorld().getMaxHeight();
 
         ItemStack frozenTool = tool.clone();
         Location frozenLocation = location;
 
         scheduler.runTaskAsync(() -> {
-            boolean hasLeaves = hasNearbyLeaves(block, radius, config, snapshots);
+            boolean hasLeaves = hasNearbyLeaves(frozenLocation, minY, maxY, radius, config, snapshots);
 
             scheduler.runTaskAtLocation(frozenLocation, () -> {
                 try {
-                    if (!player.isOnline() || plugin.getDataManager().getPlayerConfig(playerUUID) != playerConfig)
-                        return;
+                    if (!RegionAccess.owns(player)
+                            || !player.isOnline()
+                            || plugin.getDataManager().getPlayerConfig(playerUUID) != playerConfig) return;
 
                     if (config.isPreventNoLeavesChopping() && !hasLeaves) {
                         return;
@@ -163,7 +177,8 @@ public class BlockBreakListener implements Listener {
                     confirmationManager.recordSuccessfulChop(playerUUID, null, hasLeaves);
                     dispatchChop(player, playerConfig, block, frozenTool, frozenLocation, config);
                 } finally {
-                    SessionManager.getInstance().finishLeafCheck(playerUUID);
+                    if (plugin.getDataManager().getPlayerConfig(playerUUID) == playerConfig)
+                        SessionManager.getInstance().finishLeafCheck(playerUUID);
                 }
             });
         });
@@ -225,13 +240,11 @@ public class BlockBreakListener implements Listener {
         return snapshots;
     }
 
-    private static boolean hasNearbyLeaves(Block log, int radius, Config config, Map<Long, ChunkSnapshot> snapshots) {
-        World world = log.getWorld();
-        int cx = log.getX();
-        int cy = log.getY();
-        int cz = log.getZ();
-        int minY = world.getMinHeight();
-        int maxY = world.getMaxHeight();
+    private static boolean hasNearbyLeaves(
+            Location log, int minY, int maxY, int radius, Config config, Map<Long, ChunkSnapshot> snapshots) {
+        int cx = log.getBlockX();
+        int cy = log.getBlockY();
+        int cz = log.getBlockZ();
 
         for (int dx = -radius; dx <= radius; dx++) {
             for (int dy = -radius; dy <= radius; dy++) {

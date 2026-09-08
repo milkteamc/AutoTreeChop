@@ -58,13 +58,13 @@ public class BlockSnapshotCreator {
         visited.add(new BlockSnapshot.LocationKey(center));
 
         // Quick BFS to find all connected logs
-        while (!queue.isEmpty() && blockData.size() < maxBlocks) {
+        while (!queue.isEmpty()) {
             Block current = queue.poll();
             BlockSnapshot.LocationKey key = new BlockSnapshot.LocationKey(current.getLocation());
+            if (!RegionAccess.owns(current.getLocation())) {
+                return new BlockSnapshot(blockData, startBlock.getWorld(), center, false);
+            }
             Material type = current.getType();
-
-            // Store block data
-            blockData.put(key, type);
 
             // Only continue if it's a log
             if (!isLog(type, config)) {
@@ -72,9 +72,15 @@ public class BlockSnapshotCreator {
             }
 
             // Check same type if required
-            if (config.isStopChoppingIfDifferentTypes() && type != originalType) {
+            if (config.isStopChoppingIfDifferentTypes()
+                    && BlockDiscoveryUtils.treeFamily(type) != BlockDiscoveryUtils.treeFamily(originalType)) {
                 continue;
             }
+
+            // Count tree blocks, not the surrounding air, against the discovery budget.
+            if (blockData.size() >= maxBlocks)
+                return new BlockSnapshot(blockData, startBlock.getWorld(), center, false);
+            blockData.put(key, type);
 
             // Add neighbors
             for (int y = -1; y <= 1; y++) {
@@ -99,49 +105,64 @@ public class BlockSnapshotCreator {
             }
         }
 
-        return new BlockSnapshot(blockData, startBlock.getWorld(), center);
+        return new BlockSnapshot(blockData, startBlock.getWorld(), center, queue.isEmpty());
+    }
+
+    /** Legacy entry point. New chopping jobs seed capture from all discovered logs. */
+    public static BlockSnapshot captureLeafRegion(Block centerBlock, int radius, Config config) {
+        return captureLeafRegion(Set.of(centerBlock.getLocation()), radius, config);
     }
 
     /**
-     * Capture a spherical region around center for leaf processing
-     *
-     * @param centerBlock Center of the sphere
-     * @param radius Radius in blocks
-     * @param config Plugin configuration
-     * @return BlockSnapshot containing the spherical region
+     * Walk connected canopy from every tree block, so height and branch spread cannot
+     * truncate coverage. Also capture supporting logs and a leaf buffer for neighboring trees.
+     * Return null when ownership/work limits prevent a complete safe snapshot.
      */
-    public static BlockSnapshot captureLeafRegion(Block centerBlock, int radius, Config config) {
-
-        Map<BlockSnapshot.LocationKey, Material> blockData = new HashMap<>();
-        Location center = centerBlock.getLocation();
-        int radiusSquared = radius * radius;
-
-        int cx = center.getBlockX();
-        int cy = center.getBlockY();
-        int cz = center.getBlockZ();
-
-        // Scan spherical region
-        for (int x = -radius; x <= radius; x++) {
-            for (int y = -radius; y <= radius; y++) {
-                for (int z = -radius; z <= radius; z++) {
-                    // Spherical check
-                    if (x * x + y * y + z * z > radiusSquared) {
-                        continue;
-                    }
-
-                    Block block = center.getWorld().getBlockAt(cx + x, cy + y, cz + z);
-                    Material type = block.getType();
-
-                    // Only store leaves and logs
-                    if (isLeafBlock(type, config) || isLog(type, config)) {
-                        BlockSnapshot.LocationKey key = new BlockSnapshot.LocationKey(cx + x, cy + y, cz + z);
-                        blockData.put(key, type);
+    public static BlockSnapshot captureLeafRegion(Set<Location> logs, int radius, Config config) {
+        if (logs.isEmpty()) return null;
+        Location center = logs.iterator().next();
+        var world = center.getWorld();
+        int minY = world.getMinHeight();
+        int maxY = world.getMaxHeight();
+        Map<BlockSnapshot.LocationKey, Material> data = new HashMap<>();
+        Map<BlockSnapshot.LocationKey, Integer> visited = new HashMap<>();
+        Queue<BlockSnapshot.LocationKey> queue = new LinkedList<>();
+        for (Location log : logs) {
+            if (!RegionAccess.owns(log)) return null;
+            var key = new BlockSnapshot.LocationKey(log);
+            data.put(key, log.getBlock().getType());
+            visited.put(key, 0);
+            queue.add(key);
+        }
+        // Bound pathological/custom canopies without deleting an incomplete selection.
+        long budget = Math.max(10000L, (long) config.getMaxDiscoveryBlocks() * 100);
+        while (!queue.isEmpty()) {
+            var current = queue.remove();
+            int distance = visited.get(current) + 1;
+            if (distance > (long) radius + 4) continue;
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dy = -1; dy <= 1; dy++) {
+                    for (int dz = -1; dz <= 1; dz++) {
+                        if (dx == 0 && dy == 0 && dz == 0) continue;
+                        var key = new BlockSnapshot.LocationKey(
+                                current.getX() + dx, current.getY() + dy, current.getZ() + dz);
+                        if (key.getY() < minY || key.getY() >= maxY || visited.containsKey(key)) continue;
+                        if (visited.size() >= budget) return null;
+                        visited.put(key, distance);
+                        Location location = key.toLocation(world);
+                        if (!RegionAccess.owns(location)) return null;
+                        Material type = location.getBlock().getType();
+                        if (isLeafBlock(type, config)) {
+                            data.put(key, type);
+                            queue.add(key);
+                        } else if (isLog(type, config)) {
+                            data.put(key, type);
+                        }
                     }
                 }
             }
         }
-
-        return new BlockSnapshot(blockData, centerBlock.getWorld(), center);
+        return new BlockSnapshot(data, world, center);
     }
 
     /**
