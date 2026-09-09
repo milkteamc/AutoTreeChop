@@ -57,6 +57,11 @@ public class ConfirmCommand {
             AutoTreeChop.sendMessage(player, MessageKeys.PLAYER_DATA_UNAVAILABLE);
             return;
         }
+        if (!playerConfig.isAutoTreeChopEnabled()) {
+            plugin.getConfirmationManager().clearPlayer(uuid);
+            AutoTreeChop.sendMessage(player, MessageKeys.NO_PENDING_CONFIRMATION);
+            return;
+        }
 
         // consumePendingConfirmation atomically reads and removes the pending entry in
         // one step, avoiding the TOCTOU race that would exist with separate

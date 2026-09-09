@@ -66,6 +66,7 @@ class TreeChopSafetyTest {
         when(player.isOnline()).thenReturn(true);
         when(player.hasPermission("autotreechop.use")).thenReturn(true);
         when(manager.getPlayerConfig(uuid)).thenReturn(data);
+        when(data.isAutoTreeChopEnabled()).thenReturn(true);
         when(config.getMaxTreeSize()).thenReturn(100);
         when(block.getLocation()).thenReturn(location);
         when(block.getType()).thenReturn(Material.OAK_LOG);
@@ -367,5 +368,24 @@ class TreeChopSafetyTest {
         completion.run();
         verify(data).incrementDailyBlocksBroken();
         verify(config, never()).getSaplingForLog(any());
+    }
+
+    @Test
+    void disablingDuringDiscoveryCannotStartANewBatchOrConfirmation() throws Exception {
+        when(data.isAutoTreeChopEnabled()).thenReturn(false);
+        SessionManager.getInstance().addTreeChopLocations(uuid, Set.of(location));
+        validate(null);
+        verifyNoInteractions(batches.constructed().get(0));
+        verify(plugin.getConfirmationManager(), never()).recordSuccessfulChop(any(), any(), anyBoolean());
+        assertFalse(SessionManager.getInstance().hasActiveTreeChopSession(uuid));
+    }
+
+    @Test
+    void disabledEntryDoesNotCaptureOrScheduleTreeDiscovery() {
+        when(data.isAutoTreeChopEnabled()).thenReturn(false);
+        utils.chopTree(block, player, true, null, location, config, data, hooks);
+        verifyNoInteractions(
+                block, schedulers.constructed().get(0), batches.constructed().get(0));
+        assertFalse(SessionManager.getInstance().hasActiveTreeChopSession(uuid));
     }
 }

@@ -187,7 +187,7 @@ public class TreeChopUtils {
             boolean hasLeaves,
             ConfirmReason confirmedReason) {
 
-        if (!isCurrentPlayer(player, playerConfig)) return;
+        if (!isCurrentPlayer(player, playerConfig) || !playerConfig.isAutoTreeChopEnabled()) return;
         if (!RegionAccess.owns(block.getLocation())) return;
 
         if (!player.hasPermission("autotreechop.use")) {
@@ -275,6 +275,10 @@ public class TreeChopUtils {
         }
 
         if (!player.hasPermission("autotreechop.use")) {
+            sessionManager.clearTreeChopSession(playerUUID);
+            return;
+        }
+        if (!playerConfig.isAutoTreeChopEnabled()) {
             sessionManager.clearTreeChopSession(playerUUID);
             return;
         }

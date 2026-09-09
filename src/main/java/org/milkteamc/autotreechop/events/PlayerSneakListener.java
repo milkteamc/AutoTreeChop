@@ -53,6 +53,7 @@ public class PlayerSneakListener implements Listener {
             }
         } else {
             playerConfig.setAutoTreeChopEnabled(false);
+            plugin.getConfirmationManager().clearPlayer(playerUUID);
             if (plugin.getPluginConfig().getSneakMessage()) {
                 AutoTreeChop.sendMessage(player, MessageKeys.SNEAK_DISABLED);
             }
