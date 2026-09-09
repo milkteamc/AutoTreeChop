@@ -22,6 +22,7 @@ import com.cryptomorin.xseries.XMaterial;
 import com.cryptomorin.xseries.XSound;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -33,6 +34,7 @@ import org.milkteamc.autotreechop.AutoTreeChop;
 import org.milkteamc.autotreechop.Config;
 import org.milkteamc.autotreechop.MessageKeys;
 import org.milkteamc.autotreechop.PlayerConfig;
+import org.milkteamc.autotreechop.utils.ConfirmationManager.ConfirmReason;
 
 public class TreeChopUtils {
 
@@ -170,6 +172,21 @@ public class TreeChopUtils {
             PlayerConfig playerConfig,
             ProtectionCheckUtils.ProtectionHooks hooks) {
 
+        chopTree(block, player, connectedBlocks, tool, location, config, playerConfig, hooks, true, null);
+    }
+
+    public void chopTree(
+            Block block,
+            Player player,
+            boolean connectedBlocks,
+            ItemStack tool,
+            Location location,
+            Config config,
+            PlayerConfig playerConfig,
+            ProtectionCheckUtils.ProtectionHooks hooks,
+            boolean hasLeaves,
+            ConfirmReason confirmedReason) {
+
         if (!isCurrentPlayer(player, playerConfig)) return;
         if (!RegionAccess.owns(block.getLocation())) return;
 
@@ -216,8 +233,8 @@ public class TreeChopUtils {
                             treeSnapshot, startLocation, config, connectedBlocks, config.getMaxTreeSize());
 
                     // PHASE 3: Back to sync for validation and execution
-                    Runnable validationTask =
-                            () -> validateAndExecuteChop(treeBlocks, block, player, tool, config, playerConfig, hooks);
+                    Runnable validationTask = () -> validateAndExecuteChop(
+                            treeBlocks, block, player, tool, config, playerConfig, hooks, hasLeaves, confirmedReason);
 
                     scheduler.runTaskAtLocation(startLocation, validationTask);
 
@@ -245,7 +262,9 @@ public class TreeChopUtils {
             ItemStack tool,
             Config config,
             PlayerConfig playerConfig,
-            ProtectionCheckUtils.ProtectionHooks hooks) {
+            ProtectionCheckUtils.ProtectionHooks hooks,
+            boolean hasLeaves,
+            ConfirmReason confirmedReason) {
 
         UUID playerUUID = player.getUniqueId();
 
@@ -296,9 +315,56 @@ public class TreeChopUtils {
             return;
         }
 
+        TreeGrounding.Result grounding = TreeGrounding.inspect(treeBlocks, config);
+        if (grounding == null) {
+            AutoTreeChop.sendMessage(player, MessageKeys.TREE_SCAN_INCOMPLETE);
+            sessionManager.clearTreeChopSession(playerUUID);
+            return;
+        }
+
+        ConfirmationManager confirmations = plugin.getConfirmationManager();
+        if (confirmedReason == null) {
+            var pending =
+                    confirmations.consumePendingConfirmationForBlock(playerUUID, originalBlock.getLocation(), tool);
+            if (pending != null) confirmedReason = pending.reason();
+        }
+        ConfirmReason reason = !grounding.grounded() && confirmedReason != ConfirmReason.FLOATING
+                ? ConfirmReason.FLOATING
+                : confirmedReason == null ? confirmations.getConfirmationReason(playerUUID, hasLeaves) : null;
+        if (reason != null) {
+            confirmations.setPendingConfirmation(
+                    playerUUID,
+                    reason,
+                    originalBlock.getLocation().clone(),
+                    tool == null ? null : tool.clone(),
+                    hasLeaves);
+            String messageKey =
+                    switch (reason) {
+                        case FLOATING -> MessageKeys.CONFIRMATION_REQUIRED_FLOATING;
+                        case IDLE_OR_REJOIN -> MessageKeys.CONFIRMATION_REQUIRED_IDLE;
+                        case NO_LEAVES -> MessageKeys.CONFIRMATION_REQUIRED_NO_LEAVES;
+                        case BOTH -> MessageKeys.CONFIRMATION_REQUIRED_BOTH;
+                    };
+            AutoTreeChop.sendMessage(
+                    player,
+                    messageKey,
+                    Placeholder.parsed("timeout", String.valueOf(config.getConfirmationWindowSeconds())));
+            sessionManager.clearTreeChopSession(playerUUID);
+            return;
+        }
+        confirmations.recordSuccessfulChop(playerUUID, confirmedReason, hasLeaves);
+        if (confirmedReason != null) AutoTreeChop.sendMessage(player, MessageKeys.CONFIRMATION_SUCCESS);
         sessionManager.addTreeChopLocations(playerUUID, treeBlocks);
 
-        executeTreeChop(treeBlocks, player, tool, config, playerConfig, hooks, originalBlock);
+        executeTreeChop(
+                treeBlocks,
+                player,
+                tool,
+                config,
+                playerConfig,
+                hooks,
+                originalBlock,
+                grounding.grounded() ? grounding.plantableBases() : Set.of());
     }
 
     private void executeTreeChop(
@@ -308,7 +374,8 @@ public class TreeChopUtils {
             Config config,
             PlayerConfig playerConfig,
             ProtectionCheckUtils.ProtectionHooks hooks,
-            Block originalBlock) {
+            Block originalBlock,
+            Set<Location> plantableBases) {
 
         List<Location> blockList = new ArrayList<>(treeBlocks);
         int batchSize = config.getChopBatchSize();
@@ -336,6 +403,7 @@ public class TreeChopUtils {
             }
         }
 
+        if (config.isVisualEffect()) EffectUtils.showChopEffect(player, originalBlock);
         BlockSnapshot finalLeafSnapshot = leafSnapshot;
 
         batchProcessor.processBatch(
@@ -413,10 +481,11 @@ public class TreeChopUtils {
                         if (heldTool.getAmount() == 0) stopped[0] = true;
                     }
 
-                    // Roots share the mangrove replant type and anchor at the lowest removed root.
+                    // Replant only at a removed base that already touched soil before chopping.
                     Material replantType = BlockDiscoveryUtils.treeFamily(originalLogType);
                     Location existingLoc = logTypesForReplant.get(replantType);
-                    if (existingLoc == null || location.getBlockY() < existingLoc.getBlockY()) {
+                    if (plantableBases.contains(location)
+                            && (existingLoc == null || location.getBlockY() < existingLoc.getBlockY())) {
                         logTypesForReplant.put(replantType, location.clone());
                     }
 
@@ -448,6 +517,7 @@ public class TreeChopUtils {
                     // Handle replanting
                     if (TreeReplantUtils.isReplantEnabledForPlayer(player, config)) {
                         for (Map.Entry<Material, Location> entry : logTypesForReplant.entrySet()) {
+                            if (!RegionAccess.owns(entry.getValue())) continue;
                             Block blockToReplant = entry.getValue().getBlock();
                             TreeReplantUtils.scheduleReplant(
                                     player,
@@ -463,7 +533,9 @@ public class TreeChopUtils {
                                     hooks.residence,
                                     hooks.griefPrevention,
                                     hooks.worldGuard,
-                                    actuallyRemovedLogs);
+                                    actuallyRemovedLogs,
+                                    plantableBases,
+                                    treeBlocks);
                         }
                     }
 

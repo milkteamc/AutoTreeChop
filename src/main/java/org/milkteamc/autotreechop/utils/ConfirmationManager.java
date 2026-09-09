@@ -34,7 +34,9 @@ public class ConfirmationManager {
         /** The target log has no leaf blocks nearby. */
         NO_LEAVES,
         /** Both IDLE_OR_REJOIN and NO_LEAVES apply simultaneously. */
-        BOTH
+        BOTH,
+        /** The entire connected tree has no ground support. */
+        FLOATING
     }
 
     /**
@@ -133,6 +135,19 @@ public class ConfirmationManager {
             // valid — capture data and remove the entry
             result[0] =
                     new ChopData(existing.reason(), existing.blockLocation(), existing.tool(), existing.hasLeaves());
+            return null;
+        });
+        return result[0];
+    }
+
+    /** A physical retry may only confirm the same target and tool. */
+    public ChopData consumePendingConfirmationForBlock(UUID uuid, Location location, ItemStack tool) {
+        ChopData[] result = {null};
+        pendingConfirmations.computeIfPresent(uuid, (key, pending) -> {
+            if (System.currentTimeMillis() > pending.expiryMs()) return null;
+            if (!pending.blockLocation().equals(location) || !java.util.Objects.equals(pending.tool(), tool))
+                return pending;
+            result[0] = new ChopData(pending.reason(), pending.blockLocation(), pending.tool(), pending.hasLeaves());
             return null;
         });
         return result[0];

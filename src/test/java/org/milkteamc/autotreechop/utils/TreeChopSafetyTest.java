@@ -57,6 +57,10 @@ class TreeChopSafetyTest {
     void setup() {
         when(player.getInventory()).thenReturn(mock(PlayerInventory.class));
         when(plugin.getDataManager()).thenReturn(manager);
+        when(plugin.getConfirmationManager()).thenReturn(mock(ConfirmationManager.class));
+        Block soil = mock(Block.class);
+        when(soil.getType()).thenReturn(Material.DIRT);
+        when(world.getBlockAt(location.clone().subtract(0, 1, 0))).thenReturn(soil);
         when(plugin.getCooldownManager()).thenReturn(mock(CooldownManager.class));
         when(player.getUniqueId()).thenReturn(uuid);
         when(player.isOnline()).thenReturn(true);
@@ -64,6 +68,8 @@ class TreeChopSafetyTest {
         when(manager.getPlayerConfig(uuid)).thenReturn(data);
         when(config.getMaxTreeSize()).thenReturn(100);
         when(block.getLocation()).thenReturn(location);
+        when(block.getType()).thenReturn(Material.OAK_LOG);
+        when(config.getLogTypes()).thenReturn(Set.of(Material.OAK_LOG));
         when(world.getBlockAt(location)).thenReturn(block);
         schedulers = mockConstruction(AsyncTaskScheduler.class);
         batches = mockConstruction(BatchProcessor.class);
@@ -78,6 +84,11 @@ class TreeChopSafetyTest {
     }
 
     private void validate(ItemStack tool) throws Exception {
+        validate(tool, true, null);
+    }
+
+    private void validate(ItemStack tool, boolean hasLeaves, ConfirmationManager.ConfirmReason reason)
+            throws Exception {
         Method method = TreeChopUtils.class.getDeclaredMethod(
                 "validateAndExecuteChop",
                 Set.class,
@@ -86,9 +97,11 @@ class TreeChopSafetyTest {
                 ItemStack.class,
                 Config.class,
                 PlayerConfig.class,
-                ProtectionCheckUtils.ProtectionHooks.class);
+                ProtectionCheckUtils.ProtectionHooks.class,
+                boolean.class,
+                ConfirmationManager.ConfirmReason.class);
         method.setAccessible(true);
-        method.invoke(utils, Set.of(location), block, player, tool, config, data, hooks);
+        method.invoke(utils, Set.of(location), block, player, tool, config, data, hooks, hasLeaves, reason);
     }
 
     @Test
@@ -283,5 +296,76 @@ class TreeChopSafetyTest {
             validate(null);
             assertFalse(SessionManager.getInstance().hasActiveTreeChopSession(uuid));
         }
+    }
+
+    @Test
+    void floatingTreeRequiresConfirmationBeforeAnyBatchAndOverridesNoLeavesPrompt() throws Exception {
+        when(world.getBlockAt(location.clone().subtract(0, 1, 0)).getType()).thenReturn(Material.AIR);
+        SessionManager.getInstance().addTreeChopLocations(uuid, Set.of(location));
+        validate(null, false, null);
+        verify(plugin.getConfirmationManager())
+                .setPendingConfirmation(uuid, ConfirmationManager.ConfirmReason.FLOATING, location, null, false);
+        verifyNoInteractions(batches.constructed().get(0));
+        verify(data, never()).incrementDailyUses();
+        assertFalse(SessionManager.getInstance().hasActiveTreeChopSession(uuid));
+    }
+
+    @Test
+    void confirmingFloatingTreeStartsBatchWithoutGrantingAnotherTreePermission() throws Exception {
+        when(world.getBlockAt(location.clone().subtract(0, 1, 0)).getType()).thenReturn(Material.AIR);
+        validate(null, true, ConfirmationManager.ConfirmReason.FLOATING);
+        assertNotNull(blockProcessor());
+        verify(plugin.getConfirmationManager(), never())
+                .setPendingConfirmation(any(), any(), any(), any(), anyBoolean());
+        SessionManager.getInstance().clearTreeChopSession(uuid);
+        clearInvocations(batches.constructed().get(0));
+        validate(null);
+        verifyNoInteractions(batches.constructed().get(0));
+        verify(plugin.getConfirmationManager())
+                .setPendingConfirmation(uuid, ConfirmationManager.ConfirmReason.FLOATING, location, null, true);
+    }
+
+    @Test
+    void formerlyGroundedTreeRequiresNewConfirmationWhenSupportDisappears() throws Exception {
+        when(world.getBlockAt(location.clone().subtract(0, 1, 0)).getType()).thenReturn(Material.AIR);
+        validate(null, true, ConfirmationManager.ConfirmReason.IDLE_OR_REJOIN);
+        verifyNoInteractions(batches.constructed().get(0));
+        verify(plugin.getConfirmationManager())
+                .setPendingConfirmation(uuid, ConfirmationManager.ConfirmReason.FLOATING, location, null, true);
+    }
+
+    @Test
+    void physicalRetryOfFloatingTreeConfirmsLikeNoLeavesRetry() throws Exception {
+        when(world.getBlockAt(location.clone().subtract(0, 1, 0)).getType()).thenReturn(Material.AIR);
+        when(plugin.getPluginConfig()).thenReturn(config);
+        when(config.getConfirmationWindowSeconds()).thenReturn(30);
+        ConfirmationManager confirmations = new ConfirmationManager(plugin);
+        when(plugin.getConfirmationManager()).thenReturn(confirmations);
+        validate(null, false, null);
+        verifyNoInteractions(batches.constructed().get(0));
+        validate(null, false, null);
+        assertNotNull(blockProcessor());
+        assertNull(confirmations.consumePendingConfirmation(uuid));
+    }
+
+    @Test
+    void floatingTreeDoesNotReplantEvenIfSoilAppearsDuringTheBatch() throws Exception {
+        ItemStack tool = prepareTool();
+        Block support = world.getBlockAt(location.clone().subtract(0, 1, 0));
+        when(support.getType()).thenReturn(Material.AIR);
+        when(block.breakNaturally()).thenReturn(true);
+        when(config.isAutoReplantEnabled()).thenReturn(true);
+        when(player.hasPermission("autotreechop.replant")).thenReturn(true);
+        validate(tool, true, ConfirmationManager.ConfirmReason.FLOATING);
+        when(support.getType()).thenReturn(Material.DIRT);
+        blockProcessor().accept(location, 0);
+        Runnable completion = mockingDetails(batches.constructed().get(0))
+                .getInvocations()
+                .iterator()
+                .next()
+                .getArgument(4);
+        completion.run();
+        verify(data).incrementDailyBlocksBroken();
+        verify(config, never()).getSaplingForLog(any());
     }
 }

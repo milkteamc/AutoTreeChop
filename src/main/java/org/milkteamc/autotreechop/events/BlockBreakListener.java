@@ -39,9 +39,6 @@ import org.milkteamc.autotreechop.PlayerConfig;
 import org.milkteamc.autotreechop.hooks.HookManager;
 import org.milkteamc.autotreechop.utils.AsyncTaskScheduler;
 import org.milkteamc.autotreechop.utils.BlockDiscoveryUtils;
-import org.milkteamc.autotreechop.utils.ConfirmationManager;
-import org.milkteamc.autotreechop.utils.ConfirmationManager.ChopData;
-import org.milkteamc.autotreechop.utils.ConfirmationManager.ConfirmReason;
 import org.milkteamc.autotreechop.utils.EffectUtils;
 import org.milkteamc.autotreechop.utils.PermissionUtils;
 import org.milkteamc.autotreechop.utils.ProtectionCheckUtils.ProtectionHooks;
@@ -88,8 +85,6 @@ public class BlockBreakListener implements Listener {
         if (!playerConfig.isAutoTreeChopEnabled() || !BlockDiscoveryUtils.isLog(material, config)) {
             return;
         }
-
-        ConfirmationManager confirmationManager = plugin.getConfirmationManager();
 
         if (plugin.getCooldownManager().isInCooldown(playerUUID)) {
             long remaining = plugin.getCooldownManager().getRemainingCooldown(playerUUID);
@@ -149,33 +144,7 @@ public class BlockBreakListener implements Listener {
                         return;
                     }
 
-                    ChopData pending = confirmationManager.consumePendingConfirmation(playerUUID);
-                    if (pending != null) {
-                        confirmationManager.recordSuccessfulChop(playerUUID, pending.reason(), hasLeaves);
-                        AutoTreeChop.sendMessage(player, MessageKeys.CONFIRMATION_SUCCESS);
-                        dispatchChop(player, playerConfig, block, frozenTool, frozenLocation, config);
-                        return;
-                    }
-
-                    ConfirmReason reason = confirmationManager.getConfirmationReason(playerUUID, hasLeaves);
-
-                    if (reason != null) {
-                        confirmationManager.setPendingConfirmation(
-                                playerUUID, reason, frozenLocation, frozenTool, hasLeaves);
-
-                        String timeoutStr = String.valueOf(config.getConfirmationWindowSeconds());
-                        String messageKey =
-                                switch (reason) {
-                                    case IDLE_OR_REJOIN -> MessageKeys.CONFIRMATION_REQUIRED_IDLE;
-                                    case NO_LEAVES -> MessageKeys.CONFIRMATION_REQUIRED_NO_LEAVES;
-                                    case BOTH -> MessageKeys.CONFIRMATION_REQUIRED_BOTH;
-                                };
-                        AutoTreeChop.sendMessage(player, messageKey, Placeholder.parsed("timeout", timeoutStr));
-                        return;
-                    }
-
-                    confirmationManager.recordSuccessfulChop(playerUUID, null, hasLeaves);
-                    dispatchChop(player, playerConfig, block, frozenTool, frozenLocation, config);
+                    dispatchChop(player, playerConfig, block, frozenTool, frozenLocation, config, hasLeaves);
                 } finally {
                     if (plugin.getDataManager().getPlayerConfig(playerUUID) == playerConfig)
                         SessionManager.getInstance().finishLeafCheck(playerUUID);
@@ -185,11 +154,13 @@ public class BlockBreakListener implements Listener {
     }
 
     void dispatchChop(
-            Player player, PlayerConfig playerConfig, Block block, ItemStack tool, Location location, Config config) {
-
-        if (config.isVisualEffect()) {
-            EffectUtils.showChopEffect(player, block);
-        }
+            Player player,
+            PlayerConfig playerConfig,
+            Block block,
+            ItemStack tool,
+            Location location,
+            Config config,
+            boolean hasLeaves) {
 
         ProtectionHooks hooks = buildProtectionHooks();
 
@@ -202,7 +173,9 @@ public class BlockBreakListener implements Listener {
                         location,
                         config,
                         playerConfig,
-                        hooks);
+                        hooks,
+                        hasLeaves,
+                        null);
     }
 
     private ProtectionHooks buildProtectionHooks() {

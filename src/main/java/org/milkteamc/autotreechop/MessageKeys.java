@@ -40,6 +40,7 @@ public final class MessageKeys {
     public static final String CONSOLE_NAME = "consoleName";
     public static final String SNEAK_ENABLED = "sneakEnabled";
     public static final String SNEAK_DISABLED = "sneakDisabled";
+    public static final String CONFIRMATION_REQUIRED_FLOATING = "confirmationRequiredFloating";
     public static final String CONFIRMATION_REQUIRED_IDLE = "confirmationRequiredIdle";
     public static final String CONFIRMATION_REQUIRED_NO_LEAVES = "confirmationRequiredNoLeaves";
     public static final String CONFIRMATION_REQUIRED_BOTH = "confirmationRequiredBoth";

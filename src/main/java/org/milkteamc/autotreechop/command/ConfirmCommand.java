@@ -27,7 +27,6 @@ import org.milkteamc.autotreechop.PlayerConfig;
 import org.milkteamc.autotreechop.hooks.HookManager;
 import org.milkteamc.autotreechop.utils.BlockDiscoveryUtils;
 import org.milkteamc.autotreechop.utils.ConfirmationManager.ChopData;
-import org.milkteamc.autotreechop.utils.EffectUtils;
 import org.milkteamc.autotreechop.utils.ProtectionCheckUtils.ProtectionHooks;
 import org.milkteamc.autotreechop.utils.RegionAccess;
 import revxrsal.commands.annotation.Command;
@@ -89,13 +88,6 @@ public class ConfirmCommand {
             return;
         }
 
-        plugin.getConfirmationManager().recordSuccessfulChop(uuid, chop.reason(), chop.hasLeaves());
-        AutoTreeChop.sendMessage(player, MessageKeys.CONFIRMATION_SUCCESS);
-
-        if (config.isVisualEffect()) {
-            EffectUtils.showChopEffect(player, block);
-        }
-
         HookManager hookManager = plugin.getHookManager();
         ProtectionHooks hooks = new ProtectionHooks(
                 hookManager.isWorldGuardEnabled(),
@@ -116,6 +108,8 @@ public class ConfirmCommand {
                         chop.blockLocation(),
                         config,
                         playerConfig,
-                        hooks);
+                        hooks,
+                        chop.hasLeaves(),
+                        chop.reason());
     }
 }

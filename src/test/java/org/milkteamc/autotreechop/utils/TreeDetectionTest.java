@@ -35,6 +35,7 @@ class TreeDetectionTest {
 
     @BeforeEach
     void setup() {
+        when(world.getName()).thenReturn("world");
         when(world.getMinHeight()).thenReturn(-64);
         when(world.getMaxHeight()).thenReturn(320);
         when(world.getBlockAt(any(Location.class))).thenAnswer(call -> block((Location) call.getArgument(0)));
@@ -67,6 +68,8 @@ class TreeDetectionTest {
             when(block.getRelative(anyInt(), anyInt(), anyInt()))
                     .thenAnswer(call -> block(location.clone()
                             .add((int) call.getArgument(0), (int) call.getArgument(1), (int) call.getArgument(2))));
+            when(block.getRelative(org.bukkit.block.BlockFace.DOWN))
+                    .thenAnswer(call -> block(location.clone().subtract(0, 1, 0)));
             return block;
         });
     }
@@ -143,5 +146,131 @@ class TreeDetectionTest {
         BlockSnapshot canopy = BlockSnapshotCreator.captureLeafRegion(Set.of(base), 10, config);
         assertEquals(
                 Set.of(leaf, flowering), BlockDiscoveryUtils.discoverLeavesBFS(canopy, base, 10, config, Set.of(base)));
+    }
+
+    @Test
+    void floatingTreeCannotUseNearbyOrLowerSoil() {
+        Location base = put(0, 70, 0, Material.OAK_LOG);
+        put(0, 66, 0, Material.DIRT);
+        put(1, 69, 0, Material.DIRT);
+        TreeGrounding.Result result = TreeGrounding.inspect(Set.of(base), config);
+        assertFalse(result.grounded());
+        assertTrue(result.plantableBases().isEmpty());
+        put(0, 70, 0, Material.AIR);
+        assertNull(TreeReplantUtils.findSuitablePlantLocation(base, config));
+    }
+
+    @Test
+    void mangroveIsGroundedThroughOffsetRootsRatherThanOnlyTheTrunk() {
+        Location trunk = put(0, 67, 0, Material.MANGROVE_LOG);
+        Location root = put(1, 66, 0, Material.MANGROVE_ROOTS);
+        Location muddy = put(2, 65, 0, Material.MUDDY_MANGROVE_ROOTS);
+        put(2, 64, 0, Material.MUD);
+        TreeGrounding.Result result = TreeGrounding.inspect(Set.of(trunk, root, muddy), config);
+        assertTrue(result.grounded());
+        assertEquals(Set.of(muddy), result.plantableBases());
+    }
+
+    @Test
+    void leavesAndWaterDoNotProvideGroundSupport() {
+        Location base = put(0, 64, 0, Material.OAK_LOG);
+        for (Material support : Set.of(Material.OAK_LEAVES, Material.WATER, Material.OAK_LOG)) {
+            put(0, 63, 0, support);
+            assertFalse(TreeGrounding.inspect(Set.of(base), config).grounded(), support.name());
+        }
+    }
+
+    @Test
+    void solidFloorAllowsChoppingButOnlySoilAllowsReplanting() {
+        Location base = put(0, 64, 0, Material.OAK_LOG);
+        put(0, 63, 0, Material.STONE);
+        assertTrue(TreeGrounding.inspect(Set.of(base), config).grounded());
+        assertTrue(TreeGrounding.inspect(Set.of(base), config).plantableBases().isEmpty());
+        put(0, 63, 0, Material.DIRT);
+        assertEquals(Set.of(base), TreeGrounding.inspect(Set.of(base), config).plantableBases());
+        put(0, 64, 0, Material.AIR);
+        assertEquals(base, TreeReplantUtils.findSuitablePlantLocation(base, config));
+        put(0, 64, 0, Material.OAK_LOG);
+        assertNull(TreeReplantUtils.findSuitablePlantLocation(base, config));
+    }
+
+    @Test
+    void twoByTwoReplantUsesOnlyTheOriginalFourRemovedBases() {
+        Set<Location> bases = new HashSet<>();
+        for (int x = 0; x <= 1; x++)
+            for (int z = 0; z <= 1; z++) {
+                bases.add(put(x, 64, z, Material.AIR));
+                put(x, 63, z, Material.DIRT);
+            }
+        Location origin = new Location(world, 1, 64, 1);
+        assertEquals(new Location(world, 0, 64, 0), TreeReplantUtils.find2x2PlantLocation(origin, config, bases));
+        bases.remove(new Location(world, 0, 64, 0));
+        assertNull(TreeReplantUtils.find2x2PlantLocation(origin, config, bases));
+        bases.add(new Location(world, 0, 64, 0));
+        put(0, 64, 0, Material.DARK_OAK_LOG);
+        assertNull(TreeReplantUtils.find2x2PlantLocation(origin, config, bases));
+    }
+
+    @Test
+    void foreignRegionSupportIsUnknownAndNeverRead() {
+        Location base = put(0, 64, 0, Material.OAK_LOG);
+        try (var regions = mockStatic(RegionAccess.class)) {
+            regions.when(() -> RegionAccess.owns(base)).thenReturn(true);
+            assertNull(TreeGrounding.inspect(Set.of(base), config));
+            verify(world, never()).getBlockAt(any(Location.class));
+        }
+    }
+
+    @Test
+    void partiallyCancelledLargeSpruceDoesNotFallBackToOneSapling() {
+        Set<Location> originalBases = new HashSet<>();
+        for (int x = 0; x <= 1; x++)
+            for (int z = 0; z <= 1; z++) {
+                originalBases.add(put(x, 64, z, Material.AIR));
+                put(x, 63, z, Material.DIRT);
+            }
+        Location protectedBase = put(1, 64, 1, Material.SPRUCE_LOG);
+        Set<Location> removed = new HashSet<>(originalBases);
+        removed.remove(protectedBase);
+        var plugin = mock(org.milkteamc.autotreechop.AutoTreeChop.class);
+        var data = mock(org.milkteamc.autotreechop.database.DataManager.class);
+        var playerData = mock(org.milkteamc.autotreechop.PlayerConfig.class);
+        var player = mock(org.bukkit.entity.Player.class);
+        var uuid = UUID.randomUUID();
+        when(player.getUniqueId()).thenReturn(uuid);
+        when(player.isOnline()).thenReturn(true);
+        when(plugin.getDataManager()).thenReturn(data);
+        when(data.getPlayerConfig(uuid)).thenReturn(playerData);
+        when(config.isAutoReplantEnabled()).thenReturn(true);
+        when(config.getSaplingForLog(Material.SPRUCE_LOG)).thenReturn(Material.SPRUCE_SAPLING);
+        var scheduler = mock(org.bukkit.scheduler.BukkitScheduler.class);
+        try (var bukkit = mockStatic(Bukkit.class)) {
+            bukkit.when(Bukkit::getScheduler).thenReturn(scheduler);
+            doAnswer(call -> {
+                        ((Runnable) call.getArgument(1)).run();
+                        return null;
+                    })
+                    .when(scheduler)
+                    .runTaskLater(eq(plugin), any(Runnable.class), anyLong());
+            TreeReplantUtils.scheduleReplant(
+                    player,
+                    block(new Location(world, 0, 64, 0)),
+                    Material.SPRUCE_LOG,
+                    plugin,
+                    config,
+                    false,
+                    false,
+                    false,
+                    false,
+                    null,
+                    null,
+                    null,
+                    null,
+                    removed,
+                    originalBases,
+                    originalBases);
+            verify(scheduler).runTaskLater(eq(plugin), any(Runnable.class), anyLong());
+        }
+        for (Block block : blocks.values()) verify(block, never()).setType(any(Material.class));
     }
 }

@@ -55,6 +55,43 @@ public class TreeReplantUtils {
             WorldGuardHook worldGuardHook,
             Set<Location> choppedLogs) {
 
+        scheduleReplant(
+                player,
+                brokenLogBlock,
+                originalLogType,
+                plugin,
+                config,
+                worldGuardEnabled,
+                residenceEnabled,
+                griefPreventionEnabled,
+                landsEnabled,
+                landsHook,
+                residenceHook,
+                griefPreventionHook,
+                worldGuardHook,
+                choppedLogs,
+                choppedLogs,
+                choppedLogs);
+    }
+
+    public static void scheduleReplant(
+            Player player,
+            Block brokenLogBlock,
+            Material originalLogType,
+            AutoTreeChop plugin,
+            Config config,
+            boolean worldGuardEnabled,
+            boolean residenceEnabled,
+            boolean griefPreventionEnabled,
+            boolean landsEnabled,
+            LandsHook landsHook,
+            ResidenceHook residenceHook,
+            GriefPreventionHook griefPreventionHook,
+            WorldGuardHook worldGuardHook,
+            Set<Location> choppedLogs,
+            Set<Location> plantableBases,
+            Set<Location> originalTreeBlocks) {
+
         if (!config.isAutoReplantEnabled()) {
             return;
         }
@@ -65,7 +102,10 @@ public class TreeReplantUtils {
         }
 
         Location originalLocation = brokenLogBlock.getLocation().clone();
-        boolean needs2x2 = isLikely2x2Tree(originalLogType, originalLocation, choppedLogs);
+        if (!choppedLogs.contains(originalLocation) || !plantableBases.contains(originalLocation)) return;
+        Set<Location> eligibleBases = new HashSet<>(plantableBases);
+        eligibleBases.retainAll(choppedLogs);
+        boolean needs2x2 = isLikely2x2Tree(originalLogType, originalLocation, originalTreeBlocks);
 
         var playerConfig = plugin.getDataManager().getPlayerConfig(player.getUniqueId());
         if (playerConfig == null) return;
@@ -74,7 +114,7 @@ public class TreeReplantUtils {
             if (!player.isOnline() || plugin.getDataManager().getPlayerConfig(player.getUniqueId()) != playerConfig)
                 return;
             if (needs2x2) {
-                Location anchorLocation = find2x2PlantLocation(originalLocation, config);
+                Location anchorLocation = find2x2PlantLocation(originalLocation, config, eligibleBases);
                 if (anchorLocation == null) {
                     return;
                 }
@@ -97,7 +137,7 @@ public class TreeReplantUtils {
                 }
                 plant2x2Saplings(player, anchorLocation, saplingType, config);
             } else {
-                Location plantLocation = findSuitablePlantLocation(originalLocation, config, plugin);
+                Location plantLocation = findSuitablePlantLocation(originalLocation, config);
                 if (plantLocation == null) {
                     return;
                 }
@@ -193,36 +233,27 @@ public class TreeReplantUtils {
      * Finds an anchor location where all four blocks of a 2×2 formation are
      * clear and sitting on valid soil.  Returns null if no valid anchor is found.
      */
-    private static Location find2x2PlantLocation(Location originalLocation, Config config) {
+    static Location find2x2PlantLocation(Location originalLocation, Config config, Set<Location> eligibleBases) {
         Block origin = originalLocation.getBlock();
 
         int[][] originInclusiveAnchors = {{0, 0}, {-1, 0}, {0, -1}, {-1, -1}};
         for (int[] ao : originInclusiveAnchors) {
             Block anchor = origin.getRelative(ao[0], 0, ao[1]);
-            if (is2x2FormationValid(anchor, config)) {
+            if (is2x2FormationValid(anchor, config, eligibleBases)) {
                 return anchor.getLocation();
-            }
-        }
-
-        for (int x = -2; x <= 2; x++) {
-            for (int z = -2; z <= 2; z++) {
-                if ((x == 0 || x == -1) && (z == 0 || z == -1)) continue;
-
-                Block candidate = origin.getRelative(x, 0, z);
-                if (is2x2FormationValid(candidate, config)) {
-                    return candidate.getLocation();
-                }
             }
         }
 
         return null;
     }
 
-    private static boolean is2x2FormationValid(Block anchor, Config config) {
+    private static boolean is2x2FormationValid(Block anchor, Config config, Set<Location> eligibleBases) {
         for (int[] offset : FORMATION_2X2) {
             Block target = anchor.getRelative(offset[0], 0, offset[1]);
             Block below = target.getRelative(BlockFace.DOWN);
-            if (!isClearForSapling(target) || !isValidSoil(below.getType(), config)) {
+            if (!eligibleBases.contains(target.getLocation())
+                    || !isClearForSapling(target)
+                    || !isValidSoil(below.getType(), config)) {
                 return false;
             }
         }
@@ -263,7 +294,7 @@ public class TreeReplantUtils {
         }
     }
 
-    private static Location findSuitablePlantLocation(Location originalLocation, Config config, AutoTreeChop plugin) {
+    static Location findSuitablePlantLocation(Location originalLocation, Config config) {
         Block originalBlock = originalLocation.getBlock();
 
         Block belowOriginal = originalBlock.getRelative(BlockFace.DOWN);
@@ -272,38 +303,10 @@ public class TreeReplantUtils {
             return originalLocation;
         }
 
-        for (int x = -1; x <= 1; x++) {
-            for (int z = -1; z <= 1; z++) {
-                if (x == 0 && z == 0) continue;
-
-                Block checkBlock = originalBlock.getRelative(x, 0, z);
-                Block belowCheck = checkBlock.getRelative(BlockFace.DOWN);
-
-                if (isValidSoil(belowCheck.getType(), config) && isClearForSapling(checkBlock)) {
-                    return checkBlock.getLocation();
-                }
-            }
-        }
-
-        for (int x = -2; x <= 2; x++) {
-            for (int z = -2; z <= 2; z++) {
-                if (Math.abs(x) <= 1 && Math.abs(z) <= 1) continue;
-
-                for (int yOffset = 0; yOffset >= -3; yOffset--) {
-                    Block checkBlock = originalBlock.getRelative(x, yOffset, z);
-                    Block belowCheck = checkBlock.getRelative(BlockFace.DOWN);
-
-                    if (isValidSoil(belowCheck.getType(), config) && isClearForSapling(checkBlock)) {
-                        return checkBlock.getLocation();
-                    }
-                }
-            }
-        }
-
         return null;
     }
 
-    private static boolean isValidSoil(Material material, Config config) {
+    static boolean isValidSoil(Material material, Config config) {
         if (config.getValidSoilTypes().contains(material)) {
             return true;
         }
