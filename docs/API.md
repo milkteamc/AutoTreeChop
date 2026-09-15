@@ -1,4 +1,4 @@
-# AutoTreeChop API (1.7.5)
+# AutoTreeChop API
 
 AutoTreeChop exposes loaded players' enabled preference and daily usage. Integrations can
 read an immutable snapshot and change the preference with an explicit result. The API does
@@ -6,16 +6,15 @@ not chop trees, load offline records, edit quotas, or report whether a save reac
 
 ## Add the compile dependency
 
-Use Java 17 or newer. Copy the AutoTreeChop 1.7.5 plugin JAR into your integration's `libs/`
+Use Java 17 or newer. Copy the AutoTreeChop plugin JAR into your integration's `libs/`
 folder and add this to its Gradle build (alongside your existing Bukkit/Paper API dependency):
 
 ```groovy
 dependencies {
-    compileOnly files('libs/AutoTreeChop-1.7.5.jar')
+    compileOnly files('libs/AutoTreeChop-x.y.z.jar')
 }
 ```
 
-Before the release, use the actual filename of your locally built 1.7.5 alpha JAR instead.
 Do not shade or relocate AutoTreeChop into your plugin. Install AutoTreeChop separately on
 the server so both plugins use the same API classes. This setup uses a local JAR and does
 not require an unpublished Maven artifact or an assumed JitPack release tag.
