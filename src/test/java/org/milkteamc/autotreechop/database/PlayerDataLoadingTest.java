@@ -104,7 +104,7 @@ class PlayerDataLoadingTest {
     void oldLoginCannotOverwriteNewLogin() {
         var oldLoad = new CompletableFuture<PlayerData>();
         var newLoad = new CompletableFuture<PlayerData>();
-        when(database.loadPlayerDataAsync(uuid, false)).thenReturn(oldLoad, newLoad);
+        when(database.loadPlayerDataAsync(uuid, false)).thenReturn(oldLoad).thenReturn(newLoad);
         var oldCompletion = manager.loadPlayerConfig(uuid, false);
         manager.removePlayerConfig(uuid);
         var newCompletion = manager.loadPlayerConfig(uuid, false);
@@ -118,9 +118,8 @@ class PlayerDataLoadingTest {
     @Test
     void reconnectCanRecoverFromLoadFailure() {
         when(database.loadPlayerDataAsync(uuid, false))
-                .thenReturn(
-                        CompletableFuture.failedFuture(new IllegalStateException("offline")),
-                        CompletableFuture.completedFuture(data(7)));
+                .thenReturn(CompletableFuture.failedFuture(new IllegalStateException("offline")))
+                .thenReturn(CompletableFuture.completedFuture(data(7)));
         assertThrows(CompletionException.class, () -> manager.loadPlayerConfig(uuid, false)
                 .join());
         manager.removePlayerConfig(uuid);
