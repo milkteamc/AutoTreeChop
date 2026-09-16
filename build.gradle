@@ -99,6 +99,8 @@ dependencies {
 
 test {
     useJUnitPlatform()
+    // Mockito appends to the bootstrap classpath; disable CDS for this test JVM.
+    jvmArgs '-Xshare:off'
 }
 
 compileJava {
