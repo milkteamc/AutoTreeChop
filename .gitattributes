@@ -1,0 +1,6 @@
+# Keep Spotless-managed files consistent across editors and platforms.
+*.gradle text eol=lf
+*.java text eol=lf
+.editorconfig text eol=lf
+.gitattributes text eol=lf
+.gitignore text eol=lf
