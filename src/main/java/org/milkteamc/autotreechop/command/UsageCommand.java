@@ -55,25 +55,9 @@ public class UsageCommand {
             return;
         }
 
-        boolean isVip = player.hasPermission("autotreechop.vip");
-        boolean limitVip = config.getLimitVipUsage();
-
-        String maxUsesStr;
-        String maxBlocksStr;
-
-        if (!config.getLimitUsage()) {
-            maxUsesStr = "∞";
-            maxBlocksStr = "∞";
-        } else if (!isVip) {
-            maxUsesStr = String.valueOf(config.getMaxUsesPerDay());
-            maxBlocksStr = String.valueOf(config.getMaxBlocksPerDay());
-        } else if (limitVip) {
-            maxUsesStr = String.valueOf(config.getVipUsesPerDay());
-            maxBlocksStr = String.valueOf(config.getVipBlocksPerDay());
-        } else {
-            maxUsesStr = "∞";
-            maxBlocksStr = "∞";
-        }
+        var policy = config.resolvePolicy(player);
+        String maxUsesStr = policy.limitUsage() ? String.valueOf(policy.maxUsesPerDay()) : "∞";
+        String maxBlocksStr = policy.limitUsage() ? String.valueOf(policy.maxBlocksPerDay()) : "∞";
 
         AutoTreeChop.sendMessage(
                 player,

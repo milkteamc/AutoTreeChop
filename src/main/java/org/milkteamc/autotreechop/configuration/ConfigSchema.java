@@ -44,6 +44,8 @@ public final class ConfigSchema {
     public static final int VERSION = 4;
     public static final Map<String, String> LEGACY_PATHS = legacyPaths();
     private static final String MAPPING_PATH = "replant.log-sapling-mapping";
+    private static final Set<String> GROUP_OPTIONS =
+            Set.of("priority", "limit-usage", "max-uses-per-day", "max-blocks-per-day", "cooldown-seconds");
     private static final Set<String> POSITIVE = Set.of(
             "chopping.batch-size",
             "chopping.max-tree-size",
@@ -166,15 +168,43 @@ public final class ConfigSchema {
             }
             validate(document.get(newPath), defaults.get(newPath), newPath);
         }
+        validateGroups(document);
         document.set("config-version", VERSION);
         for (String path : document.getRoutesAsStrings(true)) {
             if (path.equals("config-version")
                     || LEGACY_PATHS.containsValue(path)
                     || path.startsWith(MAPPING_PATH + ".")
+                    || isGroupPath(path)
                     || LEGACY_PATHS.values().stream().anyMatch(known -> known.startsWith(path + "."))) continue;
             warning.accept("Unrecognized config key retained: " + path);
         }
         return new Prepared(file, original, document, changed);
+    }
+
+    private static void validateGroups(YamlDocument document) {
+        Section groups = document.getSection("groups");
+        for (Object key : groups.getKeys()) {
+            if (!(key instanceof String name) || !name.matches("[a-z0-9_-]+")) {
+                throw invalid("groups", "group names must use lowercase letters, digits, underscores or hyphens");
+            }
+            String path = "groups." + name;
+            if (!document.isSection(path)) throw invalid(path, "must be a section");
+            Section group = document.getSection(path);
+            for (String option : GROUP_OPTIONS) {
+                if (group.contains(option)) {
+                    validate(
+                            group.get(option),
+                            option.equals("limit-usage") ? Boolean.TRUE : Integer.valueOf(0),
+                            path + "." + option);
+                }
+            }
+        }
+    }
+
+    private static boolean isGroupPath(String path) {
+        String[] parts = path.split("\\.");
+        return parts[0].equals("groups")
+                && (parts.length == 2 || (parts.length == 3 && GROUP_OPTIONS.contains(parts[2])));
     }
 
     private static String decode(byte[] bytes) {

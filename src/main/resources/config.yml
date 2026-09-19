@@ -16,7 +16,8 @@ messages:
 
 chopping:
   # Tree Chopping setting
-  # If disable, ALL players (including non-VIP) have unlimited usage
+  # Deprecated global override, not recommended for new setups.
+  # Prefer groups.<name>.limit-usage. False still makes ALL players unlimited.
   limit-usage: true
   # Misc
   # Use visual effect
@@ -63,17 +64,23 @@ chopping:
     - MANGROVE_ROOTS
     - MUDDY_MANGROVE_ROOTS
 
+# Assign custom groups with autotreechop.group.<name>.
+# Highest priority wins; ties use alphabetical group name order.
+# Custom groups inherit omitted limits and cooldown from default. Priority defaults to 0.
 groups:
   default:
-    # The number of times non-VIP players can chop down trees per day,
+    limit-usage: true
+    # Daily tree-chopping uses; 0 allows no uses.
     max-uses-per-day: 50
-    # Tree blocks that non-VIP players can chop down every day,
+    # Daily block quota; 0 allows no blocks.
     max-blocks-per-day: 500
     # Cooldown time (second), use 0 to disable
     cooldown-seconds: 5
   vip:
-    # VIP setting
-    # If disable, VIP have unlimited usage
+    # Compatibility preset: keeps the legacy defaults even when fields are omitted.
+    # autotreechop.vip (default: OP) is deprecated and not recommended, but still supported.
+    # Explicit group permissions override the legacy VIP fallback.
+    # False gives this group unlimited usage; cooldown still applies.
     limit-usage: false
     # Used when groups.vip.limit-usage is true
     max-uses-per-day: 100

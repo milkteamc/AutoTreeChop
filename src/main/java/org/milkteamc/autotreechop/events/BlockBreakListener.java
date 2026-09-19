@@ -95,16 +95,14 @@ public class BlockBreakListener implements Listener {
             return;
         }
 
-        if (config.getLimitUsage()) {
-            if (!PermissionUtils.canBreakBlocks(player, playerConfig, config, 1)) {
-                EffectUtils.sendMaxBlockLimitReachedMessage(player, block);
-                return;
-            }
+        if (!PermissionUtils.canBreakBlocks(player, playerConfig, config, 1)) {
+            EffectUtils.sendMaxBlockLimitReachedMessage(player, block);
+            return;
+        }
 
-            if (!PermissionUtils.canUse(player, playerConfig, config)) {
-                AutoTreeChop.sendMessage(player, MessageKeys.HIT_MAX_USAGE);
-                return;
-            }
+        if (!PermissionUtils.canUse(player, playerConfig, config)) {
+            AutoTreeChop.sendMessage(player, MessageKeys.HIT_MAX_USAGE);
+            return;
         }
 
         event.setCancelled(true);

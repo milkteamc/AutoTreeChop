@@ -30,8 +30,10 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.bukkit.Material;
+import org.bukkit.entity.Player;
 import org.milkteamc.autotreechop.configuration.ConfigLoadException;
 import org.milkteamc.autotreechop.configuration.ConfigSchema;
+import org.milkteamc.autotreechop.configuration.GroupPolicies;
 
 public class Config {
     private final AutoTreeChop plugin;
@@ -93,6 +95,12 @@ public class Config {
 
     public List<String> getRestartRequiredSettings() {
         return restartRequired;
+    }
+
+    public GroupPolicies.Policy resolvePolicy(Player player) {
+        return state.groupPolicies.resolve(
+                permission -> player.isPermissionSet(permission) && player.hasPermission(permission),
+                player.hasPermission("autotreechop.vip"));
     }
 
     private State readValues(YamlDocument config) {
@@ -228,7 +236,8 @@ public class Config {
                 maxTreeSize,
                 maxDiscoveryBlocks,
                 callBlockBreakEvent,
-                limitUsage);
+                limitUsage,
+                GroupPolicies.from(config));
     }
 
     private Set<Material> loadMaterialSet(YamlDocument config, String path) {
@@ -301,6 +310,8 @@ public class Config {
         return state.cooldownTime;
     }
 
+    /** @deprecated Legacy VIP settings; use {@link #resolvePolicy(Player)} for player limits and cooldown. */
+    @Deprecated(since = "1.8.0", forRemoval = false)
     public int getVipCooldownTime() {
         return state.vipCooldownTime;
     }
@@ -357,14 +368,20 @@ public class Config {
         return state.limitUsage;
     }
 
+    /** @deprecated Legacy VIP settings; use {@link #resolvePolicy(Player)} for player limits and cooldown. */
+    @Deprecated(since = "1.8.0", forRemoval = false)
     public boolean getLimitVipUsage() {
         return state.limitVipUsage;
     }
 
+    /** @deprecated Legacy VIP settings; use {@link #resolvePolicy(Player)} for player limits and cooldown. */
+    @Deprecated(since = "1.8.0", forRemoval = false)
     public int getVipUsesPerDay() {
         return state.vipUsesPerDay;
     }
 
+    /** @deprecated Legacy VIP settings; use {@link #resolvePolicy(Player)} for player limits and cooldown. */
+    @Deprecated(since = "1.8.0", forRemoval = false)
     public int getVipBlocksPerDay() {
         return state.vipBlocksPerDay;
     }
@@ -570,5 +587,6 @@ public class Config {
             int maxTreeSize,
             int maxDiscoveryBlocks,
             boolean callBlockBreakEvent,
-            boolean limitUsage) {}
+            boolean limitUsage,
+            GroupPolicies groupPolicies) {}
 }

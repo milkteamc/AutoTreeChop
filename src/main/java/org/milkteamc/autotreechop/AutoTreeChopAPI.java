@@ -20,8 +20,10 @@ package org.milkteamc.autotreechop;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.milkteamc.autotreechop.database.DataManager;
+import org.milkteamc.autotreechop.utils.RegionAccess;
 
 /**
  * Public integration API, available through Bukkit's ServicesManager after AutoTreeChop enables.
@@ -50,6 +52,41 @@ public class AutoTreeChopAPI {
 
     /** Immutable snapshot. Daily counters follow the server's local date and reset on access. */
     public record PlayerState(boolean enabled, int dailyUses, int dailyBlocksBroken) {}
+
+    /**
+     * Immutable effective group settings. When unlimited is true, both daily quotas are ignored;
+     * cooldown still applies. cooldownSeconds is the configured duration, not the remaining time.
+     * This snapshot does not indicate whether the player is currently allowed to chop.
+     */
+    public record PlayerPolicy(
+            String group, boolean unlimited, int maxUsesPerDay, int maxBlocksPerDay, int cooldownSeconds) {}
+
+    /**
+     * Resolves current permissions against the active configuration without loading player data.
+     * Call on the main thread on Paper, or the player's owning execution context on Folia.
+     * Permission changes and successful config reloads are reflected on the next call.
+     *
+     * @param player non-null online player
+     * @return an immutable policy, or empty if the player is offline or the plugin/config is unavailable
+     * @throws IllegalStateException when called outside the required execution context
+     */
+    public Optional<PlayerPolicy> getPlayerPolicy(Player player) {
+        Objects.requireNonNull(player, "player");
+        if (!active || !plugin.isEnabled()) return Optional.empty();
+        Config config = plugin.getPluginConfig();
+        if (config == null) return Optional.empty();
+        if (AutoTreeChop.isFolia() ? !RegionAccess.owns(player) : !Bukkit.isPrimaryThread()) {
+            throw new IllegalStateException("getPlayerPolicy must run in the player's owning execution context");
+        }
+        if (!player.isOnline()) return Optional.empty();
+        var policy = config.resolvePolicy(player);
+        return Optional.of(new PlayerPolicy(
+                policy.group(),
+                !policy.limitUsage(),
+                policy.maxUsesPerDay(),
+                policy.maxBlocksPerDay(),
+                policy.cooldownSeconds()));
+    }
 
     /**
      * Returns a snapshot, or empty when player data/the plugin is unavailable.

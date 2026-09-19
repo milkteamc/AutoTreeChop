@@ -1,8 +1,9 @@
 # AutoTreeChop API
 
-AutoTreeChop exposes loaded players' enabled preference and daily usage. Integrations can
-read an immutable snapshot and change the preference with an explicit result. The API does
-not chop trees, load offline records, edit quotas, or report whether a save reached SQL.
+AutoTreeChop exposes loaded players' enabled preference and daily usage, plus online players'
+effective group policies. Integrations can read immutable snapshots and change the preference
+with an explicit result. The API does not chop trees, load offline records, edit quotas,
+or report whether a save reached SQL.
 
 ## Add the compile dependency
 
@@ -70,6 +71,30 @@ according to the server's local date when read. `isPlayerDataReady(UUID)` is a c
 check, not a reservation: the player can leave before your next operation. Always handle
 the result of that operation.
 
+## Read the effective group policy
+
+```java
+// Paper: main thread. Folia: this player's owning execution context.
+api.getPlayerPolicy(player).ifPresent(policy -> {
+    String group = policy.group();
+    String uses = policy.unlimited() ? "∞" : String.valueOf(policy.maxUsesPerDay());
+    String blocks = policy.unlimited() ? "∞" : String.valueOf(policy.maxBlocksPerDay());
+    int cooldownSeconds = policy.cooldownSeconds();
+    // Display the effective group settings in your UI.
+});
+```
+
+`PlayerPolicy` is an immutable snapshot using the same group resolution as chopping and
+`/atc usage`, including legacy VIP and global unlimited settings. Each call reflects current
+permissions and the latest successful configuration reload; earlier snapshots stay unchanged.
+When `unlimited()` is true, ignore both quota numbers. Cooldown still applies; its value is
+the configured duration, not remaining cooldown time.
+
+The result is empty when the player is offline or the plugin/config is unavailable. This
+query does not require loaded player data; use `getPlayerState(UUID)` separately for usage.
+The two queries are separate snapshots. A policy does not guarantee permission to chop or
+bypass enabled-state, usage, cooldown, tool, or protection checks.
+
 ## Set the preference
 
 ```java
@@ -96,8 +121,11 @@ once the database is healthy to retry loading; this API does not initiate a relo
 The UUID-based methods operate on synchronized in-memory data and can be called from any
 thread. They perform no SQL or world/entity operations. Calling plugins must still use the
 correct Paper/Folia scheduler for any player, inventory, message, or world work of their own.
-Use UUID methods in asynchronous code; call the legacy `Player` overloads from that player's
-own execution context. Null plugin, UUID, or Player arguments throw `NullPointerException`.
+Use UUID methods in asynchronous code; call `getPlayerPolicy(Player)` and the legacy `Player`
+overloads from that player's own execution context (Paper's main thread; the owning player
+context on Folia). An available `getPlayerPolicy` query throws `IllegalStateException` when
+called from the wrong context, before reading permissions. Null plugin, UUID, or Player
+arguments throw `NullPointerException`.
 
 ## Compatibility methods
 

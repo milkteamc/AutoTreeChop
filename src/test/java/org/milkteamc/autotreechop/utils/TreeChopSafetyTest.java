@@ -68,6 +68,9 @@ class TreeChopSafetyTest {
         when(manager.getPlayerConfig(uuid)).thenReturn(data);
         when(data.isAutoTreeChopEnabled()).thenReturn(true);
         when(config.getMaxTreeSize()).thenReturn(100);
+        when(config.resolvePolicy(player))
+                .thenReturn(new org.milkteamc.autotreechop.configuration.GroupPolicies.Policy(
+                        "default", false, 50, 500, 5));
         when(block.getLocation()).thenReturn(location);
         when(block.getType()).thenReturn(Material.OAK_LOG);
         when(config.getLogTypes()).thenReturn(Set.of(Material.OAK_LOG));

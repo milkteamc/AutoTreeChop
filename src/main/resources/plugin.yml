@@ -15,6 +15,7 @@ permissions:
   autotreechop.leaves:
     default: true
   autotreechop.vip:
+    description: "Deprecated and not recommended; use autotreechop.group.<name>. Retains legacy VIP/OP behavior."
     default: op
   autotreechop.updatechecker:
     default: op
