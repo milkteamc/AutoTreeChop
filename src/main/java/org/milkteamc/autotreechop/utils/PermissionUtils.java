@@ -23,29 +23,23 @@ import org.milkteamc.autotreechop.PlayerConfig;
 
 public class PermissionUtils {
 
-    /** Whether the player has room for the proposed operation, including VIP limits. */
+    /** Whether the player has room for the proposed operation under their current group policy. */
     public static boolean canUse(Player player, PlayerConfig playerConfig, Config config) {
-        if (!config.getLimitUsage()) return true;
-        boolean vip = player.hasPermission("autotreechop.vip");
-        if (vip && !config.getLimitVipUsage()) return true;
-        int limit = vip ? config.getVipUsesPerDay() : config.getMaxUsesPerDay();
-        return playerConfig.getDailyUses() < limit;
+        return config.resolvePolicy(player).canUse(playerConfig.getDailyUses());
     }
 
     public static boolean canBreakBlocks(Player player, PlayerConfig playerConfig, Config config, int count) {
-        if (count < 0) throw new IllegalArgumentException("count must be nonnegative");
-        if (!config.getLimitUsage()) return true;
-        boolean vip = player.hasPermission("autotreechop.vip");
-        if (vip && !config.getLimitVipUsage()) return true;
-        int limit = vip ? config.getVipBlocksPerDay() : config.getMaxBlocksPerDay();
-        return (long) playerConfig.getDailyBlocksBroken() + count <= limit;
+        return config.resolvePolicy(player).canBreakBlocks(playerConfig.getDailyBlocksBroken(), count);
     }
 
-    /** Legacy helpers: true only for unlimited VIP usage. Use canUse/canBreakBlocks for quotas. */
+    /** @deprecated Retains legacy VIP semantics; use {@link #canUse} for group quotas. */
+    @Deprecated(since = "1.8.0", forRemoval = false)
     public static boolean hasVipUses(Player player, PlayerConfig playerConfig, Config config) {
         return player.hasPermission("autotreechop.vip") && !config.getLimitVipUsage();
     }
 
+    /** @deprecated Retains legacy VIP semantics; use {@link #canBreakBlocks} for group quotas. */
+    @Deprecated(since = "1.8.0", forRemoval = false)
     public static boolean hasVipBlock(Player player, PlayerConfig playerConfig, Config config) {
         return hasVipUses(player, playerConfig, config);
     }

@@ -32,6 +32,7 @@ import org.milkteamc.autotreechop.command.ConfirmCommand;
 import org.milkteamc.autotreechop.command.ReloadCommand;
 import org.milkteamc.autotreechop.command.ToggleCommand;
 import org.milkteamc.autotreechop.command.UsageCommand;
+import org.milkteamc.autotreechop.configuration.ConfigLoadException;
 import org.milkteamc.autotreechop.database.DataManager;
 import org.milkteamc.autotreechop.database.DatabaseManager;
 import org.milkteamc.autotreechop.events.BlockBreakListener;
@@ -76,7 +77,9 @@ public class AutoTreeChop extends JavaPlugin {
 
     public static boolean isPaper() {
         try {
-            Class.forName("io.papermc.paper.configuration.Configuration");
+            // Public API marker also present on older Paper versions such as 1.18.2.
+            Class.forName("com.destroystokyo.paper.event.server.ServerTickEndEvent");
+            Class.forName("net.kyori.adventure.text.minimessage.MiniMessage");
             return true;
         } catch (ClassNotFoundException ex) {
             return false;
@@ -86,7 +89,7 @@ public class AutoTreeChop extends JavaPlugin {
     public static String getServerType() {
         if (isFolia()) return "folia";
         if (isPaper()) return "paper";
-        return "spigot";
+        return "unsupported";
     }
 
     public static void sendMessage(CommandSender sender, String messageKey, TagResolver... resolvers) {
@@ -104,10 +107,22 @@ public class AutoTreeChop extends JavaPlugin {
 
     @Override
     public void onEnable() {
+        if (!isPaper()) {
+            getLogger()
+                    .severe("AutoTreeChop requires Paper 1.18.2+ (or Folia/Purpur) with native MiniMessage. "
+                            + "Spigot is no longer supported.");
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
         instance = this;
 
-        saveDefaultConfig();
-        this.config = new Config(this);
+        try {
+            this.config = new Config(this);
+        } catch (ConfigLoadException e) {
+            getLogger().severe("AutoTreeChop could not load its configuration: " + e.getMessage());
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
         setupTranslation();
 
         this.cooldownManager = new CooldownManager();
@@ -124,15 +139,6 @@ public class AutoTreeChop extends JavaPlugin {
         registerCommands();
 
         setupIntegrations();
-
-        if (getServerType().equals("spigot")) {
-            getLogger().warning("=====================================================");
-            getLogger().warning(" You are running AutoTreeChop on Spigot.");
-            getLogger().warning(" Spigot support is deprecated and may be removed");
-            getLogger().warning(" as early as v1.8.0.");
-            getLogger().warning(" Please consider migrating to Paper or Folia.");
-            getLogger().warning("=====================================================");
-        }
 
         registerApi();
         getLogger().info("AutoTreeChop enabled!");

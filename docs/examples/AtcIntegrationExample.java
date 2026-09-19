@@ -1,6 +1,7 @@
 package example;
 
 import java.util.UUID;
+import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.milkteamc.autotreechop.AutoTreeChopAPI;
 
@@ -28,5 +29,17 @@ public final class AtcIntegrationExample extends JavaPlugin {
                 .map(state -> "Enabled: " + state.enabled() + ", uses: " + state.dailyUses()
                         + ", blocks: " + state.dailyBlocksBroken())
                 .orElse("Player data is not ready; wait or reconnect after a load failure");
+    }
+
+    /** Call on Paper's main thread or in this player's owning execution context on Folia. */
+    public String describePolicy(Player player) {
+        AutoTreeChopAPI api = getServer().getServicesManager().load(AutoTreeChopAPI.class);
+        if (api == null) return "AutoTreeChop is unavailable";
+        return api.getPlayerPolicy(player)
+                .map(policy -> "Group: " + policy.group()
+                        + ", uses/day: " + (policy.unlimited() ? "unlimited" : policy.maxUsesPerDay())
+                        + ", blocks/day: " + (policy.unlimited() ? "unlimited" : policy.maxBlocksPerDay())
+                        + ", cooldown: " + policy.cooldownSeconds() + "s")
+                .orElse("Player is offline or AutoTreeChop is unavailable");
     }
 }

@@ -1,7 +1,7 @@
 name: AutoTreeChop
 version: '${version}'
 main: org.milkteamc.autotreechop.AutoTreeChop
-api-version: 1.17
+api-version: '1.18'
 author: Maoyue
 description: A auto tree chopping plugin for milkteamc
 softdepend: [ PlaceholderAPI, Residence, Lands, WorldGuard, GriefPrevention ]
@@ -15,6 +15,7 @@ permissions:
   autotreechop.leaves:
     default: true
   autotreechop.vip:
+    description: "Deprecated and not recommended; use autotreechop.group.<name>. Retains legacy VIP/OP behavior."
     default: op
   autotreechop.updatechecker:
     default: op

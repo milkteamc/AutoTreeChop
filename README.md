@@ -34,7 +34,7 @@ It's async-friendly, lightweight, and fully customizable — with built-in suppo
 
 - Daily limits for usage and chopped blocks
 - Configurable cooldowns
-- VIP players can bypass limits with permission
+- Custom permission groups with priorities, daily limits and cooldowns
 
 ### 🛡️ Full Protection Plugin Support
 
@@ -91,7 +91,8 @@ Automatically switches to the player's locale if enabled.
 | Permission | Description | Default |
 |------------|-------------|-------------|
 | `autotreechop.use` | Use `/atc`, `/atc confirm`, and `/atc usage` commands | Everyone |
-| `autotreechop.vip` | Ignore usage limits | OP |
+| `autotreechop.group.<name>` | Apply a configured group | Explicit grant |
+| `autotreechop.vip` | Legacy VIP fallback (deprecated) | OP |
 | `autotreechop.other` | Toggle others' ATC status | OP |
 | `autotreechop.reload` | Reload config file | OP |
 | `autotreechop.updatechecker` | Receive update notifications | OP |
@@ -114,7 +115,7 @@ Automatically switches to the player's locale if enabled.
 
 ## Developer API
 
-Integrate through Bukkit ServicesManager to read player state and change the ATC preference.
+Integrate through Bukkit ServicesManager to read player state, effective group limits/cooldown, and change the ATC preference.
 See the [API guide](https://github.com/milkteamc/AutoTreeChop/blob/master/docs/API.md) for dependency setup, lifecycle and threading rules,
 explicit operation results, and a compiled example plugin.
 
