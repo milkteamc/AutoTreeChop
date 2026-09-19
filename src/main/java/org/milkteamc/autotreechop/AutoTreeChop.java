@@ -32,6 +32,7 @@ import org.milkteamc.autotreechop.command.ConfirmCommand;
 import org.milkteamc.autotreechop.command.ReloadCommand;
 import org.milkteamc.autotreechop.command.ToggleCommand;
 import org.milkteamc.autotreechop.command.UsageCommand;
+import org.milkteamc.autotreechop.configuration.ConfigLoadException;
 import org.milkteamc.autotreechop.database.DataManager;
 import org.milkteamc.autotreechop.database.DatabaseManager;
 import org.milkteamc.autotreechop.events.BlockBreakListener;
@@ -115,8 +116,13 @@ public class AutoTreeChop extends JavaPlugin {
         }
         instance = this;
 
-        saveDefaultConfig();
-        this.config = new Config(this);
+        try {
+            this.config = new Config(this);
+        } catch (ConfigLoadException e) {
+            getLogger().severe("AutoTreeChop could not load its configuration: " + e.getMessage());
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
         setupTranslation();
 
         this.cooldownManager = new CooldownManager();

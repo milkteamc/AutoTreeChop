@@ -19,19 +19,9 @@ package org.milkteamc.autotreechop;
 
 import com.cryptomorin.xseries.XMaterial;
 import dev.dejvokep.boostedyaml.YamlDocument;
-import dev.dejvokep.boostedyaml.dvs.versioning.BasicVersioning;
-import dev.dejvokep.boostedyaml.settings.dumper.DumperSettings;
-import dev.dejvokep.boostedyaml.settings.general.GeneralSettings;
-import dev.dejvokep.boostedyaml.settings.loader.LoaderSettings;
-import dev.dejvokep.boostedyaml.settings.updater.UpdaterSettings;
-import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.Arrays;
+import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -40,245 +30,208 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.bukkit.Material;
+import org.milkteamc.autotreechop.configuration.ConfigLoadException;
+import org.milkteamc.autotreechop.configuration.ConfigSchema;
 
 public class Config {
-
-    private static final DateTimeFormatter BACKUP_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
-    private static final String CONFIG_VERSION_KEY = "config-version";
-
     private final AutoTreeChop plugin;
-    private YamlDocument config;
-
-    private boolean visualEffect;
-    private boolean toolDamage;
-    private int maxUsesPerDay;
-    private int maxBlocksPerDay;
-    private int cooldownTime;
-    private int vipCooldownTime;
-    private boolean stopChoppingIfNotConnected;
-    private boolean stopChoppingIfDifferentTypes;
-    private String residenceFlag;
-    private String griefPreventionFlag;
-    private Locale locale;
-    private boolean useClientLocale;
-    private boolean useMysql;
-    private String hostname;
-    private int port;
-    private String database;
-    private String username;
-    private String password;
-    private boolean limitVipUsage;
-    private int vipUsesPerDay;
-    private int vipBlocksPerDay;
-    private int toolDamageDecrease;
-    private boolean mustUseTool;
-    private boolean defaultTreeChop;
-    private boolean respectUnbreaking;
-    private boolean playBreakSound;
-    private Set<Material> logTypes;
-    private boolean sneakToggle;
-    private boolean commandToggle;
-    private boolean sneakMessage;
-    private boolean autoReplantEnabled;
-    private long replantDelayTicks;
-    private boolean requireSaplingInInventory;
-    private boolean replantVisualEffect;
-    private Map<Material, Material> logSaplingMapping;
-    private Set<Material> validSoilTypes;
-    private boolean leafRemovalEnabled;
-    private long leafRemovalDelayTicks;
-    private int leafRemovalRadius;
-    private boolean leafRemovalDropItems;
-    private boolean leafRemovalVisualEffects;
-    private boolean leafRemovalAsync;
-    private int leafRemovalBatchSize;
-    private boolean leafRemovalCountsTowardsLimit;
-    private String leafRemovalMode;
-    private Set<Material> leafTypes;
-    private int idleTimeoutSeconds;
-    private int confirmationWindowSeconds;
-    private boolean noLeavesConfirmationEnabled;
-    private boolean preventNoLeavesChopping;
-    private boolean enableIdleConfirmation;
-    private int noLeavesDetectionRadius;
-    private int chopBatchSize;
-    private int maxTreeSize;
-    private int maxDiscoveryBlocks;
-    private boolean callBlockBreakEvent;
-    private boolean limitUsage;
+    private volatile State state;
+    private volatile List<String> restartRequired = List.of();
 
     public Config(AutoTreeChop plugin) {
         this.plugin = plugin;
         load();
     }
 
-    public void load() {
-        File configFile = new File(plugin.getDataFolder(), "config.yml");
-
-        // Sanitize config file before parsing to remove illegal YAML characters
-        if (configFile.exists()) {
-            sanitizeConfigFile(configFile);
-        }
-
+    public synchronized void load() {
+        List<String> warnings = new ArrayList<>();
         try {
-            config = YamlDocument.create(
-                    configFile,
-                    plugin.getResource("config.yml"),
-                    GeneralSettings.DEFAULT,
-                    LoaderSettings.builder().setAutoUpdate(true).build(),
-                    DumperSettings.DEFAULT,
-                    UpdaterSettings.builder()
-                            .setVersioning(new BasicVersioning(CONFIG_VERSION_KEY))
-                            .build());
-
-            if (config.getBoolean("__updated__", false)) {
-                backupConfig(configFile);
-                config.set("__updated__", null);
-                config.save();
+            ConfigSchema.Prepared prepared;
+            try (InputStream defaults = plugin.getResource("config.yml")) {
+                if (defaults == null) throw new ConfigLoadException("Missing bundled config.yml");
+                prepared = ConfigSchema.prepare(
+                        plugin.getDataFolder().toPath().resolve("config.yml"), defaults, warnings::add);
             }
-
+            YamlDocument effective = ConfigSchema.parse(prepared.document().dump());
+            List<String> pendingRestart = new ArrayList<>();
+            if (state != null) {
+                retainUntilRestart(effective, "storage.use-mysql", state.useMysql, pendingRestart);
+                retainUntilRestart(effective, "storage.mysql.hostname", state.hostname, pendingRestart);
+                retainUntilRestart(effective, "storage.mysql.port", state.port, pendingRestart);
+                retainUntilRestart(effective, "storage.mysql.database", state.database, pendingRestart);
+                retainUntilRestart(effective, "storage.mysql.username", state.username, pendingRestart);
+                retainUntilRestart(effective, "storage.mysql.password", state.password, pendingRestart);
+                retainUntilRestart(effective, "integrations.residence.flag", state.residenceFlag, pendingRestart);
+                retainUntilRestart(
+                        effective, "integrations.grief-prevention.flag", state.griefPreventionFlag, pendingRestart);
+            }
+            State candidate = readValues(effective);
+            prepared.commit();
+            state = candidate;
+            restartRequired = List.copyOf(pendingRestart);
+            warnings.forEach(plugin.getLogger()::warning);
+            if (!pendingRestart.isEmpty()) {
+                plugin.getLogger()
+                        .warning("Configuration changes require restart: " + String.join(", ", pendingRestart));
+            }
+            plugin.getLogger()
+                    .info("Loaded " + candidate.logTypes.size() + " log types, "
+                            + candidate.leafTypes.size() + " leaf types and "
+                            + candidate.logSaplingMapping.size() + " log-sapling mappings");
         } catch (IOException e) {
-            plugin.getLogger().severe("Failed to load config.yml: " + e.getMessage());
-
-            if (configFile.exists()) {
-                backupConfig(configFile);
-            }
-
-            try {
-                plugin.saveResource("config.yml", true);
-                config = YamlDocument.create(
-                        configFile,
-                        plugin.getResource("config.yml"),
-                        GeneralSettings.DEFAULT,
-                        LoaderSettings.DEFAULT,
-                        DumperSettings.DEFAULT,
-                        UpdaterSettings.builder()
-                                .setVersioning(new BasicVersioning(CONFIG_VERSION_KEY))
-                                .build());
-                plugin.getLogger().info("Created new config.yml from defaults");
-            } catch (IOException ex) {
-                plugin.getLogger().severe("Failed to create default config: " + ex.getMessage());
-                throw new RuntimeException("Cannot initialize config", ex);
-            }
-        }
-
-        loadValues();
-    }
-
-    /**
-     * Removes illegal YAML characters from config.yml (e.g. UTF-8 BOM, null bytes, control characters).
-     */
-    private void sanitizeConfigFile(File file) {
-        try {
-            byte[] bytes = Files.readAllBytes(file.toPath());
-
-            // Remove UTF-8 BOM (EF BB BF) added by some Windows editors
-            if (bytes.length >= 3
-                    && (bytes[0] & 0xFF) == 0xEF
-                    && (bytes[1] & 0xFF) == 0xBB
-                    && (bytes[2] & 0xFF) == 0xBF) {
-                bytes = Arrays.copyOfRange(bytes, 3, bytes.length);
-            }
-
-            // Remove null bytes and other control characters (keep \t \n \r)
-            String content =
-                    new String(bytes, StandardCharsets.UTF_8).replaceAll("[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F\\x7F]", "");
-
-            Files.write(file.toPath(), content.getBytes(StandardCharsets.UTF_8));
-
-        } catch (IOException e) {
-            plugin.getLogger().warning("Failed to sanitize config.yml: " + e.getMessage());
+            throw new ConfigLoadException(
+                    "Could not read or save config.yml (" + e.getClass().getSimpleName() + ")");
         }
     }
 
-    private void loadValues() {
-        visualEffect = config.getBoolean("visual-effect", true);
-        toolDamage = config.getBoolean("toolDamage", true);
-        limitUsage = config.getBoolean("limitUsage", true);
-        maxUsesPerDay = config.getInt("max-uses-per-day", 50);
-        maxBlocksPerDay = config.getInt("max-blocks-per-day", 500);
-        cooldownTime = config.getInt("cooldownTime", 5);
-        vipCooldownTime = config.getInt("vipCooldownTime", 2);
-        stopChoppingIfNotConnected = config.getBoolean("stopChoppingIfNotConnected", false);
-        stopChoppingIfDifferentTypes = config.getBoolean("stopChoppingIfDifferentTypes", false);
-        residenceFlag = config.getString("residenceFlag", "build");
-        griefPreventionFlag = config.getString("griefPreventionFlag", "Build");
-        useClientLocale = config.getBoolean("use-player-locale", false);
-
-        useMysql = config.getBoolean("useMysql", false);
-        hostname = config.getString("hostname", "example.com");
-        port = config.getInt("port", 3306);
-        database = config.getString("database", "example");
-        username = config.getString("username", "root");
-        password = config.getString("password", "abc1234");
-
-        limitVipUsage = config.getBoolean("limitVipUsage", false);
-        vipUsesPerDay = config.getInt("vip-uses-per-day", 100);
-        vipBlocksPerDay = config.getInt("vip-blocks-per-day", 1000);
-
-        toolDamageDecrease = Math.max(0, config.getInt("toolDamageDecrease", 1));
-        mustUseTool = config.getBoolean("mustUseTool", false);
-        respectUnbreaking = config.getBoolean("respectUnbreaking", true);
-
-        defaultTreeChop = config.getBoolean("defaultTreeChop", false);
-        playBreakSound = config.getBoolean("playBreakSound", true);
-        sneakToggle = config.getBoolean("enable-sneak-toggle", false);
-        commandToggle = config.getBoolean("enable-command-toggle", true);
-        sneakMessage = config.getBoolean("sneak-message", false);
-
-        chopBatchSize = Math.max(1, config.getInt("chop-batch-size", 50));
-        maxTreeSize = Math.max(1, config.getInt("max-tree-size", 500));
-        maxDiscoveryBlocks = Math.max(1, config.getInt("max-discovery-blocks", 1000));
-        callBlockBreakEvent = config.getBoolean("call-block-break-event", true);
-
-        autoReplantEnabled = config.getBoolean("enable-auto-replant", true);
-        replantDelayTicks = Math.max(0, config.getLong("replant-delay-ticks", 15L));
-        requireSaplingInInventory = config.getBoolean("require-sapling-in-inventory", false);
-        replantVisualEffect = config.getBoolean("replant-visual-effect", true);
-
-        leafRemovalEnabled = config.getBoolean("enable-leaf-removal", true);
-        leafRemovalDelayTicks = Math.max(0, config.getLong("leaf-removal-delay-ticks", 5L));
-        leafRemovalRadius = Math.max(0, config.getInt("leaf-removal-radius", 10));
-        leafRemovalDropItems = config.getBoolean("leaf-removal-drop-items", false);
-        leafRemovalVisualEffects = config.getBoolean("leaf-removal-visual-effects", true);
-        leafRemovalAsync = config.getBoolean("leaf-removal-async", true);
-        leafRemovalBatchSize = Math.max(1, config.getInt("leaf-removal-batch-size", 20));
-        leafRemovalCountsTowardsLimit = config.getBoolean("leaf-removal-counts-towards-limit", false);
-        leafRemovalMode = config.getString("leaf-removal-mode", "smart");
-
-        idleTimeoutSeconds = config.getInt("idle-timeout", 300);
-        confirmationWindowSeconds = config.getInt("confirmation-window", 10);
-        noLeavesConfirmationEnabled = config.getBoolean("enable-no-leaves-confirmation", true);
-        preventNoLeavesChopping = config.getBoolean("prevent-no-leaves-chopping", false);
-        enableIdleConfirmation = config.getBoolean("enable-idle-confirmation", true);
-        noLeavesDetectionRadius = Math.max(0, config.getInt("no-leaves-detection-radius", 6));
-
-        String localeStr = config.getString("locale", "en");
-        try {
-            this.locale = Locale.forLanguageTag(localeStr.replace('_', '-'));
-        } catch (Exception e) {
-            this.locale = Locale.ENGLISH;
-            plugin.getLogger().warning("Invalid locale '" + localeStr + "' in config.yml. Using default: English");
+    private static void retainUntilRestart(YamlDocument config, String path, Object current, List<String> changed) {
+        if (!Objects.equals(config.get(path), current)) {
+            changed.add(path);
+            config.set(path, current);
         }
+    }
 
-        logTypes = loadMaterialSet("log-types");
-        logTypes.addAll(loadMaterialSet("root-types"));
-        leafTypes = loadMaterialSet("leaf-types");
-        for (String name :
-                config.getStringList("additional-leaf-types", List.of("AZALEA_LEAVES", "FLOWERING_AZALEA_LEAVES"))) {
+    public List<String> getRestartRequiredSettings() {
+        return restartRequired;
+    }
+
+    private State readValues(YamlDocument config) {
+        boolean visualEffect = config.getBoolean("chopping.visual-effect");
+        boolean toolDamage = config.getBoolean("chopping.tool-damage.enabled");
+        boolean limitUsage = config.getBoolean("chopping.limit-usage");
+        int maxUsesPerDay = config.getInt("groups.default.max-uses-per-day");
+        int maxBlocksPerDay = config.getInt("groups.default.max-blocks-per-day");
+        int cooldownTime = config.getInt("groups.default.cooldown-seconds");
+        int vipCooldownTime = config.getInt("groups.vip.cooldown-seconds");
+        boolean stopChoppingIfNotConnected = config.getBoolean("chopping.stop-if-not-connected");
+        boolean stopChoppingIfDifferentTypes = config.getBoolean("chopping.stop-if-different-types");
+        String residenceFlag = config.getString("integrations.residence.flag");
+        String griefPreventionFlag = config.getString("integrations.grief-prevention.flag");
+        boolean useClientLocale = config.getBoolean("messages.use-player-locale");
+
+        boolean useMysql = config.getBoolean("storage.use-mysql");
+        String hostname = config.getString("storage.mysql.hostname");
+        int port = config.getInt("storage.mysql.port");
+        String database = config.getString("storage.mysql.database");
+        String username = config.getString("storage.mysql.username");
+        String password = config.getString("storage.mysql.password");
+
+        boolean limitVipUsage = config.getBoolean("groups.vip.limit-usage");
+        int vipUsesPerDay = config.getInt("groups.vip.max-uses-per-day");
+        int vipBlocksPerDay = config.getInt("groups.vip.max-blocks-per-day");
+
+        int toolDamageDecrease = config.getInt("chopping.tool-damage.amount");
+        boolean mustUseTool = config.getBoolean("chopping.require-tool");
+        boolean respectUnbreaking = config.getBoolean("chopping.tool-damage.respect-unbreaking");
+
+        boolean defaultTreeChop = config.getBoolean("activation.default-enabled");
+        boolean playBreakSound = config.getBoolean("chopping.play-break-sound");
+        boolean sneakToggle = config.getBoolean("activation.sneak-toggle");
+        boolean commandToggle = config.getBoolean("activation.command-toggle");
+        boolean sneakMessage = config.getBoolean("activation.sneak-message");
+
+        int chopBatchSize = config.getInt("chopping.batch-size");
+        int maxTreeSize = config.getInt("chopping.max-tree-size");
+        int maxDiscoveryBlocks = config.getInt("chopping.max-discovery-blocks");
+        boolean callBlockBreakEvent = config.getBoolean("integrations.call-block-break-event");
+
+        boolean autoReplantEnabled = config.getBoolean("replant.enabled");
+        long replantDelayTicks = config.getLong("replant.delay-ticks");
+        boolean requireSaplingInInventory = config.getBoolean("replant.require-sapling-in-inventory");
+        boolean replantVisualEffect = config.getBoolean("replant.visual-effect");
+
+        boolean leafRemovalEnabled = config.getBoolean("leaves.enabled");
+        long leafRemovalDelayTicks = config.getLong("leaves.delay-ticks");
+        int leafRemovalRadius = config.getInt("leaves.radius");
+        boolean leafRemovalDropItems = config.getBoolean("leaves.drop-items");
+        boolean leafRemovalVisualEffects = config.getBoolean("leaves.visual-effects");
+        boolean leafRemovalAsync = config.getBoolean("leaves.async");
+        int leafRemovalBatchSize = config.getInt("leaves.batch-size");
+        boolean leafRemovalCountsTowardsLimit = config.getBoolean("leaves.counts-towards-limit");
+        String leafRemovalMode = config.getString("leaves.mode");
+
+        int idleTimeoutSeconds = config.getInt("safety.idle-timeout-seconds");
+        int confirmationWindowSeconds = config.getInt("safety.confirmation-window-seconds");
+        boolean noLeavesConfirmationEnabled = config.getBoolean("safety.no-leaves-confirmation");
+        boolean preventNoLeavesChopping = config.getBoolean("safety.prevent-no-leaves-chopping");
+        boolean enableIdleConfirmation = config.getBoolean("safety.idle-confirmation");
+        int noLeavesDetectionRadius = config.getInt("safety.no-leaves-detection-radius");
+
+        Locale locale =
+                Locale.forLanguageTag(config.getString("messages.locale").replace('_', '-'));
+
+        Set<Material> logTypes = loadMaterialSet(config, "chopping.log-types");
+        logTypes.addAll(loadMaterialSet(config, "chopping.root-types"));
+        Set<Material> leafTypes = loadMaterialSet(config, "leaves.types");
+        for (String name : config.getStringList("leaves.additional-types")) {
             Material material = parseMaterial(name);
             if (material != null) leafTypes.add(material);
         }
-        validSoilTypes = loadMaterialSet("valid-soil-types");
+        Set<Material> validSoilTypes = loadMaterialSet(config, "replant.valid-soil-types");
 
-        logSaplingMapping = loadLogSaplingMapping();
+        Map<Material, Material> logSaplingMapping = loadLogSaplingMapping(config);
 
-        plugin.getLogger().info("Loaded " + logTypes.size() + " log types");
-        plugin.getLogger().info("Loaded " + leafTypes.size() + " leaf types");
-        plugin.getLogger().info("Loaded " + logSaplingMapping.size() + " log-sapling mappings");
+        return new State(
+                visualEffect,
+                toolDamage,
+                maxUsesPerDay,
+                maxBlocksPerDay,
+                cooldownTime,
+                vipCooldownTime,
+                stopChoppingIfNotConnected,
+                stopChoppingIfDifferentTypes,
+                residenceFlag,
+                griefPreventionFlag,
+                locale,
+                useClientLocale,
+                useMysql,
+                hostname,
+                port,
+                database,
+                username,
+                password,
+                limitVipUsage,
+                vipUsesPerDay,
+                vipBlocksPerDay,
+                toolDamageDecrease,
+                mustUseTool,
+                defaultTreeChop,
+                respectUnbreaking,
+                playBreakSound,
+                Set.copyOf(logTypes),
+                sneakToggle,
+                commandToggle,
+                sneakMessage,
+                autoReplantEnabled,
+                replantDelayTicks,
+                requireSaplingInInventory,
+                replantVisualEffect,
+                Map.copyOf(logSaplingMapping),
+                Set.copyOf(validSoilTypes),
+                leafRemovalEnabled,
+                leafRemovalDelayTicks,
+                leafRemovalRadius,
+                leafRemovalDropItems,
+                leafRemovalVisualEffects,
+                leafRemovalAsync,
+                leafRemovalBatchSize,
+                leafRemovalCountsTowardsLimit,
+                leafRemovalMode,
+                Set.copyOf(leafTypes),
+                idleTimeoutSeconds,
+                confirmationWindowSeconds,
+                noLeavesConfirmationEnabled,
+                preventNoLeavesChopping,
+                enableIdleConfirmation,
+                noLeavesDetectionRadius,
+                chopBatchSize,
+                maxTreeSize,
+                maxDiscoveryBlocks,
+                callBlockBreakEvent,
+                limitUsage);
     }
 
-    private Set<Material> loadMaterialSet(String path) {
+    private Set<Material> loadMaterialSet(YamlDocument config, String path) {
         List<String> materialNames = config.getStringList(path);
         return materialNames.stream()
                 .map(this::parseMaterial)
@@ -295,19 +248,19 @@ public class Config {
         }
     }
 
-    private Map<Material, Material> loadLogSaplingMapping() {
+    private Map<Material, Material> loadLogSaplingMapping(YamlDocument config) {
         Map<Material, Material> mapping = new HashMap<>();
 
-        var section = config.getSection("log-sapling-mapping");
+        var section = config.getSection("replant.log-sapling-mapping");
         if (section == null) {
-            plugin.getLogger().warning("log-sapling-mapping section not found in config");
+            plugin.getLogger().warning("replant.log-sapling-mapping section not found in config");
             return mapping;
         }
 
         Set<Object> keys = section.getKeys();
         for (Object keyObj : keys) {
             String logTypeStr = keyObj.toString();
-            String saplingTypeStr = config.getString("log-sapling-mapping." + logTypeStr);
+            String saplingTypeStr = config.getString("replant.log-sapling-mapping." + logTypeStr);
 
             if (saplingTypeStr == null) {
                 continue;
@@ -328,250 +281,294 @@ public class Config {
         return mapping;
     }
 
-    private void backupConfig(File configFile) {
-        if (!configFile.exists()) {
-            return;
-        }
-
-        try {
-            String timestamp = LocalDateTime.now().format(BACKUP_FORMAT);
-            File backupFile = new File(plugin.getDataFolder(), "config.yml.backup." + timestamp);
-            Files.copy(configFile.toPath(), backupFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-            plugin.getLogger().info("Config backed up to: " + backupFile.getName());
-        } catch (IOException e) {
-            plugin.getLogger().warning("Failed to backup config: " + e.getMessage());
-        }
-    }
-
     public boolean isVisualEffect() {
-        return visualEffect;
+        return state.visualEffect;
     }
 
     public boolean isToolDamage() {
-        return toolDamage;
+        return state.toolDamage;
     }
 
     public int getMaxUsesPerDay() {
-        return maxUsesPerDay;
+        return state.maxUsesPerDay;
     }
 
     public int getMaxBlocksPerDay() {
-        return maxBlocksPerDay;
+        return state.maxBlocksPerDay;
     }
 
     public int getCooldownTime() {
-        return cooldownTime;
+        return state.cooldownTime;
     }
 
     public int getVipCooldownTime() {
-        return vipCooldownTime;
+        return state.vipCooldownTime;
     }
 
     public boolean isStopChoppingIfNotConnected() {
-        return stopChoppingIfNotConnected;
+        return state.stopChoppingIfNotConnected;
     }
 
     public boolean isStopChoppingIfDifferentTypes() {
-        return stopChoppingIfDifferentTypes;
+        return state.stopChoppingIfDifferentTypes;
     }
 
     public String getResidenceFlag() {
-        return residenceFlag;
+        return state.residenceFlag;
     }
 
     public String getGriefPreventionFlag() {
-        return griefPreventionFlag;
+        return state.griefPreventionFlag;
     }
 
     public Locale getLocale() {
-        return locale;
+        return state.locale;
     }
 
     public boolean isUseClientLocale() {
-        return useClientLocale;
+        return state.useClientLocale;
     }
 
     public boolean isUseMysql() {
-        return useMysql;
+        return state.useMysql;
     }
 
     public String getHostname() {
-        return hostname;
+        return state.hostname;
     }
 
     public int getPort() {
-        return port;
+        return state.port;
     }
 
     public String getDatabase() {
-        return database;
+        return state.database;
     }
 
     public String getUsername() {
-        return username;
+        return state.username;
     }
 
     public String getPassword() {
-        return password;
+        return state.password;
     }
 
     public boolean getLimitUsage() {
-        return limitUsage;
+        return state.limitUsage;
     }
 
     public boolean getLimitVipUsage() {
-        return limitVipUsage;
+        return state.limitVipUsage;
     }
 
     public int getVipUsesPerDay() {
-        return vipUsesPerDay;
+        return state.vipUsesPerDay;
     }
 
     public int getVipBlocksPerDay() {
-        return vipBlocksPerDay;
+        return state.vipBlocksPerDay;
     }
 
     public int getToolDamageDecrease() {
-        return toolDamageDecrease;
+        return state.toolDamageDecrease;
     }
 
     public boolean getMustUseTool() {
-        return mustUseTool;
+        return state.mustUseTool;
     }
 
     public boolean getDefaultTreeChop() {
-        return defaultTreeChop;
+        return state.defaultTreeChop;
     }
 
     public boolean getRespectUnbreaking() {
-        return respectUnbreaking;
+        return state.respectUnbreaking;
     }
 
     public boolean getPlayBreakSound() {
-        return playBreakSound;
+        return state.playBreakSound;
     }
 
     public boolean getSneakToggle() {
-        return sneakToggle;
+        return state.sneakToggle;
     }
 
     public boolean getCommandToggle() {
-        return commandToggle;
+        return state.commandToggle;
     }
 
     public boolean getSneakMessage() {
-        return sneakMessage;
+        return state.sneakMessage;
     }
 
     public Set<Material> getLogTypes() {
-        return logTypes;
+        return state.logTypes;
     }
 
     public boolean isAutoReplantEnabled() {
-        return autoReplantEnabled;
+        return state.autoReplantEnabled;
     }
 
     public long getReplantDelayTicks() {
-        return replantDelayTicks;
+        return state.replantDelayTicks;
     }
 
     public boolean getRequireSaplingInInventory() {
-        return requireSaplingInInventory;
+        return state.requireSaplingInInventory;
     }
 
     public boolean getReplantVisualEffect() {
-        return replantVisualEffect;
+        return state.replantVisualEffect;
     }
 
     public Set<Material> getValidSoilTypes() {
-        return validSoilTypes;
+        return state.validSoilTypes;
     }
 
     public Map<Material, Material> getLogSaplingMapping() {
-        return logSaplingMapping;
+        return state.logSaplingMapping;
     }
 
     public Material getSaplingForLog(Material logType) {
-        return logSaplingMapping.get(org.milkteamc.autotreechop.utils.BlockDiscoveryUtils.treeFamily(logType));
+        return state.logSaplingMapping.get(org.milkteamc.autotreechop.utils.BlockDiscoveryUtils.treeFamily(logType));
     }
 
     public boolean isLeafRemovalEnabled() {
-        return leafRemovalEnabled;
+        return state.leafRemovalEnabled;
     }
 
     public long getLeafRemovalDelayTicks() {
-        return leafRemovalDelayTicks;
+        return state.leafRemovalDelayTicks;
     }
 
     public int getLeafRemovalRadius() {
-        return leafRemovalRadius;
+        return state.leafRemovalRadius;
     }
 
     public boolean getLeafRemovalDropItems() {
-        return leafRemovalDropItems;
+        return state.leafRemovalDropItems;
     }
 
     public boolean getLeafRemovalVisualEffects() {
-        return leafRemovalVisualEffects;
+        return state.leafRemovalVisualEffects;
     }
 
     public boolean isLeafRemovalAsync() {
-        return leafRemovalAsync;
+        return state.leafRemovalAsync;
     }
 
     public int getLeafRemovalBatchSize() {
-        return leafRemovalBatchSize;
+        return state.leafRemovalBatchSize;
     }
 
     public boolean getLeafRemovalCountsTowardsLimit() {
-        return leafRemovalCountsTowardsLimit;
+        return state.leafRemovalCountsTowardsLimit;
     }
 
     public Set<Material> getLeafTypes() {
-        return leafTypes;
+        return state.leafTypes;
     }
 
     public String getLeafRemovalMode() {
-        return leafRemovalMode;
+        return state.leafRemovalMode;
     }
 
     public int getChopBatchSize() {
-        return chopBatchSize;
+        return state.chopBatchSize;
     }
 
     public int getMaxTreeSize() {
-        return maxTreeSize;
+        return state.maxTreeSize;
     }
 
     public int getMaxDiscoveryBlocks() {
-        return maxDiscoveryBlocks;
+        return state.maxDiscoveryBlocks;
     }
 
     public boolean isCallBlockBreakEvent() {
-        return callBlockBreakEvent;
+        return state.callBlockBreakEvent;
     }
 
     public int getIdleTimeoutSeconds() {
-        return idleTimeoutSeconds;
+        return state.idleTimeoutSeconds;
     }
 
     public int getConfirmationWindowSeconds() {
-        return confirmationWindowSeconds;
+        return state.confirmationWindowSeconds;
     }
 
     public boolean isNoLeavesConfirmationEnabled() {
-        return noLeavesConfirmationEnabled;
+        return state.noLeavesConfirmationEnabled;
     }
 
     public boolean isPreventNoLeavesChopping() {
-        return preventNoLeavesChopping;
+        return state.preventNoLeavesChopping;
     }
 
     public boolean isIdleConfirmationEnabled() {
-        return enableIdleConfirmation;
+        return state.enableIdleConfirmation;
     }
 
     public int getNoLeavesDetectionRadius() {
-        return noLeavesDetectionRadius;
+        return state.noLeavesDetectionRadius;
     }
+
+    private record State(
+            boolean visualEffect,
+            boolean toolDamage,
+            int maxUsesPerDay,
+            int maxBlocksPerDay,
+            int cooldownTime,
+            int vipCooldownTime,
+            boolean stopChoppingIfNotConnected,
+            boolean stopChoppingIfDifferentTypes,
+            String residenceFlag,
+            String griefPreventionFlag,
+            Locale locale,
+            boolean useClientLocale,
+            boolean useMysql,
+            String hostname,
+            int port,
+            String database,
+            String username,
+            String password,
+            boolean limitVipUsage,
+            int vipUsesPerDay,
+            int vipBlocksPerDay,
+            int toolDamageDecrease,
+            boolean mustUseTool,
+            boolean defaultTreeChop,
+            boolean respectUnbreaking,
+            boolean playBreakSound,
+            Set<Material> logTypes,
+            boolean sneakToggle,
+            boolean commandToggle,
+            boolean sneakMessage,
+            boolean autoReplantEnabled,
+            long replantDelayTicks,
+            boolean requireSaplingInInventory,
+            boolean replantVisualEffect,
+            Map<Material, Material> logSaplingMapping,
+            Set<Material> validSoilTypes,
+            boolean leafRemovalEnabled,
+            long leafRemovalDelayTicks,
+            int leafRemovalRadius,
+            boolean leafRemovalDropItems,
+            boolean leafRemovalVisualEffects,
+            boolean leafRemovalAsync,
+            int leafRemovalBatchSize,
+            boolean leafRemovalCountsTowardsLimit,
+            String leafRemovalMode,
+            Set<Material> leafTypes,
+            int idleTimeoutSeconds,
+            int confirmationWindowSeconds,
+            boolean noLeavesConfirmationEnabled,
+            boolean preventNoLeavesChopping,
+            boolean enableIdleConfirmation,
+            int noLeavesDetectionRadius,
+            int chopBatchSize,
+            int maxTreeSize,
+            int maxDiscoveryBlocks,
+            boolean callBlockBreakEvent,
+            boolean limitUsage) {}
 }

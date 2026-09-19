@@ -22,6 +22,9 @@ public final class MessageKeys {
     private MessageKeys() {}
 
     public static final String NO_RESIDENCE_PERMISSIONS = "noResidencePermissions";
+    public static final String CONFIG_RELOADED = "configReloaded";
+    public static final String CONFIG_RELOAD_FAILED = "configReloadFailed";
+    public static final String CONFIG_RESTART_REQUIRED = "configRestartRequired";
     public static final String ENABLED = "enabled";
     public static final String DISABLED = "disabled";
     public static final String NO_PERMISSION = "no-permission";
