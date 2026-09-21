@@ -116,12 +116,15 @@ safety:
   no-leaves-detection-radius: 6
 
 activation:
+  # command: use /atc; sneak: hold sneak (does not change the saved preference).
+  # command-and-sneak: /atc must be enabled AND the player must hold sneak.
+  # hotkey: sneak + swap-hand key (normally Shift+F) toggles the saved preference.
+  # disabled: prevent new chops regardless of the saved preference.
+  # Self /atc toggles are available in command and command-and-sneak modes.
+  # Changing mode does not reset saved preferences. A chop already started completes normally.
+  mode: command
   # Set the default AutoTreeChop state for new players.
   default-enabled: false
-  # This controls whether players can toggle AutoTreeChop by running "/atc" command
-  command-toggle: true
-  # This controls whether players can toggle AutoTreeChop by sneaking (pressing shift)
-  sneak-toggle: false
   # Should plugin show a message when player is sneaking?
   sneak-message: false
 

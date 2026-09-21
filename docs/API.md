@@ -66,6 +66,13 @@ api.getPlayerState(playerId).ifPresentOrElse(
 );
 ```
 
+`PlayerState.enabled()` is the saved preference, not the current activation result.
+In `command-and-sneak` mode the player must also hold sneak; in `sneak` mode the current
+sneak state controls activation independently of that preference. Sneak-only and combined
+modes do not rewrite the preference. `disabled` prevents new chops regardless of the preference.
+The legacy `%autotreechop_status%` placeholder also
+continues to report the saved preference.
+
 `PlayerState` is immutable and detached from later player changes. Daily counters reset
 according to the server's local date when read. `isPlayerDataReady(UUID)` is a convenience
 check, not a reservation: the player can leave before your next operation. Always handle

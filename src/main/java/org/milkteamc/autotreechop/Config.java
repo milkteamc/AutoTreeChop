@@ -31,6 +31,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
+import org.milkteamc.autotreechop.configuration.ActivationMode;
 import org.milkteamc.autotreechop.configuration.ConfigLoadException;
 import org.milkteamc.autotreechop.configuration.ConfigSchema;
 import org.milkteamc.autotreechop.configuration.GroupPolicies;
@@ -134,8 +135,6 @@ public class Config {
 
         boolean defaultTreeChop = config.getBoolean("activation.default-enabled");
         boolean playBreakSound = config.getBoolean("chopping.play-break-sound");
-        boolean sneakToggle = config.getBoolean("activation.sneak-toggle");
-        boolean commandToggle = config.getBoolean("activation.command-toggle");
         boolean sneakMessage = config.getBoolean("activation.sneak-message");
 
         int chopBatchSize = config.getInt("chopping.batch-size");
@@ -207,8 +206,6 @@ public class Config {
                 respectUnbreaking,
                 playBreakSound,
                 Set.copyOf(logTypes),
-                sneakToggle,
-                commandToggle,
                 sneakMessage,
                 autoReplantEnabled,
                 replantDelayTicks,
@@ -237,7 +234,8 @@ public class Config {
                 maxDiscoveryBlocks,
                 callBlockBreakEvent,
                 limitUsage,
-                GroupPolicies.from(config));
+                GroupPolicies.from(config),
+                ActivationMode.parse(config.getString("activation.mode")));
     }
 
     private Set<Material> loadMaterialSet(YamlDocument config, String path) {
@@ -406,12 +404,13 @@ public class Config {
         return state.playBreakSound;
     }
 
-    public boolean getSneakToggle() {
-        return state.sneakToggle;
+    public boolean isCommandActivationEnabled() {
+        ActivationMode mode = state.activationMode;
+        return mode == ActivationMode.COMMAND || mode == ActivationMode.COMMAND_AND_SNEAK;
     }
 
-    public boolean getCommandToggle() {
-        return state.commandToggle;
+    public ActivationMode getActivationMode() {
+        return state.activationMode;
     }
 
     public boolean getSneakMessage() {
@@ -558,8 +557,6 @@ public class Config {
             boolean respectUnbreaking,
             boolean playBreakSound,
             Set<Material> logTypes,
-            boolean sneakToggle,
-            boolean commandToggle,
             boolean sneakMessage,
             boolean autoReplantEnabled,
             long replantDelayTicks,
@@ -588,5 +585,6 @@ public class Config {
             int maxDiscoveryBlocks,
             boolean callBlockBreakEvent,
             boolean limitUsage,
-            GroupPolicies groupPolicies) {}
+            GroupPolicies groupPolicies,
+            ActivationMode activationMode) {}
 }

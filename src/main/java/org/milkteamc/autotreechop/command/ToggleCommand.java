@@ -92,7 +92,7 @@ public class ToggleCommand {
     @Subcommand("enable")
     @CommandPermission("autotreechop.use")
     public void enable(BukkitCommandActor actor) {
-        if (!plugin.getPluginConfig().getCommandToggle()) {
+        if (!plugin.getPluginConfig().isCommandActivationEnabled()) {
             AutoTreeChop.sendMessage(actor.sender(), MessageKeys.NO_PERMISSION);
             return;
         }
@@ -149,7 +149,7 @@ public class ToggleCommand {
     @Subcommand("disable")
     @CommandPermission("autotreechop.use")
     public void disable(BukkitCommandActor actor) {
-        if (!plugin.getPluginConfig().getCommandToggle()) {
+        if (!plugin.getPluginConfig().isCommandActivationEnabled()) {
             AutoTreeChop.sendMessage(actor.sender(), MessageKeys.NO_PERMISSION);
             return;
         }
@@ -214,7 +214,7 @@ public class ToggleCommand {
             return;
         }
 
-        if (!plugin.getPluginConfig().getCommandToggle()) {
+        if (!plugin.getPluginConfig().isCommandActivationEnabled()) {
             AutoTreeChop.sendMessage(actor.sender(), MessageKeys.NO_PERMISSION);
             return;
         }

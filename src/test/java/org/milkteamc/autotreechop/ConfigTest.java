@@ -139,7 +139,7 @@ class ConfigTest {
 
     @ParameterizedTest
     @ValueSource(ints = {0, 1, 2, 3})
-    void migrationPreservesAllToggleCombinationsAndUsageFlags(int mask) throws Exception {
+    void migrationConvertsOldToggleCombinationsAndPreservesUsageFlags(int mask) throws Exception {
         boolean command = (mask & 1) != 0;
         boolean sneak = (mask & 2) != 0;
         Files.writeString(
@@ -147,8 +147,14 @@ class ConfigTest {
                 "config-version: 3\nenable-command-toggle: " + command + "\nenable-sneak-toggle: " + sneak
                         + "\nlimitUsage: false\nlimitVipUsage: true\n");
         Config config = new Config(plugin);
-        assertEquals(command, config.getCommandToggle());
-        assertEquals(sneak, config.getSneakToggle());
+        String expected = command ? (sneak ? "command-and-sneak" : "command") : (sneak ? "sneak" : "disabled");
+        var migrated = ConfigSchema.parse(Files.readString(file()));
+        assertEquals(expected, migrated.getString("activation.mode"));
+        assertEquals(command, config.isCommandActivationEnabled());
+        assertFalse(migrated.contains("enable-command-toggle"));
+        assertFalse(migrated.contains("enable-sneak-toggle"));
+        assertFalse(migrated.contains("activation.command-toggle"));
+        assertFalse(migrated.contains("activation.sneak-toggle"));
         assertFalse(config.getLimitUsage());
         assertTrue(config.getLimitVipUsage());
     }

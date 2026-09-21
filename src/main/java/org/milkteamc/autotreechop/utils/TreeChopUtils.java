@@ -187,7 +187,7 @@ public class TreeChopUtils {
             boolean hasLeaves,
             ConfirmReason confirmedReason) {
 
-        if (!isCurrentPlayer(player, playerConfig) || !playerConfig.isAutoTreeChopEnabled()) return;
+        if (!isCurrentPlayer(player, playerConfig) || !ActivationUtils.isActive(player, playerConfig, config)) return;
         if (!RegionAccess.owns(block.getLocation())) return;
 
         if (!player.hasPermission("autotreechop.use")) {
@@ -278,7 +278,7 @@ public class TreeChopUtils {
             sessionManager.clearTreeChopSession(playerUUID);
             return;
         }
-        if (!playerConfig.isAutoTreeChopEnabled()) {
+        if (!ActivationUtils.isActive(player, playerConfig, config)) {
             sessionManager.clearTreeChopSession(playerUUID);
             return;
         }
@@ -428,7 +428,8 @@ public class TreeChopUtils {
                         return;
                     }
                     if (actuallyRemovedLogs.isEmpty()
-                            && (plugin.getCooldownManager().isInCooldown(playerUUID)
+                            && (!ActivationUtils.isActive(player, playerConfig, config)
+                                    || plugin.getCooldownManager().isInCooldown(playerUUID)
                                     || !PermissionUtils.canUse(player, playerConfig, config))) return;
                     if (!PermissionUtils.canBreakBlocks(player, playerConfig, config, 1)) return;
                     Block block = location.getBlock();
@@ -466,6 +467,8 @@ public class TreeChopUtils {
                         stopped[0] = true;
                         return;
                     }
+                    if (actuallyRemovedLogs.isEmpty() && !ActivationUtils.isActive(player, playerConfig, config))
+                        return;
                     if (!PermissionUtils.canBreakBlocks(player, playerConfig, config, 1)) return;
                     ItemStack heldTool = player.getInventory().getItemInMainHand();
                     if (block.getType() != originalLogType) return;

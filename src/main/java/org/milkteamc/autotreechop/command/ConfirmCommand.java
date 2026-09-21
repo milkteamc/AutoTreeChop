@@ -25,6 +25,7 @@ import org.milkteamc.autotreechop.Config;
 import org.milkteamc.autotreechop.MessageKeys;
 import org.milkteamc.autotreechop.PlayerConfig;
 import org.milkteamc.autotreechop.hooks.HookManager;
+import org.milkteamc.autotreechop.utils.ActivationUtils;
 import org.milkteamc.autotreechop.utils.BlockDiscoveryUtils;
 import org.milkteamc.autotreechop.utils.ConfirmationManager.ChopData;
 import org.milkteamc.autotreechop.utils.ProtectionCheckUtils.ProtectionHooks;
@@ -57,7 +58,8 @@ public class ConfirmCommand {
             AutoTreeChop.sendMessage(player, MessageKeys.PLAYER_DATA_UNAVAILABLE);
             return;
         }
-        if (!playerConfig.isAutoTreeChopEnabled()) {
+        Config config = plugin.getPluginConfig();
+        if (!ActivationUtils.isActive(player, playerConfig, config)) {
             plugin.getConfirmationManager().clearPlayer(uuid);
             AutoTreeChop.sendMessage(player, MessageKeys.NO_PENDING_CONFIRMATION);
             return;
@@ -72,8 +74,6 @@ public class ConfirmCommand {
             AutoTreeChop.sendMessage(player, MessageKeys.NO_PENDING_CONFIRMATION);
             return;
         }
-
-        Config config = plugin.getPluginConfig();
 
         if (config.isPreventNoLeavesChopping() && !chop.hasLeaves()) {
             return;

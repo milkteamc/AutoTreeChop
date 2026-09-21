@@ -55,6 +55,7 @@ class TreeChopSafetyTest {
 
     @BeforeEach
     void setup() {
+        when(config.getActivationMode()).thenReturn(org.milkteamc.autotreechop.configuration.ActivationMode.COMMAND);
         when(player.getInventory()).thenReturn(mock(PlayerInventory.class));
         when(plugin.getDataManager()).thenReturn(manager);
         when(plugin.getConfirmationManager()).thenReturn(mock(ConfirmationManager.class));
@@ -131,6 +132,32 @@ class TreeChopSafetyTest {
         validate(original);
         verify(data, never()).incrementDailyUses();
         verifyNoInteractions(batches.constructed().get(0));
+    }
+
+    @Test
+    void releasingSneakDuringDiscoveryPreventsCombinedModeFromStarting() throws Exception {
+        when(config.getActivationMode())
+                .thenReturn(org.milkteamc.autotreechop.configuration.ActivationMode.COMMAND_AND_SNEAK);
+        when(player.isSneaking()).thenReturn(false);
+        validate(null);
+        verifyNoInteractions(batches.constructed().get(0));
+    }
+
+    @Test
+    void releasingSneakBeforeTheFirstQueuedBlockPreventsRemoval() throws Exception {
+        when(config.getActivationMode())
+                .thenReturn(org.milkteamc.autotreechop.configuration.ActivationMode.COMMAND_AND_SNEAK);
+        when(player.isSneaking()).thenReturn(true);
+        validate(null);
+        var invocation = mockingDetails(batches.constructed().get(0))
+                .getInvocations()
+                .iterator()
+                .next();
+        BiConsumer<Location, Integer> processor = invocation.getArgument(3);
+        when(player.isSneaking()).thenReturn(false);
+        processor.accept(location, 0);
+        verify(block, never()).breakNaturally();
+        verify(data, never()).incrementDailyUses();
     }
 
     @Test

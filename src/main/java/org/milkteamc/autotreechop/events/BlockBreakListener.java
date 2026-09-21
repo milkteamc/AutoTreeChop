@@ -37,6 +37,7 @@ import org.milkteamc.autotreechop.Config;
 import org.milkteamc.autotreechop.MessageKeys;
 import org.milkteamc.autotreechop.PlayerConfig;
 import org.milkteamc.autotreechop.hooks.HookManager;
+import org.milkteamc.autotreechop.utils.ActivationUtils;
 import org.milkteamc.autotreechop.utils.AsyncTaskScheduler;
 import org.milkteamc.autotreechop.utils.BlockDiscoveryUtils;
 import org.milkteamc.autotreechop.utils.EffectUtils;
@@ -60,7 +61,7 @@ public class BlockBreakListener implements Listener {
         Player player = event.getPlayer();
         UUID playerUUID = player.getUniqueId();
         PlayerConfig playerConfig = plugin.getDataManager().getPlayerConfig(playerUUID);
-        if (playerConfig == null) return;
+        if (playerConfig == null || !player.hasPermission("autotreechop.use")) return;
         Block block = event.getBlock();
         ItemStack tool = player.getInventory().getItemInMainHand();
         Location location = block.getLocation();
@@ -82,7 +83,7 @@ public class BlockBreakListener implements Listener {
 
         Material material = block.getType();
 
-        if (!playerConfig.isAutoTreeChopEnabled() || !BlockDiscoveryUtils.isLog(material, config)) {
+        if (!ActivationUtils.isActive(player, playerConfig, config) || !BlockDiscoveryUtils.isLog(material, config)) {
             return;
         }
 

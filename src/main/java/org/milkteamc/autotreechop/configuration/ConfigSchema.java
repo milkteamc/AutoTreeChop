@@ -87,8 +87,6 @@ public final class ConfigSchema {
         paths.put("defaultTreeChop", "activation.default-enabled");
         paths.put("respectUnbreaking", "chopping.tool-damage.respect-unbreaking");
         paths.put("playBreakSound", "chopping.play-break-sound");
-        paths.put("enable-command-toggle", "activation.command-toggle");
-        paths.put("enable-sneak-toggle", "activation.sneak-toggle");
         paths.put("sneak-message", "activation.sneak-message");
         paths.put("chop-batch-size", "chopping.batch-size");
         paths.put("max-tree-size", "chopping.max-tree-size");
@@ -168,10 +166,12 @@ public final class ConfigSchema {
             }
             validate(document.get(newPath), defaults.get(newPath), newPath);
         }
+        changed |= migrateActivation(document, warning);
         validateGroups(document);
         document.set("config-version", VERSION);
         for (String path : document.getRoutesAsStrings(true)) {
             if (path.equals("config-version")
+                    || path.equals("activation.mode")
                     || LEGACY_PATHS.containsValue(path)
                     || path.startsWith(MAPPING_PATH + ".")
                     || isGroupPath(path)
@@ -179,6 +179,48 @@ public final class ConfigSchema {
             warning.accept("Unrecognized config key retained: " + path);
         }
         return new Prepared(file, original, document, changed);
+    }
+
+    private static boolean migrateActivation(YamlDocument document, Consumer<String> warning) {
+        Object mode = document.get("activation.mode");
+        boolean changed = false;
+        if (!document.contains("activation.mode") || "legacy".equals(mode)) {
+            boolean command = oldActivationToggle(document, "command", true, warning);
+            boolean sneak = oldActivationToggle(document, "sneak", false, warning);
+            mode = command ? (sneak ? "command-and-sneak" : "command") : (sneak ? "sneak" : "disabled");
+            document.set("activation.mode", mode);
+            changed = true;
+        }
+        if (!(mode instanceof String name)
+                || !Set.of("disabled", "command", "sneak", "command-and-sneak", "hotkey")
+                        .contains(name)) {
+            throw invalid("activation.mode", "must be disabled, command, sneak, command-and-sneak or hotkey");
+        }
+        for (String path : List.of(
+                "enable-command-toggle",
+                "enable-sneak-toggle",
+                "activation.command-toggle",
+                "activation.sneak-toggle")) {
+            if (document.contains(path)) {
+                document.remove(path);
+                changed = true;
+            }
+        }
+        return changed;
+    }
+
+    private static boolean oldActivationToggle(
+            YamlDocument document, String kind, boolean fallback, Consumer<String> warning) {
+        String oldPath = "enable-" + kind + "-toggle";
+        String nestedPath = "activation." + kind + "-toggle";
+        if (document.contains(oldPath) && document.contains(nestedPath)) {
+            warning.accept("Both " + oldPath + " and " + nestedPath + " are set; using " + nestedPath);
+        }
+        String path = document.contains(nestedPath) ? nestedPath : oldPath;
+        if (!document.contains(path)) return fallback;
+        Object value = document.get(path);
+        validate(value, Boolean.TRUE, path);
+        return (Boolean) value;
     }
 
     private static void validateGroups(YamlDocument document) {

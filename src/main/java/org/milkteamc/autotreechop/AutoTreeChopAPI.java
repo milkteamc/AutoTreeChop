@@ -50,7 +50,11 @@ public class AutoTreeChopAPI {
         UNAVAILABLE
     }
 
-    /** Immutable snapshot. Daily counters follow the server's local date and reset on access. */
+    /**
+     * Immutable saved preference and usage, not the current activation result.
+     * Sneak-only mode uses posture; combined mode requires both this preference and sneaking.
+     * Daily counters follow the server's local date and reset on access.
+     */
     public record PlayerState(boolean enabled, int dailyUses, int dailyBlocksBroken) {}
 
     /**

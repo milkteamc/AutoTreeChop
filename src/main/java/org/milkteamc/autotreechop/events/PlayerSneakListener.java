@@ -20,11 +20,13 @@ package org.milkteamc.autotreechop.events;
 import java.util.UUID;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerToggleSneakEvent;
 import org.milkteamc.autotreechop.AutoTreeChop;
 import org.milkteamc.autotreechop.MessageKeys;
 import org.milkteamc.autotreechop.PlayerConfig;
+import org.milkteamc.autotreechop.configuration.ActivationMode;
 
 public class PlayerSneakListener implements Listener {
 
@@ -34,9 +36,13 @@ public class PlayerSneakListener implements Listener {
         this.plugin = plugin;
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onPlayerToggleSneak(PlayerToggleSneakEvent event) {
-        if (!plugin.getPluginConfig().getSneakToggle()) return;
+        if (event.isCancelled()) return;
+        var config = plugin.getPluginConfig();
+        ActivationMode mode = config.getActivationMode();
+        boolean holdMode = mode == ActivationMode.SNEAK || mode == ActivationMode.COMMAND_AND_SNEAK;
+        if (!holdMode) return;
 
         Player player = event.getPlayer();
         UUID playerUUID = player.getUniqueId();
@@ -46,17 +52,10 @@ public class PlayerSneakListener implements Listener {
         PlayerConfig playerConfig = plugin.getDataManager().getPlayerConfig(playerUUID);
         if (playerConfig == null) return;
 
-        if (event.isSneaking()) {
-            playerConfig.setAutoTreeChopEnabled(true);
-            if (plugin.getPluginConfig().getSneakMessage()) {
-                AutoTreeChop.sendMessage(player, MessageKeys.SNEAK_ENABLED);
-            }
-        } else {
-            playerConfig.setAutoTreeChopEnabled(false);
-            plugin.getConfirmationManager().clearPlayer(playerUUID);
-            if (plugin.getPluginConfig().getSneakMessage()) {
-                AutoTreeChop.sendMessage(player, MessageKeys.SNEAK_DISABLED);
-            }
+        if (!event.isSneaking()) plugin.getConfirmationManager().clearPlayer(playerUUID);
+        if (config.getSneakMessage() && (mode == ActivationMode.SNEAK || playerConfig.isAutoTreeChopEnabled())) {
+            AutoTreeChop.sendMessage(
+                    player, event.isSneaking() ? MessageKeys.SNEAK_ENABLED : MessageKeys.SNEAK_DISABLED);
         }
     }
 }

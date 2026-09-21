@@ -16,7 +16,7 @@ It's async-friendly, lightweight, and fully customizable — with built-in suppo
 ### 🌲 Smart Tree Chopping
 
 - Chop entire trees by breaking just one log
-- Toggle on/off with `/atc` command or by sneaking (pressing SHIFT)
+- Activation modes: command(`/atc`), hold sneak, command + sneak, or sneak + swap-hand key (normally Shift+F)
 - Async support for smooth performance on Modern servers
 - Customizable leaves cleaner
 

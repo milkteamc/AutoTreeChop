@@ -105,7 +105,7 @@ class ConfigSchemaTest {
     @Test
     void migratesEveryLegacyKeyWithoutChangingItsValue() throws Exception {
         YamlDocument original = ConfigSchema.parse(legacy());
-        assertEquals(original.getKeys().size() - 1, ConfigSchema.LEGACY_PATHS.size());
+        assertEquals(original.getKeys().size() - 3, ConfigSchema.LEGACY_PATHS.size());
         Files.writeString(temp.resolve("config.yml"), legacy());
         YamlDocument migrated = prepare().document();
         for (var entry : ConfigSchema.LEGACY_PATHS.entrySet()) {
@@ -138,7 +138,8 @@ class ConfigSchemaTest {
                   log-sapling-mapping: {}
                 """);
         YamlDocument result = prepare().document();
-        assertFalse(result.getBoolean("activation.command-toggle"));
+        assertEquals("disabled", result.getString("activation.mode"));
+        assertFalse(result.contains("activation.command-toggle"));
         assertEquals(0, result.getInt("groups.default.max-uses-per-day"));
         assertTrue(result.getStringList("chopping.root-types").isEmpty());
         assertTrue(result.getSection("replant.log-sapling-mapping").getKeys().isEmpty());

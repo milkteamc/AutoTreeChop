@@ -36,6 +36,7 @@ import org.milkteamc.autotreechop.configuration.ConfigLoadException;
 import org.milkteamc.autotreechop.database.DataManager;
 import org.milkteamc.autotreechop.database.DatabaseManager;
 import org.milkteamc.autotreechop.events.BlockBreakListener;
+import org.milkteamc.autotreechop.events.PlayerHotkeyListener;
 import org.milkteamc.autotreechop.events.PlayerJoinListener;
 import org.milkteamc.autotreechop.events.PlayerQuitListener;
 import org.milkteamc.autotreechop.events.PlayerSneakListener;
@@ -201,6 +202,7 @@ public class AutoTreeChop extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new PlayerQuitListener(this), this);
         getServer().getPluginManager().registerEvents(new BlockBreakListener(this), this);
         getServer().getPluginManager().registerEvents(new PlayerSneakListener(this), this);
+        getServer().getPluginManager().registerEvents(new PlayerHotkeyListener(this), this);
     }
 
     private void registerCommands() {
