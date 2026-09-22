@@ -74,7 +74,7 @@ Automatically switches to the player's locale if enabled.
 | Command | Description |
 |--------|-------------|
 | `/atc` | Toggle AutoTreeChop |
-| `/atc confirm` | Confirm a pending chop (idle / no-leaves warning) |
+| `/atc confirm` | Confirm a pending chop after a safety warning |
 | `/atc usage` | Show daily usage |
 | `/atc settings [setting] [value]` | View or change personal settings |
 | `/atc settings reset` | Restore all server defaults |

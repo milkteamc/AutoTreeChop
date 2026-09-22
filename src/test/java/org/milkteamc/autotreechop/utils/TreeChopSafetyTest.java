@@ -412,6 +412,85 @@ class TreeChopSafetyTest {
     }
 
     @Test
+    void suspiciousStructureRequiresConfirmationEvenWithLeavesAndAfterAnIdleConfirmation() throws Exception {
+        when(config.isPlayerStructureConfirmationEnabled()).thenReturn(true);
+        try (var detector = mockStatic(TreeStructureDetector.class)) {
+            detector.when(() -> TreeStructureDetector.inspect(Set.of(location), config))
+                    .thenReturn(TreeStructureDetector.Result.SUSPICIOUS);
+            validate(null, true, ConfirmationManager.ConfirmReason.IDLE_OR_REJOIN);
+            verify(plugin.getConfirmationManager())
+                    .setPendingConfirmation(
+                            uuid, ConfirmationManager.ConfirmReason.PLAYER_STRUCTURE, location, null, true);
+            verifyNoInteractions(batches.constructed().get(0));
+            verify(block, never()).breakNaturally();
+            verify(data, never()).incrementDailyUses();
+        }
+    }
+
+    @Test
+    void structureRetryConfirmsOnceAndDoesNotAuthorizeTheNextStructure() throws Exception {
+        when(config.isPlayerStructureConfirmationEnabled()).thenReturn(true);
+        when(plugin.getPluginConfig()).thenReturn(config);
+        when(config.getConfirmationWindowSeconds()).thenReturn(30);
+        when(plugin.getConfirmationManager()).thenReturn(new ConfirmationManager(plugin));
+        try (var detector = mockStatic(TreeStructureDetector.class)) {
+            detector.when(() -> TreeStructureDetector.inspect(Set.of(location), config))
+                    .thenReturn(TreeStructureDetector.Result.SUSPICIOUS);
+            validate(null);
+            verifyNoInteractions(batches.constructed().get(0));
+            validate(null);
+            assertNotNull(blockProcessor());
+            SessionManager.getInstance().clearTreeChopSession(uuid);
+            clearInvocations(batches.constructed().get(0));
+            validate(null);
+            verifyNoInteractions(batches.constructed().get(0));
+            assertEquals(
+                    ConfirmationManager.ConfirmReason.PLAYER_STRUCTURE,
+                    plugin.getConfirmationManager()
+                            .consumePendingConfirmation(uuid)
+                            .reason());
+        }
+    }
+
+    @Test
+    void floatingStructureCanBeConfirmedWithoutAlternatingWarnings() throws Exception {
+        when(config.isPlayerStructureConfirmationEnabled()).thenReturn(true);
+        when(world.getBlockAt(location.clone().subtract(0, 1, 0)).getType()).thenReturn(Material.AIR);
+        try (var detector = mockStatic(TreeStructureDetector.class)) {
+            detector.when(() -> TreeStructureDetector.inspect(Set.of(location), config))
+                    .thenReturn(TreeStructureDetector.Result.SUSPICIOUS);
+            validate(null, true, ConfirmationManager.ConfirmReason.FLOATING);
+            verify(plugin.getConfirmationManager())
+                    .setPendingConfirmation(
+                            uuid, ConfirmationManager.ConfirmReason.FLOATING_STRUCTURE, location, null, true);
+            verifyNoInteractions(batches.constructed().get(0));
+            validate(null, true, ConfirmationManager.ConfirmReason.FLOATING_STRUCTURE);
+            assertNotNull(blockProcessor());
+        }
+    }
+
+    @Test
+    void incompleteStructureScanStopsEvenWhenPreviouslyConfirmed() throws Exception {
+        when(config.isPlayerStructureConfirmationEnabled()).thenReturn(true);
+        try (var detector = mockStatic(TreeStructureDetector.class)) {
+            detector.when(() -> TreeStructureDetector.inspect(Set.of(location), config))
+                    .thenReturn(TreeStructureDetector.Result.INCOMPLETE);
+            validate(null, true, ConfirmationManager.ConfirmReason.PLAYER_STRUCTURE);
+            verifyNoInteractions(batches.constructed().get(0));
+            verify(block, never()).breakNaturally();
+        }
+    }
+
+    @Test
+    void disabledStructureCheckDoesNotInspectNeighbors() throws Exception {
+        try (var detector = mockStatic(TreeStructureDetector.class)) {
+            validate(null);
+            assertNotNull(blockProcessor());
+            detector.verifyNoInteractions();
+        }
+    }
+
+    @Test
     void disabledEntryDoesNotCaptureOrScheduleTreeDiscovery() {
         when(data.isAutoTreeChopEnabled()).thenReturn(false);
         utils.chopTree(block, player, true, null, location, config, data, hooks);

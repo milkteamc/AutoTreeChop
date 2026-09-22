@@ -326,15 +326,33 @@ public class TreeChopUtils {
             return;
         }
 
+        TreeStructureDetector.Result structure = config.isPlayerStructureConfirmationEnabled()
+                ? TreeStructureDetector.inspect(treeBlocks, config)
+                : TreeStructureDetector.Result.NO_EVIDENCE;
+        if (structure == TreeStructureDetector.Result.INCOMPLETE) {
+            AutoTreeChop.sendMessage(player, MessageKeys.TREE_SCAN_INCOMPLETE);
+            sessionManager.clearTreeChopSession(playerUUID);
+            return;
+        }
         ConfirmationManager confirmations = plugin.getConfirmationManager();
         if (confirmedReason == null) {
             var pending =
                     confirmations.consumePendingConfirmationForBlock(playerUUID, originalBlock.getLocation(), tool);
             if (pending != null) confirmedReason = pending.reason();
         }
-        ConfirmReason reason = !grounding.grounded() && confirmedReason != ConfirmReason.FLOATING
-                ? ConfirmReason.FLOATING
-                : confirmedReason == null ? confirmations.getConfirmationReason(playerUUID, hasLeaves) : null;
+        boolean suspicious = structure == TreeStructureDetector.Result.SUSPICIOUS;
+        boolean floatingConfirmed =
+                confirmedReason == ConfirmReason.FLOATING || confirmedReason == ConfirmReason.FLOATING_STRUCTURE;
+        boolean structureConfirmed = confirmedReason == ConfirmReason.PLAYER_STRUCTURE
+                || confirmedReason == ConfirmReason.FLOATING_STRUCTURE;
+        ConfirmReason reason = null;
+        if ((!grounding.grounded() && !floatingConfirmed) || (suspicious && !structureConfirmed)) {
+            reason = !grounding.grounded()
+                    ? suspicious ? ConfirmReason.FLOATING_STRUCTURE : ConfirmReason.FLOATING
+                    : ConfirmReason.PLAYER_STRUCTURE;
+        } else if (confirmedReason == null) {
+            reason = confirmations.getConfirmationReason(playerUUID, hasLeaves);
+        }
         if (reason != null) {
             confirmations.setPendingConfirmation(
                     playerUUID,
@@ -345,6 +363,8 @@ public class TreeChopUtils {
             String messageKey =
                     switch (reason) {
                         case FLOATING -> MessageKeys.CONFIRMATION_REQUIRED_FLOATING;
+                        case PLAYER_STRUCTURE -> MessageKeys.CONFIRMATION_REQUIRED_STRUCTURE;
+                        case FLOATING_STRUCTURE -> MessageKeys.CONFIRMATION_REQUIRED_FLOATING_STRUCTURE;
                         case IDLE_OR_REJOIN -> MessageKeys.CONFIRMATION_REQUIRED_IDLE;
                         case NO_LEAVES -> MessageKeys.CONFIRMATION_REQUIRED_NO_LEAVES;
                         case BOTH -> MessageKeys.CONFIRMATION_REQUIRED_BOTH;

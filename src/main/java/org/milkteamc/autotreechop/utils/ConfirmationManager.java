@@ -36,7 +36,11 @@ public class ConfirmationManager {
         /** Both IDLE_OR_REJOIN and NO_LEAVES apply simultaneously. */
         BOTH,
         /** The entire connected tree has no ground support. */
-        FLOATING
+        FLOATING,
+        /** Connected logs show evidence of construction. */
+        PLAYER_STRUCTURE,
+        /** Construction evidence and missing ground support must both be acknowledged. */
+        FLOATING_STRUCTURE
     }
 
     /**

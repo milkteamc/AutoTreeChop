@@ -44,6 +44,7 @@ public final class ConfigSchema {
     public static final int VERSION = 4;
     public static final Map<String, String> LEGACY_PATHS = legacyPaths();
     private static final String MAPPING_PATH = "replant.log-sapling-mapping";
+    private static final Set<String> ADDITIONAL_PATHS = Set.of("safety.player-structure-confirmation");
     private static final Set<String> GROUP_OPTIONS =
             Set.of("priority", "limit-usage", "max-uses-per-day", "max-blocks-per-day", "cooldown-seconds");
     private static final Set<String> POSITIVE = Set.of(
@@ -166,6 +167,14 @@ public final class ConfigSchema {
             }
             validate(document.get(newPath), defaults.get(newPath), newPath);
         }
+        for (String path : ADDITIONAL_PATHS) {
+            requireSections(document, path);
+            if (!document.contains(path)) {
+                document.set(path, rawValue(defaults.get(path)));
+                changed = true;
+            }
+            validate(document.get(path), defaults.get(path), path);
+        }
         changed |= migrateActivation(document, warning);
         validateGroups(document);
         document.set("config-version", VERSION);
@@ -173,6 +182,7 @@ public final class ConfigSchema {
             if (path.equals("config-version")
                     || path.equals("activation.mode")
                     || LEGACY_PATHS.containsValue(path)
+                    || ADDITIONAL_PATHS.contains(path)
                     || path.startsWith(MAPPING_PATH + ".")
                     || isGroupPath(path)
                     || LEGACY_PATHS.values().stream().anyMatch(known -> known.startsWith(path + "."))) continue;

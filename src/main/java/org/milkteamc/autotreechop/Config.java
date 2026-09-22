@@ -160,6 +160,7 @@ public class Config {
         int idleTimeoutSeconds = config.getInt("safety.idle-timeout-seconds");
         int confirmationWindowSeconds = config.getInt("safety.confirmation-window-seconds");
         boolean noLeavesConfirmationEnabled = config.getBoolean("safety.no-leaves-confirmation");
+        boolean playerStructureConfirmation = config.getBoolean("safety.player-structure-confirmation");
         boolean preventNoLeavesChopping = config.getBoolean("safety.prevent-no-leaves-chopping");
         boolean enableIdleConfirmation = config.getBoolean("safety.idle-confirmation");
         int noLeavesDetectionRadius = config.getInt("safety.no-leaves-detection-radius");
@@ -226,6 +227,7 @@ public class Config {
                 idleTimeoutSeconds,
                 confirmationWindowSeconds,
                 noLeavesConfirmationEnabled,
+                playerStructureConfirmation,
                 preventNoLeavesChopping,
                 enableIdleConfirmation,
                 noLeavesDetectionRadius,
@@ -517,6 +519,10 @@ public class Config {
         return state.noLeavesConfirmationEnabled;
     }
 
+    public boolean isPlayerStructureConfirmationEnabled() {
+        return state.playerStructureConfirmation;
+    }
+
     public boolean isPreventNoLeavesChopping() {
         return state.preventNoLeavesChopping;
     }
@@ -577,6 +583,7 @@ public class Config {
             int idleTimeoutSeconds,
             int confirmationWindowSeconds,
             boolean noLeavesConfirmationEnabled,
+            boolean playerStructureConfirmation,
             boolean preventNoLeavesChopping,
             boolean enableIdleConfirmation,
             int noLeavesDetectionRadius,

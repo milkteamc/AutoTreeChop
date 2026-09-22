@@ -55,6 +55,21 @@ class ConfigTest {
     }
 
     @Test
+    void structureConfirmationDefaultsOnAndCanBeSafelyReloaded() throws Exception {
+        Files.writeString(file(), "config-version: 4\nsafety:\n  no-leaves-confirmation: false\n");
+        Config config = new Config(plugin);
+        assertTrue(config.isPlayerStructureConfirmationEnabled());
+        assertFalse(config.isNoLeavesConfirmationEnabled());
+        assertTrue(Files.readString(file()).contains("player-structure-confirmation: true"));
+        Files.writeString(file(), "config-version: 4\nsafety:\n  player-structure-confirmation: false\n");
+        config.load();
+        assertFalse(config.isPlayerStructureConfirmationEnabled());
+        Files.writeString(file(), "config-version: 4\nsafety:\n  player-structure-confirmation: maybe\n");
+        assertThrows(ConfigLoadException.class, config::load);
+        assertFalse(config.isPlayerStructureConfirmationEnabled());
+    }
+
+    @Test
     void invalidReloadKeepsAllOldSettingsAndTheEditedFile() throws Exception {
         Config config = new Config(plugin);
         Set<Material> logs = config.getLogTypes();

@@ -102,11 +102,13 @@ storage:
 safety:
   # Seconds of tree-chop inactivity before the player must re-confirm their intent.
   idle-timeout-seconds: 300
-  # Seconds the player has to chop any log (or run /atc confirm) after seeing the warning.
+  # Seconds to retry the same log with the same tool (or run /atc confirm).
   confirmation-window-seconds: 10
   # Require confirmation when the broken log has no leaf blocks nearby.
   # Helps prevent accidentally chopping placed or stripped logs.
   no-leaves-confirmation: true
+  # Confirm suspected buildings, processed wood, decorative foliage, and flat log structures.
+  player-structure-confirmation: true
   # Prevent AutoTreeChop from chopping logs with no nearby leaves without showing a confirmation prompt.
   prevent-no-leaves-chopping: false
   # Require confirmation after the player has been idle or rejoined with ATC enabled.
