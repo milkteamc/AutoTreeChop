@@ -448,6 +448,6 @@ public class TreeReplantUtils {
     }
 
     public static boolean isReplantEnabledForPlayer(Player player, Config config) {
-        return config.isAutoReplantEnabled() && player.hasPermission("autotreechop.replant");
+        return config.isAutoReplantEnabled() && (config.isLiteMode() || player.hasPermission("autotreechop.replant"));
     }
 }

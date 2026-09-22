@@ -42,7 +42,6 @@ public final class SettingsCommand {
     }
 
     @Subcommand("settings")
-    @CommandPermission("autotreechop.settings")
     public void settings(
             BukkitCommandActor actor,
             @Optional @Suggest({"activation", "sneak-messages", "leaves", "replant", "reset"}) String setting,
@@ -52,7 +51,8 @@ public final class SettingsCommand {
             AutoTreeChop.sendMessage(actor.sender(), MessageKeys.ONLY_PLAYERS);
             return;
         }
-        if (!player.hasPermission("autotreechop.settings") || !player.hasPermission("autotreechop.use")) {
+        if (!plugin.getPluginConfig().isLiteMode()
+                && (!player.hasPermission("autotreechop.settings") || !player.hasPermission("autotreechop.use"))) {
             AutoTreeChop.sendMessage(player, MessageKeys.NO_PERMISSION);
             return;
         }

@@ -223,4 +223,25 @@ class ConfigSchemaTest {
         assertTrue(backups().isEmpty());
         assertTrue(prepared.document().getBoolean("messages.use-player-locale"));
     }
+
+    @Test
+    void liteSwitchIsAddedToExistingConfigsWithoutChangingTheirOtherSettings() throws Exception {
+        Files.writeString(temp.resolve("config.yml"), "config-version: 4\nactivation: {mode: sneak}\n");
+        ConfigSchema.Prepared prepared = prepare();
+        assertFalse(prepared.document().getBoolean("lite-mode.enabled"));
+        assertEquals("sneak", prepared.document().getString("activation.mode"));
+        prepared.commit();
+        YamlDocument saved = ConfigSchema.parse(Files.readString(temp.resolve("config.yml")));
+        assertFalse(saved.getBoolean("lite-mode.enabled"));
+        assertEquals("sneak", saved.getString("activation.mode"));
+    }
+
+    @Test
+    void invalidLiteSwitchIsRejectedWithoutChangingTheFile() throws Exception {
+        String contents = "config-version: 4\nlite-mode: {enabled: maybe}\n";
+        Files.writeString(temp.resolve("config.yml"), contents);
+        assertThrows(ConfigLoadException.class, this::prepare);
+        assertEquals(contents, Files.readString(temp.resolve("config.yml")));
+        assertTrue(backups().isEmpty());
+    }
 }

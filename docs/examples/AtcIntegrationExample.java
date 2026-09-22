@@ -2,18 +2,35 @@ package example;
 
 import java.util.UUID;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.milkteamc.autotreechop.AutoTreeChopAPI;
 import org.milkteamc.autotreechop.PlayerPreferences;
+import org.milkteamc.autotreechop.api.event.TreeChopPostEvent;
+import org.milkteamc.autotreechop.api.event.TreeChopPreEvent;
 
 /** Minimal integration; pair with docs/examples/plugin.yml in a separate plugin project. */
-public final class AtcIntegrationExample extends JavaPlugin {
+public final class AtcIntegrationExample extends JavaPlugin implements Listener {
     @Override
     public void onEnable() {
         if (getServer().getServicesManager().load(AutoTreeChopAPI.class) == null) {
             getLogger().severe("AutoTreeChop API is unavailable; disabling this integration.");
             getServer().getPluginManager().disablePlugin(this);
+            return;
         }
+        getServer().getPluginManager().registerEvents(this, this);
+    }
+
+    @EventHandler
+    public void onTreeChopPre(TreeChopPreEvent event) {
+        if (getConfig().getBoolean("disable-atc-chops", false)) event.setCancelled(true);
+    }
+
+    @EventHandler
+    public void onTreeChopPost(TreeChopPostEvent event) {
+        int choppedLogs = event.getRemovedLogs().size();
+        if (choppedLogs > 0) getLogger().info(event.getPlayer().getName() + " chopped " + choppedLogs + " logs");
     }
 
     /** Call this after authorizing the initiating command or action. */

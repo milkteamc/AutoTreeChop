@@ -61,7 +61,7 @@ public class BlockBreakListener implements Listener {
         Player player = event.getPlayer();
         UUID playerUUID = player.getUniqueId();
         PlayerConfig playerConfig = plugin.getDataManager().getPlayerConfig(playerUUID);
-        if (playerConfig == null || !player.hasPermission("autotreechop.use")) return;
+        if (playerConfig == null || !PermissionUtils.hasUsePermission(player, plugin.getPluginConfig())) return;
         Block block = event.getBlock();
         ItemStack tool = player.getInventory().getItemInMainHand();
         Location location = block.getLocation();
@@ -87,7 +87,7 @@ public class BlockBreakListener implements Listener {
             return;
         }
 
-        if (plugin.getCooldownManager().isInCooldown(playerUUID)) {
+        if (!config.isLiteMode() && plugin.getCooldownManager().isInCooldown(playerUUID)) {
             long remaining = plugin.getCooldownManager().getRemainingCooldown(playerUUID);
             AutoTreeChop.sendMessage(
                     player,
@@ -178,6 +178,9 @@ public class BlockBreakListener implements Listener {
     }
 
     private ProtectionHooks buildProtectionHooks() {
+        if (plugin.getPluginConfig().isLiteMode()) {
+            return new ProtectionHooks(false, null, false, null, false, null, false, null);
+        }
         HookManager hm = plugin.getHookManager();
         return new ProtectionHooks(
                 hm.isWorldGuardEnabled(),

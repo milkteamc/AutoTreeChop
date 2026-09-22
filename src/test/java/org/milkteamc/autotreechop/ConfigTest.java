@@ -55,6 +55,72 @@ class ConfigTest {
     }
 
     @Test
+    void liteModeUsesOneConfigAndRestoresFullSettingsWhenDisabled() throws Exception {
+        Config config = new Config(plugin);
+        YamlDocument edited = ConfigSchema.parse(Files.readString(file()));
+        edited.set("lite-mode.enabled", true);
+        edited.set("activation.mode", "hotkey");
+        edited.set("chopping.require-tool", true);
+        edited.set("groups.default.cooldown-seconds", 9);
+        edited.set("groups.builder.priority", 10);
+        edited.set("groups.builder.cooldown-seconds", 13);
+        edited.set("safety.no-leaves-confirmation", true);
+        edited.set("safety.player-structure-confirmation", true);
+        edited.set("safety.idle-confirmation", true);
+        edited.set("safety.prevent-no-leaves-chopping", true);
+        edited.set("leaves.enabled", true);
+        edited.set("replant.enabled", true);
+        edited.set("integrations.record-minecraft-statistics", true);
+        String saved = edited.dump();
+        Files.writeString(file(), saved);
+        config.load();
+
+        assertTrue(config.isLiteMode());
+        assertFalse(config.getLimitUsage());
+        assertEquals(0, config.getCooldownTime());
+        assertTrue(config.getMustUseTool());
+        assertTrue(config.isToolDamage());
+        assertTrue(config.isNoLeavesConfirmationEnabled());
+        assertTrue(config.isPlayerStructureConfirmationEnabled());
+        assertTrue(config.isIdleConfirmationEnabled());
+        assertTrue(config.isPreventNoLeavesChopping());
+        assertTrue(config.isLeafRemovalEnabled());
+        assertTrue(config.isAutoReplantEnabled());
+        assertTrue(config.isCallBlockBreakEvent());
+        assertTrue(config.isRecordMinecraftStatistics());
+        assertEquals(org.milkteamc.autotreechop.configuration.ActivationMode.HOTKEY, config.getActivationMode());
+        org.bukkit.entity.Player builder = mock(org.bukkit.entity.Player.class);
+        when(builder.isPermissionSet("autotreechop.group.builder")).thenReturn(true);
+        when(builder.hasPermission("autotreechop.group.builder")).thenReturn(true);
+        assertEquals(0, config.resolvePolicy(builder).cooldownSeconds());
+        assertFalse(config.resolvePolicy(builder).limitUsage());
+        assertTrue(org.milkteamc.autotreechop.utils.PermissionUtils.hasUsePermission(builder, config));
+        assertTrue(org.milkteamc.autotreechop.utils.PreferenceUtils.leafRemoval(
+                builder, PlayerPreferences.DEFAULTS, config));
+        assertTrue(org.milkteamc.autotreechop.utils.PreferenceUtils.autoReplant(
+                builder, PlayerPreferences.DEFAULTS, config));
+        assertEquals(saved, Files.readString(file()), "Lite mode must not overwrite the full settings");
+
+        edited.set("lite-mode.enabled", false);
+        Files.writeString(file(), edited.dump());
+        config.load();
+        assertFalse(config.isLiteMode());
+        assertTrue(config.getLimitUsage());
+        assertEquals(9, config.getCooldownTime());
+        assertEquals(13, config.resolvePolicy(builder).cooldownSeconds());
+        assertTrue(config.isNoLeavesConfirmationEnabled());
+        assertTrue(config.isPlayerStructureConfirmationEnabled());
+        assertTrue(config.isIdleConfirmationEnabled());
+        assertTrue(config.isLeafRemovalEnabled());
+        assertTrue(config.isAutoReplantEnabled());
+
+        Files.writeString(file(), "config-version: 4\nlite-mode: {enabled: maybe}\n");
+        assertThrows(ConfigLoadException.class, config::load);
+        assertTrue(config.isLeafRemovalEnabled());
+        assertTrue(config.isAutoReplantEnabled());
+    }
+
+    @Test
     void minecraftStatisticsDefaultOffAndReloadSafely() throws Exception {
         Files.writeString(file(), "config-version: 4\nintegrations:\n  call-block-break-event: true\n");
         Config config = new Config(plugin);

@@ -28,12 +28,12 @@ import org.milkteamc.autotreechop.hooks.HookManager;
 import org.milkteamc.autotreechop.utils.ActivationUtils;
 import org.milkteamc.autotreechop.utils.BlockDiscoveryUtils;
 import org.milkteamc.autotreechop.utils.ConfirmationManager.ChopData;
+import org.milkteamc.autotreechop.utils.PermissionUtils;
 import org.milkteamc.autotreechop.utils.ProtectionCheckUtils.ProtectionHooks;
 import org.milkteamc.autotreechop.utils.RegionAccess;
 import revxrsal.commands.annotation.Command;
 import revxrsal.commands.annotation.Subcommand;
 import revxrsal.commands.bukkit.actor.BukkitCommandActor;
-import revxrsal.commands.bukkit.annotation.CommandPermission;
 
 @Command({"atc", "autotreechop"})
 public class ConfirmCommand {
@@ -45,10 +45,13 @@ public class ConfirmCommand {
     }
 
     @Subcommand("confirm")
-    @CommandPermission("autotreechop.use")
     public void confirm(BukkitCommandActor actor) {
         if (!(actor.sender() instanceof Player player)) {
             AutoTreeChop.sendMessage(actor.sender(), MessageKeys.ONLY_PLAYERS);
+            return;
+        }
+        if (!PermissionUtils.hasUsePermission(player, plugin.getPluginConfig())) {
+            AutoTreeChop.sendMessage(player, MessageKeys.NO_PERMISSION);
             return;
         }
 
@@ -94,15 +97,17 @@ public class ConfirmCommand {
         }
 
         HookManager hookManager = plugin.getHookManager();
-        ProtectionHooks hooks = new ProtectionHooks(
-                hookManager.isWorldGuardEnabled(),
-                hookManager.getWorldGuardHook(),
-                hookManager.isResidenceEnabled(),
-                hookManager.getResidenceHook(),
-                hookManager.isGriefPreventionEnabled(),
-                hookManager.getGriefPreventionHook(),
-                hookManager.isLandsEnabled(),
-                hookManager.getLandsHook());
+        ProtectionHooks hooks = config.isLiteMode()
+                ? new ProtectionHooks(false, null, false, null, false, null, false, null)
+                : new ProtectionHooks(
+                        hookManager.isWorldGuardEnabled(),
+                        hookManager.getWorldGuardHook(),
+                        hookManager.isResidenceEnabled(),
+                        hookManager.getResidenceHook(),
+                        hookManager.isGriefPreventionEnabled(),
+                        hookManager.getGriefPreventionHook(),
+                        hookManager.isLandsEnabled(),
+                        hookManager.getLandsHook());
 
         plugin.getTreeChopUtils()
                 .chopTree(

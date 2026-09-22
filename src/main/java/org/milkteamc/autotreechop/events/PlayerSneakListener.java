@@ -27,6 +27,7 @@ import org.milkteamc.autotreechop.AutoTreeChop;
 import org.milkteamc.autotreechop.MessageKeys;
 import org.milkteamc.autotreechop.PlayerConfig;
 import org.milkteamc.autotreechop.configuration.ActivationMode;
+import org.milkteamc.autotreechop.utils.PermissionUtils;
 import org.milkteamc.autotreechop.utils.PreferenceUtils;
 
 public class PlayerSneakListener implements Listener {
@@ -44,7 +45,7 @@ public class PlayerSneakListener implements Listener {
         Player player = event.getPlayer();
         UUID playerUUID = player.getUniqueId();
 
-        if (!player.hasPermission("autotreechop.use")) return;
+        if (!PermissionUtils.hasUsePermission(player, config)) return;
 
         PlayerConfig playerConfig = plugin.getDataManager().getPlayerConfig(playerUUID);
         if (playerConfig == null) return;

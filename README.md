@@ -99,7 +99,7 @@ disabling and feature permissions still apply.
 
 ## Permissions
 
-> Requires a permission manager plugin, I personally recommend [LuckPerms](https://luckperms.net/download)
+> Outside Lite mode, a permission manager such as [LuckPerms](https://luckperms.net/download) can manage these permissions.
 
 | Permission | Description | Default |
 |------------|-------------|-------------|

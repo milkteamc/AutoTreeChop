@@ -4,6 +4,12 @@
 # Source code: https://github.com/milkteamc/AutoTreeChop
 # Default config file: https://github.com/milkteamc/AutoTreeChop/blob/master/src/main/resources/config.yml
 
+# For small private servers: no player permission setup, limits, cooldowns or
+# external protection checks. Confirmation prompts, leaf clearing and replanting
+# still follow the settings below. Turning this off restores the full settings.
+lite-mode:
+  enabled: false
+
 messages:
   # The plugin locale (<language>-<country>-<variant>)
   # en, de, zh, es, fr, ja, zh-TW, en-US, de-DE, de-AU, ...

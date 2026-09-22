@@ -23,6 +23,10 @@ import org.milkteamc.autotreechop.PlayerConfig;
 
 public class PermissionUtils {
 
+    public static boolean hasUsePermission(Player player, Config config) {
+        return config.isLiteMode() || player.hasPermission("autotreechop.use");
+    }
+
     /** Whether the player has room for the proposed operation under their current group policy. */
     public static boolean canUse(Player player, PlayerConfig playerConfig, Config config) {
         return config.resolvePolicy(player).canUse(playerConfig.getDailyUses());

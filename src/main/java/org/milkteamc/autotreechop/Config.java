@@ -56,6 +56,7 @@ public class Config {
                         plugin.getDataFolder().toPath().resolve("config.yml"), defaults, warnings::add);
             }
             YamlDocument effective = ConfigSchema.parse(prepared.document().dump());
+            ConfigSchema.applyLiteMode(effective);
             List<String> pendingRestart = new ArrayList<>();
             if (state != null) {
                 retainUntilRestart(effective, "storage.use-mysql", state.useMysql, pendingRestart);
@@ -72,6 +73,10 @@ public class Config {
             prepared.commit();
             state = candidate;
             restartRequired = List.copyOf(pendingRestart);
+            if (effective.getBoolean("lite-mode.enabled")) {
+                plugin.getLogger()
+                        .info("Lite mode active; usage limits, cooldowns and external protection hooks are off");
+            }
             warnings.forEach(plugin.getLogger()::warning);
             if (!pendingRestart.isEmpty()) {
                 plugin.getLogger()
@@ -239,7 +244,8 @@ public class Config {
                 recordMinecraftStatistics,
                 limitUsage,
                 GroupPolicies.from(config),
-                ActivationMode.parse(config.getString("activation.mode")));
+                ActivationMode.parse(config.getString("activation.mode")),
+                config.getBoolean("lite-mode.enabled"));
     }
 
     private Set<Material> loadMaterialSet(YamlDocument config, String path) {
@@ -368,6 +374,10 @@ public class Config {
 
     public boolean getLimitUsage() {
         return state.limitUsage;
+    }
+
+    public boolean isLiteMode() {
+        return state.liteMode;
     }
 
     /** @deprecated Legacy VIP settings; use {@link #resolvePolicy(Player)} for player limits and cooldown. */
@@ -600,5 +610,6 @@ public class Config {
             boolean recordMinecraftStatistics,
             boolean limitUsage,
             GroupPolicies groupPolicies,
-            ActivationMode activationMode) {}
+            ActivationMode activationMode,
+            boolean liteMode) {}
 }

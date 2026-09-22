@@ -49,6 +49,7 @@ class UsageCommandTest {
         when(actor.isPlayer()).thenReturn(true);
         when(actor.asPlayer()).thenReturn(player);
         when(player.getUniqueId()).thenReturn(uuid);
+        when(player.hasPermission("autotreechop.use")).thenReturn(true);
         when(plugin.getDataManager()).thenReturn(data);
         when(data.getPlayerConfig(uuid)).thenReturn(playerData);
         when(playerData.getDailyUses()).thenReturn(7);

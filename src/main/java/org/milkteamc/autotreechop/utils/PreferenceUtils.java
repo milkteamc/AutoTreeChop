@@ -45,12 +45,12 @@ public final class PreferenceUtils {
     public static boolean leafRemoval(Player player, PlayerPreferences preferences, Config config) {
         return config.isLeafRemovalEnabled()
                 && preferences.leafRemoval().resolve(true)
-                && player.hasPermission("autotreechop.leaves");
+                && (config.isLiteMode() || player.hasPermission("autotreechop.leaves"));
     }
 
     public static boolean autoReplant(Player player, PlayerPreferences preferences, Config config) {
         return config.isAutoReplantEnabled()
                 && preferences.autoReplant().resolve(true)
-                && player.hasPermission("autotreechop.replant");
+                && (config.isLiteMode() || player.hasPermission("autotreechop.replant"));
     }
 }

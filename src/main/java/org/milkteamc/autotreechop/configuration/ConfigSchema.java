@@ -44,8 +44,8 @@ public final class ConfigSchema {
     public static final int VERSION = 4;
     public static final Map<String, String> LEGACY_PATHS = legacyPaths();
     private static final String MAPPING_PATH = "replant.log-sapling-mapping";
-    private static final Set<String> ADDITIONAL_PATHS =
-            Set.of("safety.player-structure-confirmation", "integrations.record-minecraft-statistics");
+    private static final Set<String> ADDITIONAL_PATHS = Set.of(
+            "lite-mode.enabled", "safety.player-structure-confirmation", "integrations.record-minecraft-statistics");
     private static final Set<String> GROUP_OPTIONS =
             Set.of("priority", "limit-usage", "max-uses-per-day", "max-blocks-per-day", "cooldown-seconds");
     private static final Set<String> POSITIVE = Set.of(
@@ -186,10 +186,19 @@ public final class ConfigSchema {
                     || ADDITIONAL_PATHS.contains(path)
                     || path.startsWith(MAPPING_PATH + ".")
                     || isGroupPath(path)
-                    || LEGACY_PATHS.values().stream().anyMatch(known -> known.startsWith(path + "."))) continue;
+                    || LEGACY_PATHS.values().stream().anyMatch(known -> known.startsWith(path + "."))
+                    || ADDITIONAL_PATHS.stream().anyMatch(known -> known.startsWith(path + "."))) continue;
             warning.accept("Unrecognized config key retained: " + path);
         }
         return new Prepared(file, original, document, changed);
+    }
+
+    public static void applyLiteMode(YamlDocument document) {
+        if (!document.getBoolean("lite-mode.enabled")) return;
+        document.set("chopping.limit-usage", false);
+        for (Object name : document.getSection("groups").getKeys()) {
+            document.set("groups." + name + ".cooldown-seconds", 0);
+        }
     }
 
     private static boolean migrateActivation(YamlDocument document, Consumer<String> warning) {

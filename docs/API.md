@@ -2,8 +2,8 @@
 
 AutoTreeChop exposes loaded players' enabled preference and daily usage, plus online players'
 effective group policies and personal settings. Integrations can read immutable snapshots and change preferences
-with an explicit result. The API does not chop trees, load offline records, edit quotas,
-or report whether a save reached SQL.
+with an explicit result. The API also exposes cancellable pre-chop and result-bearing post-chop events.
+It does not start chops, load offline records, edit quotas, or report whether a save reached SQL.
 
 ## Add the compile dependency
 
@@ -95,7 +95,8 @@ api.getPlayerPolicy(player).ifPresent(policy -> {
 `/atc usage`, including legacy VIP and global unlimited settings. Each call reflects current
 permissions and the latest successful configuration reload; earlier snapshots stay unchanged.
 When `unlimited()` is true, ignore both quota numbers. Cooldown still applies; its value is
-the configured duration, not remaining cooldown time.
+the configured duration, not remaining cooldown time. In Lite mode every policy is unlimited
+with no cooldown; the saved group settings take effect again when Lite mode is disabled.
 
 The result is empty when the player is offline or the plugin/config is unavailable. This
 query does not require loaded player data; use `getPlayerState(UUID)` separately for usage.
@@ -126,10 +127,11 @@ the SQLite/MySQL schema upgrade retains their enabled preference and usage count
 
 `getPlayerSettings(Player)` resolves defaults against the current server configuration.
 Its activation is never `DEFAULT`. Server mode `disabled` overrides personal modes;
-leaf removal and replanting require both server enablement and their feature permissions.
-Sneak messages use the server value as a default. These settings do not guarantee that
-chopping is currently allowed: posture, enabled preference, use permission, limits, tools,
-and protection checks still apply. Both getters return empty when player data is unavailable.
+leaf removal and replanting require server enablement and, outside Lite mode, their
+feature permissions. Sneak messages use the server value as a default. These settings do not
+guarantee that chopping is currently allowed: posture, enabled preference, and tool checks
+still apply. Outside Lite mode, use permission, limits, and protection checks also apply.
+Both getters return empty when player data is unavailable.
 
 `setPlayerPreferences` is a privileged operation with the same result and persistence
 semantics as `setAutoTreeChopEnabled`. Changing activation clears pending confirmations;
@@ -156,6 +158,38 @@ A successful result describes the in-memory preference, **not a completed databa
 Normal periodic/quit/shutdown saving handles persistence. Unavailable mutations are not
 queued for a later login and do not create default records. After a load failure, reconnect
 once the database is healthy to retry loading; this API does not initiate a reload.
+
+## Chopping events
+
+Listen for `TreeChopPreEvent` and `TreeChopPostEvent` from
+`org.milkteamc.autotreechop.api.event`. No service lookup is needed for event registration.
+
+```java
+@EventHandler
+public void beforeChop(TreeChopPreEvent event) {
+    if (event.getPlayer().hasPermission("myplugin.no-auto-chop")) event.setCancelled(true);
+}
+
+@EventHandler
+public void afterChop(TreeChopPostEvent event) {
+    event.getRemovedLogs().forEach((location, originalMaterial) -> {
+        // Award progress for this log, rather than for every planned log.
+    });
+}
+```
+
+The pre-event fires after tree discovery, protection/limit checks, and any required
+confirmation, but before removal, tool damage, and usage charges. Cancelling it prevents
+the batch and no post-event follows. `getPlannedLogs()` lists discovered logs, not a
+promise that each will break: later protection checks, block changes, or other plugins may
+prevent individual removals. The post-event fires once when the started batch ends, even
+if zero logs were removed. `getRemovedLogs()` contains only logs ATC actually removed,
+mapped to their material before removal. Leaves and replanted saplings are excluded.
+
+Locations returned by these events are detached copies. On Folia the post-event can run
+in a block region different from the player's current region; use the appropriate
+scheduler before accessing the player or unrelated world blocks. On Paper, events run
+on the server thread. A player can also be offline by the time the post-event fires.
 
 ## Threading and invalid arguments
 
