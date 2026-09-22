@@ -26,6 +26,7 @@ import java.util.UUID;
 import java.util.function.BiConsumer;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.Statistic;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
@@ -206,12 +207,14 @@ class TreeChopSafetyTest {
     @Test
     void failedBreakDoesNotCostDurabilityOrCount() throws Exception {
         ItemStack tool = prepareTool();
+        when(config.isRecordMinecraftStatistics()).thenReturn(true);
         when(block.breakNaturally()).thenReturn(false);
         validate(tool);
         blockProcessor().accept(location, 0);
         verify((Damageable) tool.getItemMeta(), never()).setDamage(anyInt());
         verify(data, never()).incrementDailyBlocksBroken();
         verify(data, never()).incrementDailyUses();
+        verify(player, never()).incrementStatistic(any(Statistic.class), any(Material.class));
     }
 
     @Test
@@ -229,11 +232,13 @@ class TreeChopSafetyTest {
         processor.accept(location, 2);
         verify(block, times(1)).breakNaturally();
         verify((Damageable) tool.getItemMeta(), times(1)).setDamage(anyInt());
+        verify(player, never()).incrementStatistic(any(Statistic.class), any(Material.class));
     }
 
     @Test
     void cancelledEventDoesNotCostDurabilityOrCount() throws Exception {
         ItemStack tool = prepareTool();
+        when(config.isRecordMinecraftStatistics()).thenReturn(true);
         when(config.isCallBlockBreakEvent()).thenReturn(true);
         org.bukkit.Server server = mock(org.bukkit.Server.class);
         org.bukkit.plugin.PluginManager plugins = mock(org.bukkit.plugin.PluginManager.class);
@@ -251,6 +256,40 @@ class TreeChopSafetyTest {
         verify((Damageable) tool.getItemMeta(), never()).setDamage(anyInt());
         verify(data, never()).incrementDailyBlocksBroken();
         verify(data, never()).incrementDailyUses();
+        verify(player, never()).incrementStatistic(any(Statistic.class), any(Material.class));
+    }
+
+    @Test
+    void enabledMinecraftStatisticsCountEachSuccessfulLogOnly() throws Exception {
+        when(config.isRecordMinecraftStatistics()).thenReturn(true);
+        when(block.breakNaturally()).thenReturn(false, true);
+        validate(null);
+        BiConsumer<Location, Integer> processor = blockProcessor();
+        processor.accept(location, 0);
+        verify(player, never()).incrementStatistic(any(Statistic.class), any(Material.class));
+        processor.accept(location, 1);
+        verify(player).incrementStatistic(Statistic.MINE_BLOCK, Material.OAK_LOG);
+        verify(data).incrementDailyBlocksBroken();
+    }
+
+    @Test
+    void noDropChopStillRecordsMinecraftStatistic() throws Exception {
+        when(config.isRecordMinecraftStatistics()).thenReturn(true);
+        when(config.isCallBlockBreakEvent()).thenReturn(true);
+        org.bukkit.Server server = mock(org.bukkit.Server.class);
+        org.bukkit.plugin.PluginManager plugins = mock(org.bukkit.plugin.PluginManager.class);
+        when(plugin.getServer()).thenReturn(server);
+        when(server.getPluginManager()).thenReturn(plugins);
+        doAnswer(invocation -> {
+                    ((org.bukkit.event.block.BlockBreakEvent) invocation.getArgument(0)).setDropItems(false);
+                    return null;
+                })
+                .when(plugins)
+                .callEvent(any());
+        validate(null);
+        blockProcessor().accept(location, 0);
+        verify(block).setType(Material.AIR, false);
+        verify(player).incrementStatistic(Statistic.MINE_BLOCK, Material.OAK_LOG);
     }
 
     @Test

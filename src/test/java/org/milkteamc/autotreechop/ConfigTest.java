@@ -55,6 +55,22 @@ class ConfigTest {
     }
 
     @Test
+    void minecraftStatisticsDefaultOffAndReloadSafely() throws Exception {
+        Files.writeString(file(), "config-version: 4\nintegrations:\n  call-block-break-event: true\n");
+        Config config = new Config(plugin);
+        assertFalse(config.isRecordMinecraftStatistics());
+        assertTrue(Files.readString(file()).contains("record-minecraft-statistics: false"));
+
+        Files.writeString(file(), "config-version: 4\nintegrations:\n  record-minecraft-statistics: true\n");
+        config.load();
+        assertTrue(config.isRecordMinecraftStatistics());
+
+        Files.writeString(file(), "config-version: 4\nintegrations:\n  record-minecraft-statistics: maybe\n");
+        assertThrows(ConfigLoadException.class, config::load);
+        assertTrue(config.isRecordMinecraftStatistics());
+    }
+
+    @Test
     void structureConfirmationDefaultsOnAndCanBeSafelyReloaded() throws Exception {
         Files.writeString(file(), "config-version: 4\nsafety:\n  no-leaves-confirmation: false\n");
         Config config = new Config(plugin);

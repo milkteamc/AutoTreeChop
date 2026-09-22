@@ -25,6 +25,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.Statistic;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.event.block.BlockBreakEvent;
@@ -541,6 +542,9 @@ public class TreeChopUtils {
                     actuallyRemovedLogs.add(location);
                     sessionManager.trackRemovedLogForPlayer(playerUUID.toString(), location);
                     playerConfig.incrementDailyBlocksBroken();
+                    if (config.isRecordMinecraftStatistics()) {
+                        player.incrementStatistic(Statistic.MINE_BLOCK, originalLogType);
+                    }
                 },
                 () -> {
                     if (plugin.getDataManager().getPlayerConfig(playerUUID) != playerConfig) return;

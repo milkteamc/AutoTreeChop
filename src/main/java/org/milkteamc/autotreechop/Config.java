@@ -141,6 +141,7 @@ public class Config {
         int maxTreeSize = config.getInt("chopping.max-tree-size");
         int maxDiscoveryBlocks = config.getInt("chopping.max-discovery-blocks");
         boolean callBlockBreakEvent = config.getBoolean("integrations.call-block-break-event");
+        boolean recordMinecraftStatistics = config.getBoolean("integrations.record-minecraft-statistics");
 
         boolean autoReplantEnabled = config.getBoolean("replant.enabled");
         long replantDelayTicks = config.getLong("replant.delay-ticks");
@@ -235,6 +236,7 @@ public class Config {
                 maxTreeSize,
                 maxDiscoveryBlocks,
                 callBlockBreakEvent,
+                recordMinecraftStatistics,
                 limitUsage,
                 GroupPolicies.from(config),
                 ActivationMode.parse(config.getString("activation.mode")));
@@ -507,6 +509,10 @@ public class Config {
         return state.callBlockBreakEvent;
     }
 
+    public boolean isRecordMinecraftStatistics() {
+        return state.recordMinecraftStatistics;
+    }
+
     public int getIdleTimeoutSeconds() {
         return state.idleTimeoutSeconds;
     }
@@ -591,6 +597,7 @@ public class Config {
             int maxTreeSize,
             int maxDiscoveryBlocks,
             boolean callBlockBreakEvent,
+            boolean recordMinecraftStatistics,
             boolean limitUsage,
             GroupPolicies groupPolicies,
             ActivationMode activationMode) {}

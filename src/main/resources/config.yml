@@ -134,6 +134,8 @@ integrations:
   # Call BlockBreakEvent for each block
   # true = Better plugin compatibility
   call-block-break-event: true
+  # Count logs removed by AutoTreeChop in Minecraft's mined-block statistics
+  record-minecraft-statistics: false
   residence:
     # Protection plugins setting
     # If you are using Residence, you can set which Flag players have access to AutoTreeChop in residence.

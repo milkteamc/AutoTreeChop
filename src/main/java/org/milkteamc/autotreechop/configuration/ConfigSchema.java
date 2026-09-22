@@ -44,7 +44,8 @@ public final class ConfigSchema {
     public static final int VERSION = 4;
     public static final Map<String, String> LEGACY_PATHS = legacyPaths();
     private static final String MAPPING_PATH = "replant.log-sapling-mapping";
-    private static final Set<String> ADDITIONAL_PATHS = Set.of("safety.player-structure-confirmation");
+    private static final Set<String> ADDITIONAL_PATHS =
+            Set.of("safety.player-structure-confirmation", "integrations.record-minecraft-statistics");
     private static final Set<String> GROUP_OPTIONS =
             Set.of("priority", "limit-usage", "max-uses-per-day", "max-blocks-per-day", "cooldown-seconds");
     private static final Set<String> POSITIVE = Set.of(

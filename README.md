@@ -33,6 +33,7 @@ It's async-friendly, lightweight, and fully customizable — with built-in suppo
 ### 🧑‍🤝‍🧑 Player Control & Limits
 
 - Daily limits for usage and chopped blocks
+- Optional Minecraft mined-block statistics for chopped logs (disabled by default)
 - Configurable cooldowns
 - Custom permission groups with priorities, daily limits and cooldowns
 
