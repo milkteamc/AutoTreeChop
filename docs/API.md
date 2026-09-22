@@ -1,7 +1,7 @@
 # AutoTreeChop API
 
 AutoTreeChop exposes loaded players' enabled preference and daily usage, plus online players'
-effective group policies. Integrations can read immutable snapshots and change the preference
+effective group policies and personal settings. Integrations can read immutable snapshots and change preferences
 with an explicit result. The API does not chop trees, load offline records, edit quotas,
 or report whether a save reached SQL.
 
@@ -102,7 +102,41 @@ query does not require loaded player data; use `getPlayerState(UUID)` separately
 The two queries are separate snapshots. A policy does not guarantee permission to chop or
 bypass enabled-state, usage, cooldown, tool, or protection checks.
 
-## Set the preference
+## Personal settings
+
+```java
+PlayerPreferences preferences = new PlayerPreferences(
+    PlayerPreferences.Activation.HOTKEY,
+    PlayerPreferences.Toggle.OFF,
+    PlayerPreferences.Toggle.DEFAULT,
+    PlayerPreferences.Toggle.DEFAULT
+);
+AutoTreeChopAPI.ChangeResult result = api.setPlayerPreferences(playerId, preferences);
+api.getPlayerPreferences(playerId).ifPresent(saved -> { /* Saved, immutable preferences. */ });
+// Paper: main thread. Folia: this player's owning execution context.
+api.getPlayerSettings(player).ifPresent(settings -> { /* Effective values and permissions. */ });
+```
+
+`PlayerPreferences` contains activation, sneak messages, leaf removal, and auto replant.
+Each field supports `DEFAULT`; use `PlayerPreferences.DEFAULTS` to reset all four.
+The `withActivation`, `withSneakMessages`, `withLeafRemoval`, and `withAutoReplant`
+methods return modified copies. The setter replaces all four fields, so coordinate writers
+when deriving updates from an earlier snapshot. Existing players start with all defaults;
+the SQLite/MySQL schema upgrade retains their enabled preference and usage counters.
+
+`getPlayerSettings(Player)` resolves defaults against the current server configuration.
+Its activation is never `DEFAULT`. Server mode `disabled` overrides personal modes;
+leaf removal and replanting require both server enablement and their feature permissions.
+Sneak messages use the server value as a default. These settings do not guarantee that
+chopping is currently allowed: posture, enabled preference, use permission, limits, tools,
+and protection checks still apply. Both getters return empty when player data is unavailable.
+
+`setPlayerPreferences` is a privileged operation with the same result and persistence
+semantics as `setAutoTreeChopEnabled`. Changing activation clears pending confirmations;
+it does not reset the enabled preference or counters. Disabling leaves/replant also takes
+effect before subsequent leaf batches or delayed replanting.
+
+## Set the enabled preference
 
 ```java
 switch (api.setAutoTreeChopEnabled(playerId, true)) {
@@ -128,10 +162,10 @@ once the database is healthy to retry loading; this API does not initiate a relo
 The UUID-based methods operate on synchronized in-memory data and can be called from any
 thread. They perform no SQL or world/entity operations. Calling plugins must still use the
 correct Paper/Folia scheduler for any player, inventory, message, or world work of their own.
-Use UUID methods in asynchronous code; call `getPlayerPolicy(Player)` and the legacy `Player`
+Use UUID methods in asynchronous code; call `getPlayerPolicy(Player)`, `getPlayerSettings(Player)`, and the legacy `Player`
 overloads from that player's own execution context (Paper's main thread; the owning player
-context on Folia). An available `getPlayerPolicy` query throws `IllegalStateException` when
-called from the wrong context, before reading permissions. Null plugin, UUID, or Player
+context on Folia). An available policy/settings query throws `IllegalStateException` when
+called from the wrong context, before reading permissions. Null plugin, UUID, Player, or preferences
 arguments throw `NullPointerException`.
 
 ## Compatibility methods

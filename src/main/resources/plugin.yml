@@ -10,6 +10,12 @@ folia-supported: true
 permissions:
   autotreechop.use:
     default: true
+  autotreechop.settings:
+    description: Change personal AutoTreeChop preferences
+    default: true
+  autotreechop.settings.other:
+    description: View and change another online player's AutoTreeChop preferences
+    default: op
   autotreechop.replant:
     default: true
   autotreechop.leaves:

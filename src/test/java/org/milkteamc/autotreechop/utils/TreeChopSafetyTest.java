@@ -55,6 +55,7 @@ class TreeChopSafetyTest {
 
     @BeforeEach
     void setup() {
+        when(data.getPreferences()).thenReturn(PlayerPreferences.DEFAULTS);
         when(config.getActivationMode()).thenReturn(org.milkteamc.autotreechop.configuration.ActivationMode.COMMAND);
         when(player.getInventory()).thenReturn(mock(PlayerInventory.class));
         when(plugin.getDataManager()).thenReturn(manager);

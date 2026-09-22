@@ -4,6 +4,7 @@ import java.util.UUID;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.milkteamc.autotreechop.AutoTreeChopAPI;
+import org.milkteamc.autotreechop.PlayerPreferences;
 
 /** Minimal integration; pair with docs/examples/plugin.yml in a separate plugin project. */
 public final class AtcIntegrationExample extends JavaPlugin {
@@ -41,5 +42,23 @@ public final class AtcIntegrationExample extends JavaPlugin {
                         + ", blocks/day: " + (policy.unlimited() ? "unlimited" : policy.maxBlocksPerDay())
                         + ", cooldown: " + policy.cooldownSeconds() + "s")
                 .orElse("Player is offline or AutoTreeChop is unavailable");
+    }
+    /** Call this after authorizing the initiating command or action. */
+    public AutoTreeChopAPI.ChangeResult setPreferences(UUID playerId, PlayerPreferences preferences) {
+        AutoTreeChopAPI api = getServer().getServicesManager().load(AutoTreeChopAPI.class);
+        if (api == null) return AutoTreeChopAPI.ChangeResult.UNAVAILABLE;
+        return api.setPlayerPreferences(playerId, preferences);
+    }
+
+    /** Call on Paper's main thread or in this player's owning execution context on Folia. */
+    public String describeSettings(Player player) {
+        AutoTreeChopAPI api = getServer().getServicesManager().load(AutoTreeChopAPI.class);
+        if (api == null) return "AutoTreeChop is unavailable";
+        return api.getPlayerSettings(player)
+                .map(settings -> "Activation: " + settings.activation().value()
+                        + ", sneak messages: " + settings.sneakMessages()
+                        + ", leaves: " + settings.leafRemoval()
+                        + ", replant: " + settings.autoReplant())
+                .orElse("Player data is unavailable");
     }
 }

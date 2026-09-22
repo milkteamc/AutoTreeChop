@@ -27,6 +27,7 @@ import org.milkteamc.autotreechop.AutoTreeChop;
 import org.milkteamc.autotreechop.MessageKeys;
 import org.milkteamc.autotreechop.PlayerConfig;
 import org.milkteamc.autotreechop.configuration.ActivationMode;
+import org.milkteamc.autotreechop.utils.PreferenceUtils;
 
 public class PlayerSneakListener implements Listener {
 
@@ -40,10 +41,6 @@ public class PlayerSneakListener implements Listener {
     public void onPlayerToggleSneak(PlayerToggleSneakEvent event) {
         if (event.isCancelled()) return;
         var config = plugin.getPluginConfig();
-        ActivationMode mode = config.getActivationMode();
-        boolean holdMode = mode == ActivationMode.SNEAK || mode == ActivationMode.COMMAND_AND_SNEAK;
-        if (!holdMode) return;
-
         Player player = event.getPlayer();
         UUID playerUUID = player.getUniqueId();
 
@@ -51,9 +48,13 @@ public class PlayerSneakListener implements Listener {
 
         PlayerConfig playerConfig = plugin.getDataManager().getPlayerConfig(playerUUID);
         if (playerConfig == null) return;
+        var preferences = playerConfig.getPreferences();
+        ActivationMode mode = PreferenceUtils.activation(preferences, config);
+        if (mode != ActivationMode.SNEAK && mode != ActivationMode.COMMAND_AND_SNEAK) return;
 
         if (!event.isSneaking()) plugin.getConfirmationManager().clearPlayer(playerUUID);
-        if (config.getSneakMessage() && (mode == ActivationMode.SNEAK || playerConfig.isAutoTreeChopEnabled())) {
+        if (PreferenceUtils.sneakMessages(preferences, config)
+                && (mode == ActivationMode.SNEAK || playerConfig.isAutoTreeChopEnabled())) {
             AutoTreeChop.sendMessage(
                     player, event.isSneaking() ? MessageKeys.SNEAK_ENABLED : MessageKeys.SNEAK_DISABLED);
         }

@@ -24,6 +24,7 @@ import org.bukkit.event.player.PlayerSwapHandItemsEvent;
 import org.milkteamc.autotreechop.AutoTreeChop;
 import org.milkteamc.autotreechop.MessageKeys;
 import org.milkteamc.autotreechop.configuration.ActivationMode;
+import org.milkteamc.autotreechop.utils.PreferenceUtils;
 
 public final class PlayerHotkeyListener implements Listener {
     private final AutoTreeChop plugin;
@@ -34,11 +35,13 @@ public final class PlayerHotkeyListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onSwapHandItems(PlayerSwapHandItemsEvent event) {
-        if (event.isCancelled() || plugin.getPluginConfig().getActivationMode() != ActivationMode.HOTKEY) return;
+        if (event.isCancelled()) return;
         var player = event.getPlayer();
         if (!player.isSneaking() || !player.hasPermission("autotreechop.use")) return;
         var data = plugin.getDataManager().getPlayerConfig(player.getUniqueId());
-        if (data == null) return;
+        if (data == null
+                || PreferenceUtils.activation(data.getPreferences(), plugin.getPluginConfig()) != ActivationMode.HOTKEY)
+            return;
         event.setCancelled(true);
         boolean enabled = !data.isAutoTreeChopEnabled();
         data.setAutoTreeChopEnabled(enabled);

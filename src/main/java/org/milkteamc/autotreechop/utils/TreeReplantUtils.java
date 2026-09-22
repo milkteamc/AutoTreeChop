@@ -108,11 +108,12 @@ public class TreeReplantUtils {
         boolean needs2x2 = isLikely2x2Tree(originalLogType, originalLocation, originalTreeBlocks);
 
         var playerConfig = plugin.getDataManager().getPlayerConfig(player.getUniqueId());
-        if (playerConfig == null) return;
+        if (playerConfig == null || !PreferenceUtils.autoReplant(player, playerConfig.getPreferences(), config)) return;
         Runnable replantTask = () -> {
             if (!RegionAccess.owns(player) || !RegionAccess.ownsArea(originalLocation, 4)) return;
-            if (!player.isOnline() || plugin.getDataManager().getPlayerConfig(player.getUniqueId()) != playerConfig)
-                return;
+            if (!player.isOnline()
+                    || plugin.getDataManager().getPlayerConfig(player.getUniqueId()) != playerConfig
+                    || !PreferenceUtils.autoReplant(player, playerConfig.getPreferences(), config)) return;
             if (needs2x2) {
                 Location anchorLocation = find2x2PlantLocation(originalLocation, config, eligibleBases);
                 if (anchorLocation == null) {

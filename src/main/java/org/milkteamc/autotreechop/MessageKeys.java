@@ -28,6 +28,15 @@ public final class MessageKeys {
     public static final String ENABLED = "enabled";
     public static final String DISABLED = "disabled";
     public static final String NO_PERMISSION = "no-permission";
+    public static final String SETTINGS_ENTRY = "settingsEntry";
+    public static final String SETTINGS_UPDATED = "settingsUpdated";
+    public static final String SETTINGS_UNCHANGED = "settingsUnchanged";
+    public static final String SETTINGS_USAGE = "settingsUsage";
+    public static final String SETTINGS_FOR_OTHER = "settingsForOther";
+    public static final String SETTINGS_UPDATED_FOR_OTHER = "settingsUpdatedForOther";
+    public static final String SETTINGS_UNCHANGED_FOR_OTHER = "settingsUnchangedForOther";
+    public static final String SETTINGS_UPDATED_BY_OTHER = "settingsUpdatedByOther";
+    public static final String SETTINGS_OTHER_USAGE = "settingsOtherUsage";
     public static final String PLAYER_DATA_UNAVAILABLE = "playerDataUnavailable";
     public static final String ONLY_PLAYERS = "only-players";
     public static final String HIT_MAX_USAGE = "hitmaxusage";

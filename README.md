@@ -76,6 +76,10 @@ Automatically switches to the player's locale if enabled.
 | `/atc` | Toggle AutoTreeChop |
 | `/atc confirm` | Confirm a pending chop (idle / no-leaves warning) |
 | `/atc usage` | Show daily usage |
+| `/atc settings [setting] [value]` | View or change personal settings |
+| `/atc settings reset` | Restore all server defaults |
+| `/atc settings player <player> [setting] [value]` | View or change an online player's settings (admin) |
+| `/atc settings player <player> reset` | Restore an online player's server defaults (admin) |
 | `/atc reload` | Reload plugin config |
 | `/atc toggle <player>` | Toggle for another player |
 | `/atc enable <player/@a/@r/@p>` | Enable for other players |
@@ -84,6 +88,12 @@ Automatically switches to the player's locale if enabled.
 
 ---
 
+Personal settings: `activation` accepts `default`, `disabled`, `command`, `sneak`,
+`command-and-sneak`, or `hotkey`; `sneak-messages`, `leaves`, and `replant` accept
+`default`, `on`, or `off`. For example: `/atc settings activation hotkey`.
+`default` follows server changes. Personal settings persist across logins; server-wide
+disabling and feature permissions still apply.
+
 ## Permissions
 
 > Requires a permission manager plugin, I personally recommend [LuckPerms](https://luckperms.net/download)
@@ -91,6 +101,8 @@ Automatically switches to the player's locale if enabled.
 | Permission | Description | Default |
 |------------|-------------|-------------|
 | `autotreechop.use` | Use `/atc`, `/atc confirm`, and `/atc usage` commands | Everyone |
+| `autotreechop.settings` | Manage personal settings (also requires `autotreechop.use`) | Everyone |
+| `autotreechop.settings.other` | View or change another online player's settings | OP |
 | `autotreechop.group.<name>` | Apply a configured group | Explicit grant |
 | `autotreechop.vip` | Legacy VIP fallback (deprecated) | OP |
 | `autotreechop.other` | Toggle others' ATC status | OP |

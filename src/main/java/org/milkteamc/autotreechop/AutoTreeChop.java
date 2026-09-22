@@ -30,6 +30,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.milkteamc.autotreechop.command.AboutCommand;
 import org.milkteamc.autotreechop.command.ConfirmCommand;
 import org.milkteamc.autotreechop.command.ReloadCommand;
+import org.milkteamc.autotreechop.command.SettingsCommand;
 import org.milkteamc.autotreechop.command.ToggleCommand;
 import org.milkteamc.autotreechop.command.UsageCommand;
 import org.milkteamc.autotreechop.configuration.ConfigLoadException;
@@ -210,6 +211,7 @@ public class AutoTreeChop extends JavaPlugin {
         lamp.register(new ReloadCommand(this, config));
         lamp.register(new AboutCommand(this));
         lamp.register(new ToggleCommand(this));
+        lamp.register(new SettingsCommand(this));
         lamp.register(new UsageCommand(this, config));
         lamp.register(new ConfirmCommand(this));
     }

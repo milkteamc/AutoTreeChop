@@ -23,6 +23,7 @@ import org.bukkit.entity.Player;
 import org.milkteamc.autotreechop.AutoTreeChop;
 import org.milkteamc.autotreechop.MessageKeys;
 import org.milkteamc.autotreechop.PlayerConfig;
+import org.milkteamc.autotreechop.utils.PreferenceUtils;
 import revxrsal.commands.annotation.Command;
 import revxrsal.commands.annotation.Optional;
 import revxrsal.commands.annotation.Subcommand;
@@ -92,10 +93,6 @@ public class ToggleCommand {
     @Subcommand("enable")
     @CommandPermission("autotreechop.use")
     public void enable(BukkitCommandActor actor) {
-        if (!plugin.getPluginConfig().isCommandActivationEnabled()) {
-            AutoTreeChop.sendMessage(actor.sender(), MessageKeys.NO_PERMISSION);
-            return;
-        }
         if (!(actor.sender() instanceof Player player)) {
             AutoTreeChop.sendMessage(actor.sender(), MessageKeys.ONLY_PLAYERS);
             return;
@@ -103,6 +100,10 @@ public class ToggleCommand {
         PlayerConfig playerConfig = plugin.getDataManager().getPlayerConfig(player.getUniqueId());
         if (playerConfig == null) {
             AutoTreeChop.sendMessage(actor.sender(), MessageKeys.PLAYER_DATA_UNAVAILABLE);
+            return;
+        }
+        if (!PreferenceUtils.commandEnabled(playerConfig, plugin.getPluginConfig())) {
+            AutoTreeChop.sendMessage(actor.sender(), MessageKeys.NO_PERMISSION);
             return;
         }
         if (playerConfig.isAutoTreeChopEnabled()) {
@@ -149,10 +150,6 @@ public class ToggleCommand {
     @Subcommand("disable")
     @CommandPermission("autotreechop.use")
     public void disable(BukkitCommandActor actor) {
-        if (!plugin.getPluginConfig().isCommandActivationEnabled()) {
-            AutoTreeChop.sendMessage(actor.sender(), MessageKeys.NO_PERMISSION);
-            return;
-        }
         if (!(actor.sender() instanceof Player player)) {
             AutoTreeChop.sendMessage(actor.sender(), MessageKeys.ONLY_PLAYERS);
             return;
@@ -161,6 +158,10 @@ public class ToggleCommand {
         PlayerConfig playerConfig = plugin.getDataManager().getPlayerConfig(playerUUID);
         if (playerConfig == null) {
             AutoTreeChop.sendMessage(actor.sender(), MessageKeys.PLAYER_DATA_UNAVAILABLE);
+            return;
+        }
+        if (!PreferenceUtils.commandEnabled(playerConfig, plugin.getPluginConfig())) {
+            AutoTreeChop.sendMessage(actor.sender(), MessageKeys.NO_PERMISSION);
             return;
         }
         if (!playerConfig.isAutoTreeChopEnabled()) {
@@ -214,15 +215,14 @@ public class ToggleCommand {
             return;
         }
 
-        if (!plugin.getPluginConfig().isCommandActivationEnabled()) {
-            AutoTreeChop.sendMessage(actor.sender(), MessageKeys.NO_PERMISSION);
-            return;
-        }
-
         UUID playerUUID = player.getUniqueId();
         PlayerConfig playerConfig = plugin.getDataManager().getPlayerConfig(playerUUID);
         if (playerConfig == null) {
             AutoTreeChop.sendMessage(actor.sender(), MessageKeys.PLAYER_DATA_UNAVAILABLE);
+            return;
+        }
+        if (!PreferenceUtils.commandEnabled(playerConfig, plugin.getPluginConfig())) {
+            AutoTreeChop.sendMessage(actor.sender(), MessageKeys.NO_PERMISSION);
             return;
         }
         boolean autoTreeChopEnabled = !playerConfig.isAutoTreeChopEnabled();

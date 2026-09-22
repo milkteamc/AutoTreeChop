@@ -26,7 +26,7 @@ public final class ActivationUtils {
 
     /** Activation only; callers must still check permissions, quotas, cooldowns and protection. */
     public static boolean isActive(Player player, PlayerConfig data, Config config) {
-        return switch (config.getActivationMode()) {
+        return switch (PreferenceUtils.activation(data.getPreferences(), config)) {
             case DISABLED -> false;
             case SNEAK -> player.isSneaking();
             case COMMAND_AND_SNEAK -> data.isAutoTreeChopEnabled() && player.isSneaking();

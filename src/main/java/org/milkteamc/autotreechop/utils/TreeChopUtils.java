@@ -393,7 +393,7 @@ public class TreeChopUtils {
         Set<Location> actuallyRemovedLogs = ConcurrentHashMap.newKeySet();
 
         BlockSnapshot leafSnapshot = null;
-        if (config.isLeafRemovalEnabled() && player.hasPermission("autotreechop.leaves")) {
+        if (PreferenceUtils.leafRemoval(player, playerConfig.getPreferences(), config)) {
             try {
                 leafSnapshot =
                         BlockSnapshotCreator.captureLeafRegion(treeBlocks, config.getLeafRemovalRadius(), config);
@@ -506,7 +506,8 @@ public class TreeChopUtils {
                     if (!isCurrentPlayer(player, playerConfig)) return;
                     if (actuallyRemovedLogs.isEmpty()) return;
                     // Handle leaf removal
-                    if (config.isLeafRemovalEnabled() && finalLeafSnapshot != null) {
+                    if (PreferenceUtils.leafRemoval(player, playerConfig.getPreferences(), config)
+                            && finalLeafSnapshot != null) {
                         long delay = config.getLeafRemovalDelayTicks();
 
                         Runnable leafTask = () -> processLeafRemovalWithPreCapturedSnapshot(
@@ -522,7 +523,7 @@ public class TreeChopUtils {
                     }
 
                     // Handle replanting
-                    if (TreeReplantUtils.isReplantEnabledForPlayer(player, config)) {
+                    if (PreferenceUtils.autoReplant(player, playerConfig.getPreferences(), config)) {
                         for (Map.Entry<Material, Location> entry : logTypesForReplant.entrySet()) {
                             if (!RegionAccess.owns(entry.getValue())) continue;
                             Block blockToReplant = entry.getValue().getBlock();
@@ -561,13 +562,7 @@ public class TreeChopUtils {
 
         if (!isCurrentPlayer(player, playerConfig)) return;
 
-        if (!config.isLeafRemovalEnabled()) {
-            return;
-        }
-
-        if (!player.hasPermission("autotreechop.leaves")) {
-            return;
-        }
+        if (!PreferenceUtils.leafRemoval(player, playerConfig.getPreferences(), config)) return;
 
         String playerKey = player.getUniqueId().toString();
 
@@ -634,7 +629,10 @@ public class TreeChopUtils {
                 0,
                 batchSize,
                 (location, index) -> {
-                    if (!isCurrentPlayer(player, playerConfig) || !RegionAccess.owns(location)) return false;
+                    if (!isCurrentPlayer(player, playerConfig)
+                            || !RegionAccess.owns(location)
+                            || !PreferenceUtils.leafRemoval(player, playerConfig.getPreferences(), config))
+                        return false;
                     if (config.getLeafRemovalCountsTowardsLimit()) {
                         if (!PermissionUtils.canBreakBlocks(player, playerConfig, config, 1)) {
                             return false;
@@ -681,7 +679,9 @@ public class TreeChopUtils {
                 dropItems &= breakEvent.isDropItems();
             }
 
-            if (!isCurrentPlayer(player, playerConfig) || leafBlock.getType() != originalLeafType) return false;
+            if (!isCurrentPlayer(player, playerConfig)
+                    || leafBlock.getType() != originalLeafType
+                    || !PreferenceUtils.leafRemoval(player, playerConfig.getPreferences(), config)) return false;
             if (config.getLeafRemovalCountsTowardsLimit()
                     && !PermissionUtils.canBreakBlocks(player, playerConfig, config, 1)) return false;
 

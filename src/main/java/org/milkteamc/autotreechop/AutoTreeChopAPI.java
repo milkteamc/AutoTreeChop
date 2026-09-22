@@ -23,6 +23,7 @@ import java.util.UUID;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.milkteamc.autotreechop.database.DataManager;
+import org.milkteamc.autotreechop.utils.PreferenceUtils;
 import org.milkteamc.autotreechop.utils.RegionAccess;
 
 /**
@@ -64,6 +65,71 @@ public class AutoTreeChopAPI {
      */
     public record PlayerPolicy(
             String group, boolean unlimited, int maxUsesPerDay, int maxBlocksPerDay, int cooldownSeconds) {}
+
+    /** Effective settings after server defaults, global feature switches and feature permissions. */
+    public record PlayerSettings(
+            PlayerPreferences.Activation activation, boolean sneakMessages, boolean leafRemoval, boolean autoReplant) {}
+
+    /** Returns immutable saved overrides, or empty when player data/the plugin is unavailable. */
+    public Optional<PlayerPreferences> getPlayerPreferences(UUID playerUUID) {
+        Objects.requireNonNull(playerUUID, "playerUUID");
+        DataManager manager = plugin.getDataManager();
+        if (manager == null) return Optional.empty();
+        synchronized (manager) {
+            if (!active || !plugin.isEnabled()) return Optional.empty();
+            PlayerConfig data = manager.getPlayerConfig(playerUUID);
+            return data == null ? Optional.empty() : Optional.of(data.getPreferences());
+        }
+    }
+
+    /**
+     * Replaces saved overrides for a loaded player. The caller must authorize its own users.
+     * Global disable switches and feature permissions still apply. Changes use normal saving;
+     * unavailable updates are not queued. Changing activation clears pending confirmations.
+     */
+    public ChangeResult setPlayerPreferences(UUID playerUUID, PlayerPreferences preferences) {
+        Objects.requireNonNull(playerUUID, "playerUUID");
+        Objects.requireNonNull(preferences, "preferences");
+        DataManager manager = plugin.getDataManager();
+        if (manager == null) return ChangeResult.UNAVAILABLE;
+        synchronized (manager) {
+            if (!active || !plugin.isEnabled()) return ChangeResult.UNAVAILABLE;
+            PlayerConfig data = manager.getPlayerConfig(playerUUID);
+            if (data == null) return ChangeResult.UNAVAILABLE;
+            synchronized (data) {
+                PlayerPreferences previous = data.getPreferences();
+                if (previous.equals(preferences)) return ChangeResult.UNCHANGED;
+                data.setPreferences(preferences);
+                if (previous.activation() != preferences.activation())
+                    plugin.getConfirmationManager().clearPlayer(playerUUID);
+                return ChangeResult.UPDATED;
+            }
+        }
+    }
+
+    /**
+     * Resolves saved preferences against current server settings and permissions.
+     * Call on Paper's main thread or the player's owning context on Folia.
+     * Returns empty for unavailable plugin/config/player data or an offline player;
+     * throws IllegalStateException for a query outside the required execution context.
+     */
+    public Optional<PlayerSettings> getPlayerSettings(Player player) {
+        Objects.requireNonNull(player, "player");
+        if (!active || !plugin.isEnabled()) return Optional.empty();
+        Config config = plugin.getPluginConfig();
+        if (config == null) return Optional.empty();
+        if (AutoTreeChop.isFolia() ? !RegionAccess.owns(player) : !Bukkit.isPrimaryThread()) {
+            throw new IllegalStateException("getPlayerSettings must run in the player's owning execution context");
+        }
+        if (!player.isOnline()) return Optional.empty();
+        return getPlayerPreferences(player.getUniqueId())
+                .map(preferences -> new PlayerSettings(
+                        PlayerPreferences.Activation.valueOf(
+                                PreferenceUtils.activation(preferences, config).name()),
+                        PreferenceUtils.sneakMessages(preferences, config),
+                        PreferenceUtils.leafRemoval(player, preferences, config),
+                        PreferenceUtils.autoReplant(player, preferences, config)));
+    }
 
     /**
      * Resolves current permissions against the active configuration without loading player data.
