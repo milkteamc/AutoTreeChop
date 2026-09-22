@@ -4,7 +4,7 @@ main: org.milkteamc.autotreechop.AutoTreeChop
 api-version: '1.18'
 author: Maoyue
 description: A auto tree chopping plugin for milkteamc
-softdepend: [ PlaceholderAPI, Residence, Lands, WorldGuard, GriefPrevention ]
+softdepend: [ PlaceholderAPI, Residence, Lands, WorldGuard, GriefPrevention, BlockLocker, LockettePro ]
 folia-supported: true
 
 permissions:

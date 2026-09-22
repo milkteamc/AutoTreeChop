@@ -35,6 +35,8 @@ import org.bukkit.inventory.meta.Damageable;
 import org.junit.jupiter.api.*;
 import org.milkteamc.autotreechop.*;
 import org.milkteamc.autotreechop.database.DataManager;
+import org.milkteamc.autotreechop.hooks.HookManager;
+import org.milkteamc.autotreechop.hooks.SignProtectionHook;
 import org.mockito.MockedConstruction;
 
 class TreeChopSafetyTest {
@@ -248,6 +250,39 @@ class TreeChopSafetyTest {
         verify(block, never()).breakNaturally();
         verify((Damageable) tool.getItemMeta(), never()).setDamage(anyInt());
         verify(data, never()).incrementDailyBlocksBroken();
+        verify(data, never()).incrementDailyUses();
+    }
+
+    @Test
+    void protectedSignRejectsWholeTreeBeforeBatchStarts() throws Exception {
+        HookManager manager = mock(HookManager.class);
+        SignProtectionHook signHook = mock(SignProtectionHook.class);
+        when(plugin.getHookManager()).thenReturn(manager);
+        when(manager.getSignProtectionHook()).thenReturn(signHook);
+        when(signHook.inspect(Set.of(location))).thenReturn(SignProtectionHook.Result.PROTECTED);
+        validate(null);
+        verifyNoInteractions(batches.constructed().get(0));
+        verify(data, never()).incrementDailyUses();
+    }
+
+    @Test
+    void signAddedByBreakListenerIsCheckedAgainBeforeRemoval() throws Exception {
+        HookManager manager = mock(HookManager.class);
+        SignProtectionHook signHook = mock(SignProtectionHook.class);
+        when(plugin.getHookManager()).thenReturn(manager);
+        when(manager.getSignProtectionHook()).thenReturn(signHook);
+        when(signHook.inspect(Set.of(location))).thenReturn(SignProtectionHook.Result.SAFE);
+        when(signHook.inspect(location))
+                .thenReturn(SignProtectionHook.Result.SAFE, SignProtectionHook.Result.PROTECTED);
+        when(config.isCallBlockBreakEvent()).thenReturn(true);
+        org.bukkit.Server server = mock(org.bukkit.Server.class);
+        org.bukkit.plugin.PluginManager plugins = mock(org.bukkit.plugin.PluginManager.class);
+        when(plugin.getServer()).thenReturn(server);
+        when(server.getPluginManager()).thenReturn(plugins);
+        validate(null);
+        blockProcessor().accept(location, 0);
+        verify(plugins).callEvent(any());
+        verify(block, never()).breakNaturally();
         verify(data, never()).incrementDailyUses();
     }
 

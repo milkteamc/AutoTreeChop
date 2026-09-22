@@ -28,6 +28,7 @@ public class HookManager {
     private ResidenceHook residenceHook = null;
     private GriefPreventionHook griefPreventionHook = null;
     private LandsHook landsHook = null;
+    private SignProtectionHook signProtectionHook = null;
 
     public HookManager(AutoTreeChop plugin, Config config) {
         this.plugin = plugin;
@@ -35,6 +36,12 @@ public class HookManager {
     }
 
     private void initializeHooks(Config config) {
+        var blockLocker = Bukkit.getPluginManager().getPlugin("BlockLocker");
+        var lockettePro = Bukkit.getPluginManager().getPlugin("LockettePro");
+        if (blockLocker != null || lockettePro != null) {
+            signProtectionHook = new SignProtectionHook(blockLocker, lockettePro, plugin.getLogger());
+            plugin.getLogger().info("Protection sign support enabled");
+        }
         if (Bukkit.getPluginManager().getPlugin("Residence") != null) {
             try {
                 residenceHook = new ResidenceHook(config.getResidenceFlag());
@@ -110,5 +117,9 @@ public class HookManager {
 
     public LandsHook getLandsHook() {
         return landsHook;
+    }
+
+    public SignProtectionHook getSignProtectionHook() {
+        return signProtectionHook;
     }
 }

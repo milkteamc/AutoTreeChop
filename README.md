@@ -38,7 +38,7 @@ It's async-friendly, lightweight, and fully customizable — with built-in suppo
 
 ### 🛡️ Full Protection Plugin Support
 
-- Compatible with Residence, WorldGuard, Lands, GriefPrevention
+- Compatible with Residence, WorldGuard, Lands, GriefPrevention, BlockLocker and LockettePro
 - Supports **CoreProtect** for logging actions
 
 ### 🗄️ MySQL & SQLite Support
@@ -65,6 +65,8 @@ Automatically switches to the player's locale if enabled.
 - Residence
 - Lands
 - GriefPrevention
+- BlockLocker
+- LockettePro
 - PlaceholderAPI
 
 ---

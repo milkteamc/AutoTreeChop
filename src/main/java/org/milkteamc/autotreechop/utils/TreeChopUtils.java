@@ -34,6 +34,7 @@ import org.milkteamc.autotreechop.AutoTreeChop;
 import org.milkteamc.autotreechop.Config;
 import org.milkteamc.autotreechop.MessageKeys;
 import org.milkteamc.autotreechop.PlayerConfig;
+import org.milkteamc.autotreechop.hooks.SignProtectionHook;
 import org.milkteamc.autotreechop.utils.ConfirmationManager.ConfirmReason;
 
 public class TreeChopUtils {
@@ -326,6 +327,21 @@ public class TreeChopUtils {
             return;
         }
 
+        SignProtectionHook signProtection =
+                plugin.getHookManager() == null ? null : plugin.getHookManager().getSignProtectionHook();
+        if (signProtection != null) {
+            SignProtectionHook.Result signResult = signProtection.inspect(treeBlocks);
+            if (signResult != SignProtectionHook.Result.SAFE) {
+                AutoTreeChop.sendMessage(
+                        player,
+                        signResult == SignProtectionHook.Result.PROTECTED
+                                ? MessageKeys.PROTECTED_SIGN
+                                : MessageKeys.TREE_SCAN_INCOMPLETE);
+                sessionManager.clearTreeChopSession(playerUUID);
+                return;
+            }
+        }
+
         TreeStructureDetector.Result structure = config.isPlayerStructureConfirmationEnabled()
                 ? TreeStructureDetector.inspect(treeBlocks, config)
                 : TreeStructureDetector.Result.NO_EVIDENCE;
@@ -411,6 +427,8 @@ public class TreeChopUtils {
         Location centerLocation = originalBlock.getLocation().clone();
         Map<Material, Location> logTypesForReplant = new HashMap<>();
         Set<Location> actuallyRemovedLogs = ConcurrentHashMap.newKeySet();
+        SignProtectionHook signProtection =
+                plugin.getHookManager() == null ? null : plugin.getHookManager().getSignProtectionHook();
 
         BlockSnapshot leafSnapshot = null;
         if (PreferenceUtils.leafRemoval(player, playerConfig.getPreferences(), config)) {
@@ -463,6 +481,8 @@ public class TreeChopUtils {
                     if (!ProtectionCheckUtils.canModifyBlock(player, location, hooks)) {
                         return;
                     }
+                    if (signProtection != null && !checkSignProtection(signProtection, location, player, stopped))
+                        return;
 
                     Material originalLogType = block.getType();
                     boolean dropItems = true;
@@ -492,6 +512,8 @@ public class TreeChopUtils {
                     if (!PermissionUtils.canBreakBlocks(player, playerConfig, config, 1)) return;
                     ItemStack heldTool = player.getInventory().getItemInMainHand();
                     if (block.getType() != originalLogType) return;
+                    if (signProtection != null && !checkSignProtection(signProtection, location, player, stopped))
+                        return;
                     if (dropItems) {
                         if (!block.breakNaturally()) return;
                     } else {
@@ -569,6 +591,15 @@ public class TreeChopUtils {
 
                     plugin.getCooldownManager().setCooldown(player, playerUUID, config);
                 });
+    }
+
+    private static boolean checkSignProtection(
+            SignProtectionHook hook, Location location, Player player, boolean[] stopped) {
+        SignProtectionHook.Result result = hook.inspect(location);
+        if (result == SignProtectionHook.Result.SAFE) return true;
+        stopped[0] = true;
+        if (result == SignProtectionHook.Result.PROTECTED) AutoTreeChop.sendMessage(player, MessageKeys.PROTECTED_SIGN);
+        return false;
     }
 
     private void processLeafRemovalWithPreCapturedSnapshot(
