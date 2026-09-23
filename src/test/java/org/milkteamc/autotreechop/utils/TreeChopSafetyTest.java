@@ -26,15 +26,21 @@ import java.util.UUID;
 import java.util.function.BiConsumer;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.Statistic;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
+import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.Damageable;
 import org.junit.jupiter.api.*;
 import org.milkteamc.autotreechop.*;
+import org.milkteamc.autotreechop.api.event.TreeChopPostEvent;
+import org.milkteamc.autotreechop.api.event.TreeChopPreEvent;
 import org.milkteamc.autotreechop.database.DataManager;
+import org.milkteamc.autotreechop.hooks.HookManager;
+import org.milkteamc.autotreechop.hooks.SignProtectionHook;
 import org.mockito.MockedConstruction;
 
 class TreeChopSafetyTest {
@@ -55,8 +61,13 @@ class TreeChopSafetyTest {
 
     @BeforeEach
     void setup() {
+        when(data.getPreferences()).thenReturn(PlayerPreferences.DEFAULTS);
+        when(config.getActivationMode()).thenReturn(org.milkteamc.autotreechop.configuration.ActivationMode.COMMAND);
         when(player.getInventory()).thenReturn(mock(PlayerInventory.class));
         when(plugin.getDataManager()).thenReturn(manager);
+        org.bukkit.Server server = mock(org.bukkit.Server.class);
+        when(server.getPluginManager()).thenReturn(mock(org.bukkit.plugin.PluginManager.class));
+        when(plugin.getServer()).thenReturn(server);
         when(plugin.getConfirmationManager()).thenReturn(mock(ConfirmationManager.class));
         Block soil = mock(Block.class);
         when(soil.getType()).thenReturn(Material.DIRT);
@@ -68,6 +79,9 @@ class TreeChopSafetyTest {
         when(manager.getPlayerConfig(uuid)).thenReturn(data);
         when(data.isAutoTreeChopEnabled()).thenReturn(true);
         when(config.getMaxTreeSize()).thenReturn(100);
+        when(config.resolvePolicy(player))
+                .thenReturn(new org.milkteamc.autotreechop.configuration.GroupPolicies.Policy(
+                        "default", false, 50, 500, 5));
         when(block.getLocation()).thenReturn(location);
         when(block.getType()).thenReturn(Material.OAK_LOG);
         when(config.getLogTypes()).thenReturn(Set.of(Material.OAK_LOG));
@@ -131,6 +145,32 @@ class TreeChopSafetyTest {
     }
 
     @Test
+    void releasingSneakDuringDiscoveryPreventsCombinedModeFromStarting() throws Exception {
+        when(config.getActivationMode())
+                .thenReturn(org.milkteamc.autotreechop.configuration.ActivationMode.COMMAND_AND_SNEAK);
+        when(player.isSneaking()).thenReturn(false);
+        validate(null);
+        verifyNoInteractions(batches.constructed().get(0));
+    }
+
+    @Test
+    void releasingSneakBeforeTheFirstQueuedBlockPreventsRemoval() throws Exception {
+        when(config.getActivationMode())
+                .thenReturn(org.milkteamc.autotreechop.configuration.ActivationMode.COMMAND_AND_SNEAK);
+        when(player.isSneaking()).thenReturn(true);
+        validate(null);
+        var invocation = mockingDetails(batches.constructed().get(0))
+                .getInvocations()
+                .iterator()
+                .next();
+        BiConsumer<Location, Integer> processor = invocation.getArgument(3);
+        when(player.isSneaking()).thenReturn(false);
+        processor.accept(location, 0);
+        verify(block, never()).breakNaturally();
+        verify(data, never()).incrementDailyUses();
+    }
+
+    @Test
     @SuppressWarnings("unchecked")
     void queuedBlockWorkStopsAfterQuit() throws Exception {
         validate(null);
@@ -173,12 +213,14 @@ class TreeChopSafetyTest {
     @Test
     void failedBreakDoesNotCostDurabilityOrCount() throws Exception {
         ItemStack tool = prepareTool();
+        when(config.isRecordMinecraftStatistics()).thenReturn(true);
         when(block.breakNaturally()).thenReturn(false);
         validate(tool);
         blockProcessor().accept(location, 0);
         verify((Damageable) tool.getItemMeta(), never()).setDamage(anyInt());
         verify(data, never()).incrementDailyBlocksBroken();
         verify(data, never()).incrementDailyUses();
+        verify(player, never()).incrementStatistic(any(Statistic.class), any(Material.class));
     }
 
     @Test
@@ -196,11 +238,13 @@ class TreeChopSafetyTest {
         processor.accept(location, 2);
         verify(block, times(1)).breakNaturally();
         verify((Damageable) tool.getItemMeta(), times(1)).setDamage(anyInt());
+        verify(player, never()).incrementStatistic(any(Statistic.class), any(Material.class));
     }
 
     @Test
     void cancelledEventDoesNotCostDurabilityOrCount() throws Exception {
         ItemStack tool = prepareTool();
+        when(config.isRecordMinecraftStatistics()).thenReturn(true);
         when(config.isCallBlockBreakEvent()).thenReturn(true);
         org.bukkit.Server server = mock(org.bukkit.Server.class);
         org.bukkit.plugin.PluginManager plugins = mock(org.bukkit.plugin.PluginManager.class);
@@ -211,12 +255,166 @@ class TreeChopSafetyTest {
                     return null;
                 })
                 .when(plugins)
-                .callEvent(any());
+                .callEvent(any(BlockBreakEvent.class));
         validate(tool);
         blockProcessor().accept(location, 0);
         verify(block, never()).breakNaturally();
         verify((Damageable) tool.getItemMeta(), never()).setDamage(anyInt());
         verify(data, never()).incrementDailyBlocksBroken();
+        verify(data, never()).incrementDailyUses();
+        verify(player, never()).incrementStatistic(any(Statistic.class), any(Material.class));
+    }
+
+    @Test
+    void cancelledPreEventDoesNotStartOrConsumeAConfirmedChop() throws Exception {
+        org.bukkit.plugin.PluginManager plugins = plugin.getServer().getPluginManager();
+        doAnswer(invocation -> {
+                    ((TreeChopPreEvent) invocation.getArgument(0)).setCancelled(true);
+                    return null;
+                })
+                .when(plugins)
+                .callEvent(any(TreeChopPreEvent.class));
+
+        validate(null, true, ConfirmationManager.ConfirmReason.FLOATING);
+
+        verify(plugins).callEvent(any(TreeChopPreEvent.class));
+        verify(plugins, never()).callEvent(any(TreeChopPostEvent.class));
+        verifyNoInteractions(batches.constructed().get(0));
+        verify(plugin.getConfirmationManager(), never()).recordSuccessfulChop(any(), any(), anyBoolean());
+        verify(data, never()).incrementDailyUses();
+        assertFalse(SessionManager.getInstance().hasActiveTreeChopSession(uuid));
+    }
+
+    @Test
+    void postEventReportsOnlyLogsActuallyRemovedAndKeepsTheirMaterial() throws Exception {
+        when(block.breakNaturally()).thenReturn(false, true);
+        validate(null);
+        BiConsumer<Location, Integer> processor = blockProcessor();
+        processor.accept(location, 0);
+        processor.accept(location, 1);
+        Runnable completion = mockingDetails(batches.constructed().get(0))
+                .getInvocations()
+                .iterator()
+                .next()
+                .getArgument(4);
+        completion.run();
+
+        org.mockito.ArgumentCaptor<TreeChopPostEvent> captured =
+                org.mockito.ArgumentCaptor.forClass(TreeChopPostEvent.class);
+        verify(plugin.getServer().getPluginManager()).callEvent(captured.capture());
+        TreeChopPostEvent post = captured.getValue();
+        assertEquals(Set.of(location), post.getPlannedLogs());
+        assertEquals(java.util.Map.of(location, Material.OAK_LOG), post.getRemovedLogs());
+        post.getOrigin().add(10, 0, 0);
+        post.getRemovedLogs().keySet().iterator().next().add(10, 0, 0);
+        assertEquals(location, post.getOrigin());
+        assertEquals(java.util.Map.of(location, Material.OAK_LOG), post.getRemovedLogs());
+    }
+
+    @Test
+    void postEventStillFiresWhenEveryBlockBreakIsCancelled() throws Exception {
+        when(config.isCallBlockBreakEvent()).thenReturn(true);
+        org.bukkit.plugin.PluginManager plugins = plugin.getServer().getPluginManager();
+        doAnswer(invocation -> {
+                    ((BlockBreakEvent) invocation.getArgument(0)).setCancelled(true);
+                    return null;
+                })
+                .when(plugins)
+                .callEvent(any(BlockBreakEvent.class));
+        validate(null);
+        blockProcessor().accept(location, 0);
+        Runnable completion = mockingDetails(batches.constructed().get(0))
+                .getInvocations()
+                .iterator()
+                .next()
+                .getArgument(4);
+        completion.run();
+
+        org.mockito.ArgumentCaptor<TreeChopPostEvent> captured =
+                org.mockito.ArgumentCaptor.forClass(TreeChopPostEvent.class);
+        verify(plugins).callEvent(captured.capture());
+        assertTrue(captured.getValue().getRemovedLogs().isEmpty());
+        verify(data, never()).incrementDailyUses();
+    }
+
+    @Test
+    void enabledMinecraftStatisticsCountEachSuccessfulLogOnly() throws Exception {
+        when(config.isRecordMinecraftStatistics()).thenReturn(true);
+        when(block.breakNaturally()).thenReturn(false, true);
+        validate(null);
+        BiConsumer<Location, Integer> processor = blockProcessor();
+        processor.accept(location, 0);
+        verify(player, never()).incrementStatistic(any(Statistic.class), any(Material.class));
+        processor.accept(location, 1);
+        verify(player).incrementStatistic(Statistic.MINE_BLOCK, Material.OAK_LOG);
+        verify(data).incrementDailyBlocksBroken();
+    }
+
+    @Test
+    void noDropChopStillRecordsMinecraftStatistic() throws Exception {
+        when(config.isRecordMinecraftStatistics()).thenReturn(true);
+        when(config.isCallBlockBreakEvent()).thenReturn(true);
+        org.bukkit.Server server = mock(org.bukkit.Server.class);
+        org.bukkit.plugin.PluginManager plugins = mock(org.bukkit.plugin.PluginManager.class);
+        when(plugin.getServer()).thenReturn(server);
+        when(server.getPluginManager()).thenReturn(plugins);
+        doAnswer(invocation -> {
+                    ((org.bukkit.event.block.BlockBreakEvent) invocation.getArgument(0)).setDropItems(false);
+                    return null;
+                })
+                .when(plugins)
+                .callEvent(any(BlockBreakEvent.class));
+        validate(null);
+        blockProcessor().accept(location, 0);
+        verify(block).setType(Material.AIR, false);
+        verify(player).incrementStatistic(Statistic.MINE_BLOCK, Material.OAK_LOG);
+    }
+
+    @Test
+    void protectedSignRejectsWholeTreeBeforeBatchStarts() throws Exception {
+        HookManager manager = mock(HookManager.class);
+        SignProtectionHook signHook = mock(SignProtectionHook.class);
+        when(plugin.getHookManager()).thenReturn(manager);
+        when(manager.getSignProtectionHook()).thenReturn(signHook);
+        when(signHook.inspect(Set.of(location))).thenReturn(SignProtectionHook.Result.PROTECTED);
+        validate(null);
+        verifyNoInteractions(batches.constructed().get(0));
+        verify(data, never()).incrementDailyUses();
+    }
+
+    @Test
+    void liteModeAllowsChoppingWithoutUsePermissionOrSignProtectionHook() throws Exception {
+        when(config.isLiteMode()).thenReturn(true);
+        when(player.hasPermission("autotreechop.use")).thenReturn(false);
+        HookManager manager = mock(HookManager.class);
+        SignProtectionHook signHook = mock(SignProtectionHook.class);
+        when(plugin.getHookManager()).thenReturn(manager);
+        when(manager.getSignProtectionHook()).thenReturn(signHook);
+
+        validate(null);
+
+        assertNotNull(blockProcessor());
+        verifyNoInteractions(signHook);
+    }
+
+    @Test
+    void signAddedByBreakListenerIsCheckedAgainBeforeRemoval() throws Exception {
+        HookManager manager = mock(HookManager.class);
+        SignProtectionHook signHook = mock(SignProtectionHook.class);
+        when(plugin.getHookManager()).thenReturn(manager);
+        when(manager.getSignProtectionHook()).thenReturn(signHook);
+        when(signHook.inspect(Set.of(location))).thenReturn(SignProtectionHook.Result.SAFE);
+        when(signHook.inspect(location))
+                .thenReturn(SignProtectionHook.Result.SAFE, SignProtectionHook.Result.PROTECTED);
+        when(config.isCallBlockBreakEvent()).thenReturn(true);
+        org.bukkit.Server server = mock(org.bukkit.Server.class);
+        org.bukkit.plugin.PluginManager plugins = mock(org.bukkit.plugin.PluginManager.class);
+        when(plugin.getServer()).thenReturn(server);
+        when(server.getPluginManager()).thenReturn(plugins);
+        validate(null);
+        blockProcessor().accept(location, 0);
+        verify(plugins).callEvent(any(BlockBreakEvent.class));
+        verify(block, never()).breakNaturally();
         verify(data, never()).incrementDailyUses();
     }
 
@@ -262,6 +460,15 @@ class TreeChopSafetyTest {
         validate(null);
         verifyNoInteractions(batches.constructed().get(0));
         verify(data, never()).incrementDailyUses();
+    }
+
+    @Test
+    void liteModeIgnoresCooldownLeftFromFullMode() throws Exception {
+        when(config.isLiteMode()).thenReturn(true);
+        when(plugin.getCooldownManager().isInCooldown(uuid)).thenReturn(true);
+        validate(null);
+        verify(plugin.getCooldownManager(), never()).isInCooldown(uuid);
+        verify(batches.constructed().get(0)).processBatch(anyList(), anyInt(), anyInt(), any(), any());
     }
 
     @Test
@@ -378,6 +585,85 @@ class TreeChopSafetyTest {
         verifyNoInteractions(batches.constructed().get(0));
         verify(plugin.getConfirmationManager(), never()).recordSuccessfulChop(any(), any(), anyBoolean());
         assertFalse(SessionManager.getInstance().hasActiveTreeChopSession(uuid));
+    }
+
+    @Test
+    void suspiciousStructureRequiresConfirmationEvenWithLeavesAndAfterAnIdleConfirmation() throws Exception {
+        when(config.isPlayerStructureConfirmationEnabled()).thenReturn(true);
+        try (var detector = mockStatic(TreeStructureDetector.class)) {
+            detector.when(() -> TreeStructureDetector.inspect(Set.of(location), config))
+                    .thenReturn(TreeStructureDetector.Result.SUSPICIOUS);
+            validate(null, true, ConfirmationManager.ConfirmReason.IDLE_OR_REJOIN);
+            verify(plugin.getConfirmationManager())
+                    .setPendingConfirmation(
+                            uuid, ConfirmationManager.ConfirmReason.PLAYER_STRUCTURE, location, null, true);
+            verifyNoInteractions(batches.constructed().get(0));
+            verify(block, never()).breakNaturally();
+            verify(data, never()).incrementDailyUses();
+        }
+    }
+
+    @Test
+    void structureRetryConfirmsOnceAndDoesNotAuthorizeTheNextStructure() throws Exception {
+        when(config.isPlayerStructureConfirmationEnabled()).thenReturn(true);
+        when(plugin.getPluginConfig()).thenReturn(config);
+        when(config.getConfirmationWindowSeconds()).thenReturn(30);
+        when(plugin.getConfirmationManager()).thenReturn(new ConfirmationManager(plugin));
+        try (var detector = mockStatic(TreeStructureDetector.class)) {
+            detector.when(() -> TreeStructureDetector.inspect(Set.of(location), config))
+                    .thenReturn(TreeStructureDetector.Result.SUSPICIOUS);
+            validate(null);
+            verifyNoInteractions(batches.constructed().get(0));
+            validate(null);
+            assertNotNull(blockProcessor());
+            SessionManager.getInstance().clearTreeChopSession(uuid);
+            clearInvocations(batches.constructed().get(0));
+            validate(null);
+            verifyNoInteractions(batches.constructed().get(0));
+            assertEquals(
+                    ConfirmationManager.ConfirmReason.PLAYER_STRUCTURE,
+                    plugin.getConfirmationManager()
+                            .consumePendingConfirmation(uuid)
+                            .reason());
+        }
+    }
+
+    @Test
+    void floatingStructureCanBeConfirmedWithoutAlternatingWarnings() throws Exception {
+        when(config.isPlayerStructureConfirmationEnabled()).thenReturn(true);
+        when(world.getBlockAt(location.clone().subtract(0, 1, 0)).getType()).thenReturn(Material.AIR);
+        try (var detector = mockStatic(TreeStructureDetector.class)) {
+            detector.when(() -> TreeStructureDetector.inspect(Set.of(location), config))
+                    .thenReturn(TreeStructureDetector.Result.SUSPICIOUS);
+            validate(null, true, ConfirmationManager.ConfirmReason.FLOATING);
+            verify(plugin.getConfirmationManager())
+                    .setPendingConfirmation(
+                            uuid, ConfirmationManager.ConfirmReason.FLOATING_STRUCTURE, location, null, true);
+            verifyNoInteractions(batches.constructed().get(0));
+            validate(null, true, ConfirmationManager.ConfirmReason.FLOATING_STRUCTURE);
+            assertNotNull(blockProcessor());
+        }
+    }
+
+    @Test
+    void incompleteStructureScanStopsEvenWhenPreviouslyConfirmed() throws Exception {
+        when(config.isPlayerStructureConfirmationEnabled()).thenReturn(true);
+        try (var detector = mockStatic(TreeStructureDetector.class)) {
+            detector.when(() -> TreeStructureDetector.inspect(Set.of(location), config))
+                    .thenReturn(TreeStructureDetector.Result.INCOMPLETE);
+            validate(null, true, ConfirmationManager.ConfirmReason.PLAYER_STRUCTURE);
+            verifyNoInteractions(batches.constructed().get(0));
+            verify(block, never()).breakNaturally();
+        }
+    }
+
+    @Test
+    void disabledStructureCheckDoesNotInspectNeighbors() throws Exception {
+        try (var detector = mockStatic(TreeStructureDetector.class)) {
+            validate(null);
+            assertNotNull(blockProcessor());
+            detector.verifyNoInteractions();
+        }
     }
 
     @Test

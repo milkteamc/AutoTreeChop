@@ -24,14 +24,20 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Types;
 import java.time.LocalDate;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import org.bukkit.plugin.Plugin;
+import org.milkteamc.autotreechop.PlayerPreferences;
 
 public class DatabaseManager {
 
@@ -85,9 +91,31 @@ public class DatabaseManager {
                     + "autoTreeChopEnabled BOOLEAN,"
                     + "dailyUses INT,"
                     + "dailyBlocksBroken INT,"
-                    + "lastUseDate VARCHAR(10))");
+                    + "lastUseDate VARCHAR(10),"
+                    + "activationPreference VARCHAR(24),"
+                    + "sneakMessagesPreference BOOLEAN,"
+                    + "leafRemovalPreference BOOLEAN,"
+                    + "autoReplantPreference BOOLEAN)");
+            Set<String> columns = new HashSet<>();
+            try (ResultSet result = stmt.executeQuery("SELECT * FROM player_data WHERE 1 = 0")) {
+                var metadata = result.getMetaData();
+                for (int index = 1; index <= metadata.getColumnCount(); index++) {
+                    columns.add(metadata.getColumnName(index).toLowerCase(Locale.ROOT));
+                }
+            }
+            for (String definition : List.of(
+                    "activationPreference VARCHAR(24)",
+                    "sneakMessagesPreference BOOLEAN",
+                    "leafRemovalPreference BOOLEAN",
+                    "autoReplantPreference BOOLEAN")) {
+                String name = definition.substring(0, definition.indexOf(' '));
+                if (!columns.contains(name.toLowerCase(Locale.ROOT))) {
+                    stmt.executeUpdate("ALTER TABLE player_data ADD COLUMN " + definition);
+                }
+            }
         } catch (SQLException e) {
-            plugin.getLogger().warning("Error creating database table: " + e.getMessage());
+            dataSource.close();
+            throw new IllegalStateException("Could not initialize player data schema", e);
         }
     }
 
@@ -106,7 +134,8 @@ public class DatabaseManager {
                                 rs.getBoolean("autoTreeChopEnabled"),
                                 rs.getInt("dailyUses"),
                                 rs.getInt("dailyBlocksBroken"),
-                                LocalDate.parse(rs.getString("lastUseDate")));
+                                LocalDate.parse(rs.getString("lastUseDate")),
+                                readPreferences(rs));
                     } else {
                         PlayerData data = new PlayerData(playerUUID, defaultTreeChop, 0, 0, LocalDate.now());
                         insertPlayerData(data);
@@ -175,41 +204,73 @@ public class DatabaseManager {
      */
     private String buildUpsertSql() {
         if (useMysql) {
-            return "INSERT INTO player_data (uuid, autoTreeChopEnabled, dailyUses, dailyBlocksBroken, lastUseDate) "
-                    + "VALUES (?, ?, ?, ?, ?) "
+            return "INSERT INTO player_data (uuid, autoTreeChopEnabled, dailyUses, dailyBlocksBroken, lastUseDate, activationPreference, sneakMessagesPreference, leafRemovalPreference, autoReplantPreference) "
+                    + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) "
                     + "ON DUPLICATE KEY UPDATE "
                     + "autoTreeChopEnabled = VALUES(autoTreeChopEnabled), "
                     + "dailyUses = VALUES(dailyUses), "
                     + "dailyBlocksBroken = VALUES(dailyBlocksBroken), "
-                    + "lastUseDate = VALUES(lastUseDate)";
+                    + "lastUseDate = VALUES(lastUseDate), "
+                    + "activationPreference = VALUES(activationPreference), "
+                    + "sneakMessagesPreference = VALUES(sneakMessagesPreference), "
+                    + "leafRemovalPreference = VALUES(leafRemovalPreference), "
+                    + "autoReplantPreference = VALUES(autoReplantPreference)";
         } else {
             // SQLite: INSERT OR REPLACE replaces the entire row when the PK conflicts.
             return "INSERT OR REPLACE INTO player_data "
-                    + "(uuid, autoTreeChopEnabled, dailyUses, dailyBlocksBroken, lastUseDate) "
-                    + "VALUES (?, ?, ?, ?, ?)";
+                    + "(uuid, autoTreeChopEnabled, dailyUses, dailyBlocksBroken, lastUseDate, activationPreference, sneakMessagesPreference, leafRemovalPreference, autoReplantPreference) "
+                    + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
         }
     }
 
-    /** Binds the five UPSERT parameters in the order declared by {@link #buildUpsertSql()}. */
+    /** Binds the UPSERT parameters in the order declared by {@link #buildUpsertSql()}. */
     private void bindUpsertParams(PreparedStatement stmt, PlayerData data) throws SQLException {
         stmt.setString(1, data.getPlayerUUID().toString());
         stmt.setBoolean(2, data.isAutoTreeChopEnabled());
         stmt.setInt(3, data.getDailyUses());
         stmt.setInt(4, data.getDailyBlocksBroken());
         stmt.setString(5, data.getLastUseDate().toString());
+        PlayerPreferences preferences = data.getPreferences();
+        if (preferences.activation() == PlayerPreferences.Activation.DEFAULT) stmt.setNull(6, Types.VARCHAR);
+        else stmt.setString(6, preferences.activation().name());
+        bindToggle(stmt, 7, preferences.sneakMessages());
+        bindToggle(stmt, 8, preferences.leafRemoval());
+        bindToggle(stmt, 9, preferences.autoReplant());
+    }
+
+    private static void bindToggle(PreparedStatement statement, int index, PlayerPreferences.Toggle value)
+            throws SQLException {
+        if (value == PlayerPreferences.Toggle.DEFAULT) statement.setNull(index, Types.BOOLEAN);
+        else statement.setBoolean(index, value == PlayerPreferences.Toggle.ON);
+    }
+
+    private static PlayerPreferences.Toggle readToggle(ResultSet result, String column) throws SQLException {
+        boolean value = result.getBoolean(column);
+        return result.wasNull()
+                ? PlayerPreferences.Toggle.DEFAULT
+                : value ? PlayerPreferences.Toggle.ON : PlayerPreferences.Toggle.OFF;
+    }
+
+    private static PlayerPreferences readPreferences(ResultSet result) throws SQLException {
+        String mode = result.getString("activationPreference");
+        try {
+            return new PlayerPreferences(
+                    mode == null ? PlayerPreferences.Activation.DEFAULT : PlayerPreferences.Activation.valueOf(mode),
+                    readToggle(result, "sneakMessagesPreference"),
+                    readToggle(result, "leafRemovalPreference"),
+                    readToggle(result, "autoReplantPreference"));
+        } catch (IllegalArgumentException e) {
+            throw new SQLException("Invalid saved activation preference", e);
+        }
     }
 
     private void insertPlayerData(PlayerData data) throws SQLException {
         try (Connection conn = dataSource.getConnection();
-                PreparedStatement stmt =
-                        conn.prepareStatement("INSERT INTO player_data (uuid, autoTreeChopEnabled, dailyUses, "
-                                + "dailyBlocksBroken, lastUseDate) VALUES (?, ?, ?, ?, ?)")) {
+                PreparedStatement stmt = conn.prepareStatement(
+                        "INSERT INTO player_data (uuid, autoTreeChopEnabled, dailyUses, "
+                                + "dailyBlocksBroken, lastUseDate, activationPreference, sneakMessagesPreference, leafRemovalPreference, autoReplantPreference) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")) {
 
-            stmt.setString(1, data.getPlayerUUID().toString());
-            stmt.setBoolean(2, data.isAutoTreeChopEnabled());
-            stmt.setInt(3, data.getDailyUses());
-            stmt.setInt(4, data.getDailyBlocksBroken());
-            stmt.setString(5, data.getLastUseDate().toString());
+            bindUpsertParams(stmt, data);
             stmt.executeUpdate();
         }
     }
@@ -228,6 +289,7 @@ public class DatabaseManager {
         private int dailyUses;
         private int dailyBlocksBroken;
         private LocalDate lastUseDate;
+        private PlayerPreferences preferences;
 
         public PlayerData(
                 UUID playerUUID,
@@ -235,6 +297,23 @@ public class DatabaseManager {
                 int dailyUses,
                 int dailyBlocksBroken,
                 LocalDate lastUseDate) {
+            this(
+                    playerUUID,
+                    autoTreeChopEnabled,
+                    dailyUses,
+                    dailyBlocksBroken,
+                    lastUseDate,
+                    PlayerPreferences.DEFAULTS);
+        }
+
+        public PlayerData(
+                UUID playerUUID,
+                boolean autoTreeChopEnabled,
+                int dailyUses,
+                int dailyBlocksBroken,
+                LocalDate lastUseDate,
+                PlayerPreferences preferences) {
+            this.preferences = Objects.requireNonNull(preferences, "preferences");
             this.playerUUID = playerUUID;
             this.autoTreeChopEnabled = autoTreeChopEnabled;
             this.dailyUses = dailyUses;
@@ -248,6 +327,15 @@ public class DatabaseManager {
             this.dailyUses = source.dailyUses;
             this.dailyBlocksBroken = source.dailyBlocksBroken;
             this.lastUseDate = source.lastUseDate;
+            this.preferences = source.preferences;
+        }
+
+        public PlayerPreferences getPreferences() {
+            return preferences;
+        }
+
+        public void setPreferences(PlayerPreferences preferences) {
+            this.preferences = Objects.requireNonNull(preferences, "preferences");
         }
 
         public UUID getPlayerUUID() {

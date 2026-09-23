@@ -22,10 +22,10 @@ import org.bukkit.entity.Player;
 import org.milkteamc.autotreechop.AutoTreeChop;
 import org.milkteamc.autotreechop.Config;
 import org.milkteamc.autotreechop.MessageKeys;
+import org.milkteamc.autotreechop.utils.PermissionUtils;
 import revxrsal.commands.annotation.Command;
 import revxrsal.commands.annotation.Subcommand;
 import revxrsal.commands.bukkit.actor.BukkitCommandActor;
-import revxrsal.commands.bukkit.annotation.CommandPermission;
 
 @Command({"atc", "autotreechop"})
 public class UsageCommand {
@@ -39,7 +39,6 @@ public class UsageCommand {
     }
 
     @Subcommand("usage")
-    @CommandPermission("autotreechop.use")
     public void usage(BukkitCommandActor actor) {
         if (!actor.isPlayer()) {
             AutoTreeChop.sendMessage(actor.sender(), MessageKeys.ONLY_PLAYERS);
@@ -47,6 +46,10 @@ public class UsageCommand {
         }
 
         Player player = actor.asPlayer();
+        if (!PermissionUtils.hasUsePermission(player, config)) {
+            AutoTreeChop.sendMessage(player, MessageKeys.NO_PERMISSION);
+            return;
+        }
         org.milkteamc.autotreechop.PlayerConfig pConfig =
                 plugin.getDataManager().getPlayerConfig(player.getUniqueId());
 
@@ -55,25 +58,9 @@ public class UsageCommand {
             return;
         }
 
-        boolean isVip = player.hasPermission("autotreechop.vip");
-        boolean limitVip = config.getLimitVipUsage();
-
-        String maxUsesStr;
-        String maxBlocksStr;
-
-        if (!config.getLimitUsage()) {
-            maxUsesStr = "∞";
-            maxBlocksStr = "∞";
-        } else if (!isVip) {
-            maxUsesStr = String.valueOf(config.getMaxUsesPerDay());
-            maxBlocksStr = String.valueOf(config.getMaxBlocksPerDay());
-        } else if (limitVip) {
-            maxUsesStr = String.valueOf(config.getVipUsesPerDay());
-            maxBlocksStr = String.valueOf(config.getVipBlocksPerDay());
-        } else {
-            maxUsesStr = "∞";
-            maxBlocksStr = "∞";
-        }
+        var policy = config.resolvePolicy(player);
+        String maxUsesStr = policy.limitUsage() ? String.valueOf(policy.maxUsesPerDay()) : "∞";
+        String maxBlocksStr = policy.limitUsage() ? String.valueOf(policy.maxBlocksPerDay()) : "∞";
 
         AutoTreeChop.sendMessage(
                 player,

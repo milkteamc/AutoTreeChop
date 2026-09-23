@@ -37,6 +37,7 @@ import org.milkteamc.autotreechop.Config;
 import org.milkteamc.autotreechop.MessageKeys;
 import org.milkteamc.autotreechop.PlayerConfig;
 import org.milkteamc.autotreechop.hooks.HookManager;
+import org.milkteamc.autotreechop.utils.ActivationUtils;
 import org.milkteamc.autotreechop.utils.AsyncTaskScheduler;
 import org.milkteamc.autotreechop.utils.BlockDiscoveryUtils;
 import org.milkteamc.autotreechop.utils.EffectUtils;
@@ -60,7 +61,7 @@ public class BlockBreakListener implements Listener {
         Player player = event.getPlayer();
         UUID playerUUID = player.getUniqueId();
         PlayerConfig playerConfig = plugin.getDataManager().getPlayerConfig(playerUUID);
-        if (playerConfig == null) return;
+        if (playerConfig == null || !PermissionUtils.hasUsePermission(player, plugin.getPluginConfig())) return;
         Block block = event.getBlock();
         ItemStack tool = player.getInventory().getItemInMainHand();
         Location location = block.getLocation();
@@ -82,11 +83,11 @@ public class BlockBreakListener implements Listener {
 
         Material material = block.getType();
 
-        if (!playerConfig.isAutoTreeChopEnabled() || !BlockDiscoveryUtils.isLog(material, config)) {
+        if (!ActivationUtils.isActive(player, playerConfig, config) || !BlockDiscoveryUtils.isLog(material, config)) {
             return;
         }
 
-        if (plugin.getCooldownManager().isInCooldown(playerUUID)) {
+        if (!config.isLiteMode() && plugin.getCooldownManager().isInCooldown(playerUUID)) {
             long remaining = plugin.getCooldownManager().getRemainingCooldown(playerUUID);
             AutoTreeChop.sendMessage(
                     player,
@@ -95,16 +96,14 @@ public class BlockBreakListener implements Listener {
             return;
         }
 
-        if (config.getLimitUsage()) {
-            if (!PermissionUtils.canBreakBlocks(player, playerConfig, config, 1)) {
-                EffectUtils.sendMaxBlockLimitReachedMessage(player, block);
-                return;
-            }
+        if (!PermissionUtils.canBreakBlocks(player, playerConfig, config, 1)) {
+            EffectUtils.sendMaxBlockLimitReachedMessage(player, block);
+            return;
+        }
 
-            if (!PermissionUtils.canUse(player, playerConfig, config)) {
-                AutoTreeChop.sendMessage(player, MessageKeys.HIT_MAX_USAGE);
-                return;
-            }
+        if (!PermissionUtils.canUse(player, playerConfig, config)) {
+            AutoTreeChop.sendMessage(player, MessageKeys.HIT_MAX_USAGE);
+            return;
         }
 
         event.setCancelled(true);
@@ -179,6 +178,9 @@ public class BlockBreakListener implements Listener {
     }
 
     private ProtectionHooks buildProtectionHooks() {
+        if (plugin.getPluginConfig().isLiteMode()) {
+            return new ProtectionHooks(false, null, false, null, false, null, false, null);
+        }
         HookManager hm = plugin.getHookManager();
         return new ProtectionHooks(
                 hm.isWorldGuardEnabled(),

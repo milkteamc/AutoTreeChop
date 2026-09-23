@@ -45,6 +45,18 @@ public class PlayerConfig {
         return data.isAutoTreeChopEnabled();
     }
 
+    public synchronized PlayerPreferences getPreferences() {
+        return data.getPreferences();
+    }
+
+    public synchronized void setPreferences(PlayerPreferences preferences) {
+        java.util.Objects.requireNonNull(preferences, "preferences");
+        if (!data.getPreferences().equals(preferences)) {
+            data.setPreferences(preferences);
+            dirty = true;
+        }
+    }
+
     public synchronized void setAutoTreeChopEnabled(boolean enabled) {
         if (data.isAutoTreeChopEnabled() != enabled) {
             data.setAutoTreeChopEnabled(enabled);
