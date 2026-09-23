@@ -41,6 +41,7 @@ public class ToggleCommand {
         this.plugin = plugin;
     }
 
+    @Command({"atc", "autotreechop"})
     public void root(BukkitCommandActor actor) {
         performSelfToggle(actor);
     }
