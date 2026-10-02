@@ -48,7 +48,11 @@ class PlayerDataLoadingTest {
         Plugin plugin = mock(Plugin.class);
         when(plugin.getDataFolder()).thenReturn(new File("build/test-data"));
         Connection schemaConnection = mock(Connection.class);
-        when(schemaConnection.createStatement()).thenReturn(mock(Statement.class));
+        Statement schemaStatement = mock(Statement.class);
+        when(schemaConnection.createStatement()).thenReturn(schemaStatement);
+        var columns = mock(java.sql.ResultSet.class);
+        when(schemaStatement.executeQuery(anyString())).thenReturn(columns);
+        when(columns.getMetaData()).thenReturn(mock(java.sql.ResultSetMetaData.class));
         try (var sources = mockConstruction(HikariDataSource.class, (source, context) -> {
             when(source.getConnection()).thenReturn(schemaConnection).thenThrow(new SQLException("offline"));
         })) {

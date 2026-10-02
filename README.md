@@ -16,7 +16,7 @@ It's async-friendly, lightweight, and fully customizable — with built-in suppo
 ### 🌲 Smart Tree Chopping
 
 - Chop entire trees by breaking just one log
-- Toggle on/off with `/atc` command or by sneaking (pressing SHIFT)
+- Activation modes: command(`/atc`), hold sneak, command + sneak, or sneak + swap-hand key (normally Shift+F)
 - Async support for smooth performance on Modern servers
 - Customizable leaves cleaner
 
@@ -33,12 +33,13 @@ It's async-friendly, lightweight, and fully customizable — with built-in suppo
 ### 🧑‍🤝‍🧑 Player Control & Limits
 
 - Daily limits for usage and chopped blocks
+- Optional Minecraft mined-block statistics for chopped logs (disabled by default)
 - Configurable cooldowns
-- VIP players can bypass limits with permission
+- Custom permission groups with priorities, daily limits and cooldowns
 
 ### 🛡️ Full Protection Plugin Support
 
-- Compatible with Residence, WorldGuard, Lands, GriefPrevention
+- Compatible with Residence, WorldGuard, Lands, GriefPrevention, BlockLocker and LockettePro
 - Supports **CoreProtect** for logging actions
 
 ### 🗄️ MySQL & SQLite Support
@@ -65,6 +66,8 @@ Automatically switches to the player's locale if enabled.
 - Residence
 - Lands
 - GriefPrevention
+- BlockLocker
+- LockettePro
 - PlaceholderAPI
 
 ---
@@ -74,8 +77,12 @@ Automatically switches to the player's locale if enabled.
 | Command | Description |
 |--------|-------------|
 | `/atc` | Toggle AutoTreeChop |
-| `/atc confirm` | Confirm a pending chop (idle / no-leaves warning) |
+| `/atc confirm` | Confirm a pending chop after a safety warning |
 | `/atc usage` | Show daily usage |
+| `/atc settings [setting] [value]` | View or change personal settings |
+| `/atc settings reset` | Restore all server defaults |
+| `/atc settings player <player> [setting] [value]` | View or change an online player's settings (admin) |
+| `/atc settings player <player> reset` | Restore an online player's server defaults (admin) |
 | `/atc reload` | Reload plugin config |
 | `/atc toggle <player>` | Toggle for another player |
 | `/atc enable <player/@a/@r/@p>` | Enable for other players |
@@ -84,14 +91,23 @@ Automatically switches to the player's locale if enabled.
 
 ---
 
+Personal settings: `activation` accepts `default`, `disabled`, `command`, `sneak`,
+`command-and-sneak`, or `hotkey`; `sneak-messages`, `leaves`, and `replant` accept
+`default`, `on`, or `off`. For example: `/atc settings activation hotkey`.
+`default` follows server changes. Personal settings persist across logins; server-wide
+disabling and feature permissions still apply.
+
 ## Permissions
 
-> Requires a permission manager plugin, I personally recommend [LuckPerms](https://luckperms.net/download)
+> Outside Lite mode, a permission manager such as [LuckPerms](https://luckperms.net/download) can manage these permissions.
 
 | Permission | Description | Default |
 |------------|-------------|-------------|
 | `autotreechop.use` | Use `/atc`, `/atc confirm`, and `/atc usage` commands | Everyone |
-| `autotreechop.vip` | Ignore usage limits | OP |
+| `autotreechop.settings` | Manage personal settings (also requires `autotreechop.use`) | Everyone |
+| `autotreechop.settings.other` | View or change another online player's settings | OP |
+| `autotreechop.group.<name>` | Apply a configured group | Explicit grant |
+| `autotreechop.vip` | Legacy VIP fallback (deprecated) | OP |
 | `autotreechop.other` | Toggle others' ATC status | OP |
 | `autotreechop.reload` | Reload config file | OP |
 | `autotreechop.updatechecker` | Receive update notifications | OP |
@@ -114,7 +130,7 @@ Automatically switches to the player's locale if enabled.
 
 ## Developer API
 
-Integrate through Bukkit ServicesManager to read player state and change the ATC preference.
+Integrate through Bukkit ServicesManager to read player state, effective group limits/cooldown, and change the ATC preference.
 See the [API guide](https://github.com/milkteamc/AutoTreeChop/blob/master/docs/API.md) for dependency setup, lifecycle and threading rules,
 explicit operation results, and a compiled example plugin.
 

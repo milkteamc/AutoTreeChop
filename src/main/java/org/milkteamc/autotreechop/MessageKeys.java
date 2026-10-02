@@ -22,13 +22,26 @@ public final class MessageKeys {
     private MessageKeys() {}
 
     public static final String NO_RESIDENCE_PERMISSIONS = "noResidencePermissions";
+    public static final String CONFIG_RELOADED = "configReloaded";
+    public static final String CONFIG_RELOAD_FAILED = "configReloadFailed";
+    public static final String CONFIG_RESTART_REQUIRED = "configRestartRequired";
     public static final String ENABLED = "enabled";
     public static final String DISABLED = "disabled";
     public static final String NO_PERMISSION = "no-permission";
+    public static final String SETTINGS_ENTRY = "settingsEntry";
+    public static final String SETTINGS_UPDATED = "settingsUpdated";
+    public static final String SETTINGS_UNCHANGED = "settingsUnchanged";
+    public static final String SETTINGS_USAGE = "settingsUsage";
+    public static final String SETTINGS_FOR_OTHER = "settingsForOther";
+    public static final String SETTINGS_UPDATED_FOR_OTHER = "settingsUpdatedForOther";
+    public static final String SETTINGS_UNCHANGED_FOR_OTHER = "settingsUnchangedForOther";
+    public static final String SETTINGS_UPDATED_BY_OTHER = "settingsUpdatedByOther";
+    public static final String SETTINGS_OTHER_USAGE = "settingsOtherUsage";
     public static final String PLAYER_DATA_UNAVAILABLE = "playerDataUnavailable";
     public static final String ONLY_PLAYERS = "only-players";
     public static final String HIT_MAX_USAGE = "hitmaxusage";
     public static final String TREE_SCAN_INCOMPLETE = "tree_scan_incomplete";
+    public static final String PROTECTED_SIGN = "protected_sign";
     public static final String HIT_MAX_BLOCK = "hitmaxblock";
     public static final String USAGE = "usage";
     public static final String BLOCKS_BROKEN = "blocks-broken";
@@ -41,6 +54,8 @@ public final class MessageKeys {
     public static final String SNEAK_ENABLED = "sneakEnabled";
     public static final String SNEAK_DISABLED = "sneakDisabled";
     public static final String CONFIRMATION_REQUIRED_FLOATING = "confirmationRequiredFloating";
+    public static final String CONFIRMATION_REQUIRED_STRUCTURE = "confirmationRequiredStructure";
+    public static final String CONFIRMATION_REQUIRED_FLOATING_STRUCTURE = "confirmationRequiredFloatingStructure";
     public static final String CONFIRMATION_REQUIRED_IDLE = "confirmationRequiredIdle";
     public static final String CONFIRMATION_REQUIRED_NO_LEAVES = "confirmationRequiredNoLeaves";
     public static final String CONFIRMATION_REQUIRED_BOTH = "confirmationRequiredBoth";
