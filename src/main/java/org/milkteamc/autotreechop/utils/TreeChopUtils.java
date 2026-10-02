@@ -148,7 +148,13 @@ public class TreeChopUtils {
             return false;
         }
 
-        XMaterial xMat = XMaterial.matchXMaterial(item);
+        XMaterial xMat;
+        try {
+            xMat = XMaterial.matchXMaterial(item);
+        } catch (IllegalArgumentException e) {
+            // Unknown server items are not assumed to be tools.
+            return false;
+        }
         if (xMat == XMaterial.AIR) {
             return false;
         }

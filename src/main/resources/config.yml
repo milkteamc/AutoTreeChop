@@ -52,6 +52,7 @@ chopping:
   # Define which materials can be chop
   # You can add something else as you like
   # Fun fact: If you add "DIAMOND_ORE", this plugin can become an auto mining plugin, lol
+  # Materials unavailable on the running server version are ignored.
   log-types:
     - OAK_LOG
     - BIRCH_LOG
@@ -62,6 +63,7 @@ chopping:
     - MANGROVE_LOG
     - CHERRY_LOG
     - PALE_OAK_LOG
+    - POPLAR_LOG
     - WARPED_STEM
     - CRIMSON_STEM
   # Mangrove roots participate in the same tree as MANGROVE_LOG.
@@ -182,6 +184,9 @@ leaves:
     - MANGROVE_LEAVES
     - CHERRY_LEAVES
     - PALE_OAK_LEAVES
+    - RED_POPLAR_LEAVES
+    - ORANGE_POPLAR_LEAVES
+    - YELLOW_POPLAR_LEAVES
     - WARPED_WART_BLOCK
     - NETHER_WART_BLOCK
   # Additional foliage kept separate so upgrading preserves customized leaves.types lists.
@@ -213,6 +218,7 @@ replant:
     MANGROVE_LOG: MANGROVE_PROPAGULE
     CHERRY_LOG: CHERRY_SAPLING
     PALE_OAK_LOG: PALE_OAK_SAPLING
+    POPLAR_LOG: POPLAR_SAPLING
   # Define valid soil types where saplings can be planted
   valid-soil-types:
     - DIRT

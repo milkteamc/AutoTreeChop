@@ -25,6 +25,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.logging.Logger;
 import org.bukkit.Material;
@@ -172,6 +173,40 @@ class ConfigTest {
         assertEquals(50, config.getMaxUsesPerDay());
         assertSame(logs, config.getLogTypes());
         assertEquals(invalid, Files.readString(file()));
+    }
+
+    @Test
+    void customMaterialsUseNativeNamesAndSkipUnavailableMaterials() throws Exception {
+        Files.writeString(file(), """
+                config-version: 4
+                chopping:
+                  log-types: ['minecraft:oak_log', NOT_A_MATERIAL]
+                  root-types: []
+                leaves:
+                  types: ['minecraft:oak_leaves']
+                  additional-types: ['minecraft:azalea_leaves', NOT_A_MATERIAL]
+                replant:
+                  valid-soil-types: ['minecraft:dirt', NOT_A_MATERIAL]
+                  log-sapling-mapping:
+                    'minecraft:oak_log': 'minecraft:oak_sapling'
+                    NOT_A_MATERIAL: OAK_SAPLING
+                """);
+        Config config = new Config(plugin);
+        assertEquals(Set.of(Material.OAK_LOG), config.getLogTypes());
+        assertEquals(Set.of(Material.OAK_LEAVES, Material.AZALEA_LEAVES), config.getLeafTypes());
+        assertEquals(Set.of(Material.DIRT), config.getValidSoilTypes());
+        assertEquals(Map.of(Material.OAK_LOG, Material.OAK_SAPLING), config.getLogSaplingMapping());
+    }
+
+    @Test
+    void materialAliasesRemainSupportedThroughXSeriesFallback() throws Exception {
+        Files.writeString(file(), """
+                config-version: 4
+                replant:
+                  valid-soil-types: [GRASS_PATH]
+                """);
+        Config config = new Config(plugin);
+        assertEquals(Set.of(Material.DIRT_PATH), config.getValidSoilTypes());
     }
 
     @Test

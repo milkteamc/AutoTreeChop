@@ -187,7 +187,7 @@ public class TreeReplantUtils {
      */
     private static boolean isLikely2x2Tree(Material logType, Location lowestLogLocation, Set<Location> choppedLogs) {
 
-        XMaterial xMat = XMaterial.matchXMaterial(logType);
+        XMaterial xMat = matchKnownMaterial(logType);
 
         if (xMat == XMaterial.DARK_OAK_LOG || xMat == XMaterial.PALE_OAK_LOG) {
             return true;
@@ -312,7 +312,7 @@ public class TreeReplantUtils {
             return true;
         }
 
-        XMaterial xMat = XMaterial.matchXMaterial(material);
+        XMaterial xMat = matchKnownMaterial(material);
 
         return xMat == XMaterial.DIRT
                 || xMat == XMaterial.GRASS_BLOCK
@@ -328,18 +328,22 @@ public class TreeReplantUtils {
 
     private static boolean isClearForSapling(Block block) {
         Material type = block.getType();
-        XMaterial xMat = XMaterial.matchXMaterial(type);
+        XMaterial xMat = matchKnownMaterial(type);
 
         if (xMat == XMaterial.AIR) {
             return true;
         }
 
-        String matName = type.toString();
+        String matName = type.name();
         if (matName.endsWith("_LOG")
                 || matName.endsWith("_WOOD")
                 || matName.endsWith("_STEM")
                 || matName.endsWith("_HYPHAE")) {
             return false;
+        }
+
+        if (xMat == null) {
+            return isReplaceablePlantName(matName);
         }
 
         switch (xMat) {
@@ -377,10 +381,23 @@ public class TreeReplantUtils {
             case SNOW:
                 return true;
             default:
-                return matName.endsWith("_GRASS")
-                        || matName.contains("FLOWER")
-                        || matName.contains("SAPLING")
-                        || matName.contains("LEAVES");
+                return isReplaceablePlantName(matName);
+        }
+    }
+
+    private static boolean isReplaceablePlantName(String name) {
+        return name.endsWith("_GRASS")
+                || name.contains("FLOWER")
+                || name.contains("SAPLING")
+                || name.contains("LEAVES");
+    }
+
+    private static XMaterial matchKnownMaterial(Material material) {
+        try {
+            return XMaterial.matchXMaterial(material);
+        } catch (IllegalArgumentException e) {
+            // New server materials may be absent from the bundled XSeries table.
+            return null;
         }
     }
 

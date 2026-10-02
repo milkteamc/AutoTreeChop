@@ -258,7 +258,12 @@ public class Config {
 
     private Material parseMaterial(String name) {
         try {
-            return XMaterial.matchXMaterial(name).map(XMaterial::get).orElse(null);
+            Material material = Material.matchMaterial(name);
+            if (material == null) {
+                material = XMaterial.matchXMaterial(name).map(XMaterial::get).orElse(null);
+            }
+            if (material == null) plugin.getLogger().fine("Material not available in this version: " + name);
+            return material;
         } catch (Exception e) {
             plugin.getLogger().fine("Material not available in this version: " + name);
             return null;
