@@ -53,6 +53,7 @@ class DisabledConfirmationTest {
 
     @BeforeEach
     void setup() {
+        when(config.getActivationMode()).thenReturn(org.milkteamc.autotreechop.configuration.ActivationMode.COMMAND);
         when(plugin.getPluginConfig()).thenReturn(config);
         when(plugin.getConfirmationManager()).thenReturn(confirmations);
         when(plugin.getTreeChopUtils()).thenReturn(chopping);
@@ -62,7 +63,6 @@ class DisabledConfirmationTest {
         when(manager.getPlayerConfig(uuid)).thenReturn(data);
         when(player.getUniqueId()).thenReturn(uuid);
         when(player.hasPermission("autotreechop.use")).thenReturn(true);
-        when(config.getSneakToggle()).thenReturn(true);
         when(config.getConfirmationWindowSeconds()).thenReturn(30);
         var block = mock(Block.class);
         when(block.getType()).thenReturn(Material.OAK_LOG);
@@ -72,10 +72,12 @@ class DisabledConfirmationTest {
     }
 
     @Test
-    void releasingSneakClearsPendingConfirmationEvenAfterReenabling() {
+    void releasingSneakClearsPendingConfirmationWithoutChangingThePreference() {
+        when(config.getActivationMode())
+                .thenReturn(org.milkteamc.autotreechop.configuration.ActivationMode.COMMAND_AND_SNEAK);
         var listener = new PlayerSneakListener(plugin);
         listener.onPlayerToggleSneak(new PlayerToggleSneakEvent(player, false));
-        assertFalse(data.isAutoTreeChopEnabled());
+        assertTrue(data.isAutoTreeChopEnabled());
         listener.onPlayerToggleSneak(new PlayerToggleSneakEvent(player, true));
         assertTrue(data.isAutoTreeChopEnabled());
         assertNull(confirmations.consumePendingConfirmation(uuid));
@@ -109,5 +111,17 @@ class DisabledConfirmationTest {
                         eq(true),
                         eq(ConfirmationManager.ConfirmReason.FLOATING));
         assertNull(confirmations.consumePendingConfirmation(uuid));
+    }
+
+    @Test
+    void combinedModeCannotConfirmWhileStandingEvenWithSavedPreferenceEnabled() {
+        when(config.getActivationMode())
+                .thenReturn(org.milkteamc.autotreechop.configuration.ActivationMode.COMMAND_AND_SNEAK);
+        var actor = mock(BukkitCommandActor.class);
+        when(actor.sender()).thenReturn(player);
+        new ConfirmCommand(plugin).confirm(actor);
+        verifyNoInteractions(chopping);
+        assertNull(confirmations.consumePendingConfirmation(uuid));
+        assertTrue(data.isAutoTreeChopEnabled());
     }
 }

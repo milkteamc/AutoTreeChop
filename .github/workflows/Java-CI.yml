@@ -1,17 +1,23 @@
-name: "Pre-release"
+name: "Java CI"
 
 on:
   push:
     branches:
       - "master"
+      - "dev"
+  pull_request:
+    branches:
+      - "master"
+      - "dev"
 
-env:
-  MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+permissions:
+  contents: read
 
 jobs:
-  pre-release:
-    name: "Build and Pre-release"
+  build:
+    name: "Check and Build"
     runs-on: "ubuntu-latest"
+    timeout-minutes: 20
 
     steps:
       - uses: actions/checkout@v6
@@ -24,7 +30,30 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
-      - name: Build Jar file
-        run: ./gradlew clean build shadowJar
+      - name: Check and build plugin
+        run: ./gradlew --no-daemon clean check build
+
+      - name: Upload plugin JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: AutoTreeChop-${{ github.sha }}
+          path: |
+            build/libs/AutoTreeChop-*.jar
+            !build/libs/*-original.jar
+          if-no-files-found: error
+
+      - name: Upload test reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports-${{ github.sha }}
+          path: |
+            build/reports/tests/
+            build/test-results/
+          if-no-files-found: ignore
+
       - name: Upload to Modrinth
-        run: ./gradlew modrinth
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        run: ./gradlew --no-daemon modrinth

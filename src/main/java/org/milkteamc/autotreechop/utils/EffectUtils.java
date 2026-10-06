@@ -17,7 +17,6 @@
  
 package org.milkteamc.autotreechop.utils;
 
-import com.cryptomorin.xseries.XMaterial;
 import com.cryptomorin.xseries.particles.ParticleDisplay;
 import com.cryptomorin.xseries.particles.XParticle;
 import java.awt.Color;
@@ -86,15 +85,12 @@ public class EffectUtils {
 
         // Falling leaf-like block particles
         try {
-            XMaterial blockMaterial = XMaterial.matchXMaterial(block.getType());
-            if (blockMaterial != null && blockMaterial.get() != null) {
-                ParticleDisplay.of(XParticle.BLOCK)
-                        .withLocation(block.getLocation().add(0.5, 0.8, 0.5))
-                        .withBlock(blockMaterial.get().createBlockData())
-                        .withCount(10)
-                        .offset(0.2, 0.1, 0.2)
-                        .spawn();
-            }
+            ParticleDisplay.of(XParticle.BLOCK)
+                    .withLocation(block.getLocation().add(0.5, 0.8, 0.5))
+                    .withBlock(block.getBlockData())
+                    .withCount(10)
+                    .offset(0.2, 0.1, 0.2)
+                    .spawn();
         } catch (NoSuchMethodError | UnsupportedOperationException e) {
             // The BLOCK particle API changed between MC versions; XSeries could not
             // provide a compatible implementation on this server.  The visual is
