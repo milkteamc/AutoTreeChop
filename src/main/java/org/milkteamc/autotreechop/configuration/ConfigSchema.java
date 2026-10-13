@@ -55,6 +55,9 @@ public final class ConfigSchema {
             "leaves.batch-size",
             "safety.confirmation-window-seconds");
     private static final Set<String> LONG_VALUES = Set.of("leaves.delay-ticks", "replant.delay-ticks");
+    private static final String GRIEF_FLAG = "integrations.grief-prevention.flag";
+    // Kept independent of the optional GriefPrevention classes so config loading works without that plugin.
+    private static final List<String> GRIEF_PERMISSIONS = List.of("Edit", "Build", "Inventory", "Access", "Manage");
 
     private ConfigSchema() {}
 
@@ -144,9 +147,12 @@ public final class ConfigSchema {
         String sanitized = contents.startsWith("\uFEFF") ? contents.substring(1) : contents;
         sanitized = sanitized.replaceAll("[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F\\x7F]", "");
         YamlDocument document = parse(sanitized);
-        int version = document.contains("config-version")
-                ? (int) integer(document.get("config-version"), "config-version", 1, VERSION)
-                : 1;
+        Object rawVersion = document.get("config-version");
+        // The 1.7.x BoostedYaml updater writes known legacy versions as strings.
+        if (rawVersion instanceof String text && Set.of("1", "2", "3").contains(text)) {
+            rawVersion = Integer.valueOf(text);
+        }
+        int version = document.contains("config-version") ? (int) integer(rawVersion, "config-version", 1, VERSION) : 1;
         boolean changed = original == null || !contents.equals(sanitized) || version != VERSION;
 
         for (var entry : LEGACY_PATHS.entrySet()) {
@@ -167,6 +173,13 @@ public final class ConfigSchema {
                 changed = true;
             }
             validate(document.get(newPath), defaults.get(newPath), newPath);
+            if (newPath.equals(GRIEF_FLAG)) {
+                String canonical = griefPermission(document.getString(newPath));
+                if (!canonical.equals(document.getString(newPath))) {
+                    document.set(newPath, canonical);
+                    changed = true;
+                }
+            }
         }
         for (String path : ADDITIONAL_PATHS) {
             requireSections(document, path);
@@ -314,6 +327,7 @@ public final class ConfigSchema {
         } else if (expected instanceof String) {
             if (!(value instanceof String text)) throw invalid(path, "must be a string");
             if (!path.equals("storage.mysql.password") && text.isBlank()) throw invalid(path, "must not be empty");
+            if (path.equals(GRIEF_FLAG)) griefPermission(text);
             if (path.equals("leaves.mode")
                     && !Set.of("smart", "radius", "aggressive").contains(text)) {
                 throw invalid(path, "must be smart, radius or aggressive");
@@ -362,7 +376,20 @@ public final class ConfigSchema {
         }
     }
 
+    private static String griefPermission(String value) {
+        return GRIEF_PERMISSIONS.stream()
+                .filter(permission -> permission.equalsIgnoreCase(value.trim()))
+                .findFirst()
+                .orElseThrow(() -> invalid(
+                        GRIEF_FLAG,
+                        "must be Edit, Build, Inventory, Access or Manage; use Build for block modification"));
+    }
+
     private static ConfigLoadException invalid(String path, String reason) {
+        if (path.startsWith("groups.")
+                && (path.endsWith(".max-uses-per-day") || path.endsWith(".max-blocks-per-day"))) {
+            reason += "; for unlimited usage set the group's limit-usage to false instead of using a huge quota";
+        }
         return new ConfigLoadException("Invalid config key " + path + ": " + reason);
     }
 

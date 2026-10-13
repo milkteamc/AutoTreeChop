@@ -52,6 +52,9 @@ import revxrsal.commands.bukkit.BukkitLamp;
 
 public class AutoTreeChop extends JavaPlugin {
 
+    // Server type is fixed for the lifetime of this plugin class loader.
+    private static final boolean FOLIA_SERVER = detectFolia();
+
     private static AutoTreeChop instance;
 
     private Config config;
@@ -69,6 +72,10 @@ public class AutoTreeChop extends JavaPlugin {
     private PluginDescriptionFile description;
 
     public static boolean isFolia() {
+        return FOLIA_SERVER;
+    }
+
+    private static boolean detectFolia() {
         try {
             Class.forName("io.papermc.paper.threadedregions.RegionizedServer");
             return true;

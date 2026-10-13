@@ -41,6 +41,8 @@ public final class MessageKeys {
     public static final String ONLY_PLAYERS = "only-players";
     public static final String HIT_MAX_USAGE = "hitmaxusage";
     public static final String TREE_SCAN_INCOMPLETE = "tree_scan_incomplete";
+    public static final String TREE_TOO_LARGE = "tree_too_large";
+    public static final String TREE_DISCOVERY_INCOMPLETE = "tree_discovery_incomplete";
     public static final String PROTECTED_SIGN = "protected_sign";
     public static final String HIT_MAX_BLOCK = "hitmaxblock";
     public static final String USAGE = "usage";

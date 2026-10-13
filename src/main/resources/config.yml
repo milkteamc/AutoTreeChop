@@ -78,9 +78,9 @@ chopping:
 groups:
   default:
     limit-usage: true
-    # Daily tree-chopping uses; 0 allows no uses.
+    # Daily tree-chopping uses; 0 allows no uses. Use limit-usage: false for unlimited usage.
     max-uses-per-day: 50
-    # Daily block quota; 0 allows no blocks.
+    # Daily block quota; 0 allows no blocks. Quotas must be within 0–2147483647.
     max-blocks-per-day: 500
     # Cooldown time (second), use 0 to disable
     cooldown-seconds: 5
@@ -149,8 +149,8 @@ integrations:
     # If you are using Residence, you can set which Flag players have access to AutoTreeChop in residence.
     flag: build
   grief-prevention:
-    # If you are using GriefPrevention,
-    # you can set which Flag players have access to AutoTreeChop in GriefPrevention.
+    # Required claim permission: Edit, Build, Inventory, Access or Manage (case-insensitive).
+    # Build checks block modification permission. "all" is not a valid permission.
     flag: Build
 
 leaves:
@@ -167,7 +167,7 @@ leaves:
   drop-items: false
   # Show particle effects when removing leaves
   visual-effects: true
-  # Process leaf removal asynchronously
+  # Calculate leaf selection asynchronously; world data is captured on the main/region thread.
   async: true
   # How many leaves to process at once (performance)
   batch-size: 20

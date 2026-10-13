@@ -230,7 +230,7 @@ public class TreeChopUtils {
             BlockSnapshot treeSnapshot = BlockSnapshotCreator.captureTreeRegion(
                     block, config, connectedBlocks, config.getMaxDiscoveryBlocks());
             if (!treeSnapshot.isComplete()) {
-                AutoTreeChop.sendMessage(player, MessageKeys.HIT_MAX_BLOCK);
+                AutoTreeChop.sendMessage(player, MessageKeys.TREE_DISCOVERY_INCOMPLETE);
                 sessionManager.clearTreeChopSession(playerUUID);
                 return;
             }
@@ -299,7 +299,10 @@ public class TreeChopUtils {
         }
 
         if (treeBlocks.size() > config.getMaxTreeSize()) {
-            AutoTreeChop.sendMessage(player, MessageKeys.HIT_MAX_BLOCK);
+            AutoTreeChop.sendMessage(
+                    player,
+                    MessageKeys.TREE_TOO_LARGE,
+                    Placeholder.parsed("limit", String.valueOf(config.getMaxTreeSize())));
             sessionManager.clearTreeChopSession(playerUUID);
             return;
         }

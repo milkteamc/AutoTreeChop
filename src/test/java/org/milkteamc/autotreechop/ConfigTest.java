@@ -365,4 +365,22 @@ class ConfigTest {
         assertThrows(ConfigLoadException.class, () -> new Config(plugin));
         assertEquals("chopping: invalid", Files.readString(file()));
     }
+
+    @Test
+    void invalidGriefFlagReloadKeepsActiveSettingsAndOriginalFile() throws Exception {
+        Config config = new Config(plugin);
+        String original = Files.readString(file());
+        YamlDocument edited = ConfigSchema.parse(original);
+        edited.set("integrations.grief-prevention.flag", "all");
+        edited.set("chopping.max-tree-size", 123);
+        String invalid = edited.dump();
+        Files.writeString(file(), invalid);
+        assertThrows(ConfigLoadException.class, config::load);
+        assertEquals("Build", config.getGriefPreventionFlag());
+        assertEquals(500, config.getMaxTreeSize());
+        assertEquals(invalid, Files.readString(file()));
+        try (var files = Files.list(temp)) {
+            assertFalse(files.anyMatch(path -> path.getFileName().toString().startsWith("config.yml.backup.")));
+        }
+    }
 }

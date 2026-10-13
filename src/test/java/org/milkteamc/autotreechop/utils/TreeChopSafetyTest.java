@@ -35,6 +35,8 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.Damageable;
 import org.junit.jupiter.api.*;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.milkteamc.autotreechop.*;
 import org.milkteamc.autotreechop.api.event.TreeChopPostEvent;
 import org.milkteamc.autotreechop.api.event.TreeChopPreEvent;
@@ -104,6 +106,12 @@ class TreeChopSafetyTest {
 
     private void validate(ItemStack tool, boolean hasLeaves, ConfirmationManager.ConfirmReason reason)
             throws Exception {
+        validate(Set.of(location), tool, hasLeaves, reason);
+    }
+
+    private void validate(
+            Set<Location> locations, ItemStack tool, boolean hasLeaves, ConfirmationManager.ConfirmReason reason)
+            throws Exception {
         Method method = TreeChopUtils.class.getDeclaredMethod(
                 "validateAndExecuteChop",
                 Set.class,
@@ -116,7 +124,7 @@ class TreeChopSafetyTest {
                 boolean.class,
                 ConfirmationManager.ConfirmReason.class);
         method.setAccessible(true);
-        method.invoke(utils, Set.of(location), block, player, tool, config, data, hooks, hasLeaves, reason);
+        method.invoke(utils, locations, block, player, tool, config, data, hooks, hasLeaves, reason);
     }
 
     @Test
@@ -673,5 +681,49 @@ class TreeChopSafetyTest {
         verifyNoInteractions(
                 block, schedulers.constructed().get(0), batches.constructed().get(0));
         assertFalse(SessionManager.getInstance().hasActiveTreeChopSession(uuid));
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {499, 500, 501})
+    void treeSizeBoundaryDoesNotUseDailyQuotaMessage(int count) throws Exception {
+        when(config.getMaxTreeSize()).thenReturn(500);
+        Set<Location> tree = new java.util.HashSet<>();
+        for (int i = 0; i < count; i++) tree.add(new Location(world, i, 64, 0));
+        try (var grounding = mockStatic(TreeGrounding.class);
+                var messages = mockStatic(AutoTreeChop.class)) {
+            grounding
+                    .when(() -> TreeGrounding.inspect(tree, config))
+                    .thenReturn(new TreeGrounding.Result(true, Set.of()));
+            validate(tree, null, true, null);
+            if (count > 500) {
+                messages.verify(() -> AutoTreeChop.sendMessage(
+                        eq(player),
+                        eq(MessageKeys.TREE_TOO_LARGE),
+                        any(net.kyori.adventure.text.minimessage.tag.resolver.TagResolver.class)));
+                verifyNoInteractions(batches.constructed().get(0));
+                verify(data, never()).incrementDailyBlocksBroken();
+            } else {
+                verify(batches.constructed().get(0)).processBatch(anyList(), anyInt(), anyInt(), any(), any());
+            }
+            messages.verify(() -> AutoTreeChop.sendMessage(player, MessageKeys.HIT_MAX_BLOCK), never());
+        }
+    }
+
+    @Test
+    void incompleteTreeDiscoveryUsesItsOwnMessageAndDoesNotCharge() {
+        when(config.getMaxDiscoveryBlocks()).thenReturn(50);
+        try (var snapshots = mockStatic(BlockSnapshotCreator.class);
+                var messages = mockStatic(AutoTreeChop.class)) {
+            snapshots
+                    .when(() -> BlockSnapshotCreator.captureTreeRegion(block, config, true, 50))
+                    .thenReturn(new BlockSnapshot(java.util.Map.of(), world, location, false));
+            utils.chopTree(block, player, true, null, location, config, data, hooks);
+            messages.verify(() -> AutoTreeChop.sendMessage(player, MessageKeys.TREE_DISCOVERY_INCOMPLETE));
+            messages.verify(() -> AutoTreeChop.sendMessage(player, MessageKeys.HIT_MAX_BLOCK), never());
+            verifyNoInteractions(batches.constructed().get(0));
+            verify(data, never()).incrementDailyUses();
+            verify(data, never()).incrementDailyBlocksBroken();
+            assertFalse(SessionManager.getInstance().hasActiveTreeChopSession(uuid));
+        }
     }
 }

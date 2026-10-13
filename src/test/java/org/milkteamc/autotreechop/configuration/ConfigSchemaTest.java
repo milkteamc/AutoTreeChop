@@ -152,6 +152,11 @@ class ConfigSchemaTest {
                 "config-version: 5",
                 "config-version: 0",
                 "config-version: nope",
+                "config-version: '4'",
+                "config-version: '5'",
+                "config-version: '03'",
+                "config-version: '3.0'",
+                "config-version: 3\ngroups: {default: {max-uses-per-day: '500'}}",
                 "storage: broken",
                 "storage: {mysql: false}",
                 "storage: {mysql: {port: 65536}}",
@@ -222,6 +227,78 @@ class ConfigSchemaTest {
         assertTrue(Files.exists(temp.resolve("config.yml")));
         assertTrue(backups().isEmpty());
         assertTrue(prepared.document().getBoolean("messages.use-player-locale"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"1", "2", "3"})
+    void migratesKnownQuotedLegacyVersionsWithExactBackup(String version) throws Exception {
+        Path file = temp.resolve("config.yml");
+        String contents = "config-version: '" + version + "'\nmax-uses-per-day: 42\n";
+        Files.writeString(file, contents);
+        prepare().commit();
+        var migrated = ConfigSchema.parse(Files.readString(file));
+        assertEquals(4, migrated.getInt("config-version"));
+        assertEquals(42, migrated.getInt("groups.default.max-uses-per-day"));
+        assertEquals(contents, Files.readString(backups().get(0)));
+    }
+
+    @Test
+    void migratesConfigActuallyUpdatedBy175From174() throws Exception {
+        byte[] original;
+        try (var input = getClass().getResourceAsStream("/config/legacy-174-updated-175.yml")) {
+            assertNotNull(input);
+            original = input.readAllBytes();
+        }
+        Path file = temp.resolve("config.yml");
+        Files.write(file, original);
+        var prepared = prepare();
+        assertArrayEquals(original, Files.readAllBytes(file));
+        prepared.commit();
+        assertEquals(4, ConfigSchema.parse(Files.readString(file)).getInt("config-version"));
+        assertEquals(50, ConfigSchema.parse(Files.readString(file)).getInt("groups.default.max-uses-per-day"));
+        assertArrayEquals(original, Files.readAllBytes(backups().get(0)));
+        byte[] migrated = Files.readAllBytes(file);
+        prepare().commit();
+        assertArrayEquals(migrated, Files.readAllBytes(file));
+        assertEquals(1, backups().size());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"Edit", "Build", "Inventory", "Access", "Manage", "bUiLd", " BUILD "})
+    void normalizesValidGriefPermissionBeforeCommitting(String flag) throws Exception {
+        Path file = temp.resolve("config.yml");
+        String contents = "config-version: 4\nintegrations: {grief-prevention: {flag: '" + flag + "'}}\n";
+        Files.writeString(file, contents);
+        var prepared = prepare();
+        String canonical = flag.trim().equalsIgnoreCase("Build") ? "Build" : flag;
+        assertEquals(canonical, prepared.document().getString("integrations.grief-prevention.flag"));
+        assertEquals(contents, Files.readString(file));
+        prepared.commit();
+        assertEquals(
+                canonical, ConfigSchema.parse(Files.readString(file)).getString("integrations.grief-prevention.flag"));
+    }
+
+    @Test
+    void invalidLegacyGriefPermissionHasActionableErrorWithoutRewriting() throws Exception {
+        String contents = "config-version: 3\ngriefPreventionFlag: all\n";
+        Files.writeString(temp.resolve("config.yml"), contents);
+        var failure = assertThrows(ConfigLoadException.class, this::prepare);
+        assertTrue(failure.getMessage().contains("integrations.grief-prevention.flag"));
+        assertTrue(failure.getMessage().contains("use Build"));
+        assertEquals(contents, Files.readString(temp.resolve("config.yml")));
+        assertTrue(backups().isEmpty());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"2147483648", "100000000000000000000000000000000000000000000000000"})
+    void oversizedQuotaExplainsHowToDisableLimits(String quota) throws Exception {
+        String contents = "config-version: 3\nmax-uses-per-day: " + quota + "\n";
+        Files.writeString(temp.resolve("config.yml"), contents);
+        var failure = assertThrows(ConfigLoadException.class, this::prepare);
+        assertTrue(failure.getMessage().contains("groups.default.max-uses-per-day"));
+        assertTrue(failure.getMessage().contains("limit-usage to false"));
+        assertEquals(contents, Files.readString(temp.resolve("config.yml")));
+        assertTrue(backups().isEmpty());
     }
 
     @Test
