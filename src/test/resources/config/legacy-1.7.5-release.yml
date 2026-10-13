@@ -1,0 +1,193 @@
+# AutoTreeChop by MilkTeaMC team
+# Matrix Support Chat: https://matrix.to/#/#maoyue-dev:matrix.org
+# Modrinth Page: https://modrinth.com/plugin/autotreechop
+# Source code: https://github.com/milkteamc/AutoTreeChop
+# Default config file: https://github.com/milkteamc/AutoTreeChop/blob/master/src/main/resources/config.yml
+
+# The plugin locale (<language>-<country>-<variant>)
+# en, de, zh, es, fr, ja, zh-TW, en-US, de-DE, de-AU, ...
+# See all available language in lang folder.
+# Want to help translate? Get started here: https://translate.codeberg.org/projects/autotreechop/autotreechop/
+locale: en
+
+# If set to true, the plugin will automatically translate to the locale of the player
+# (if there are translations present)
+use-player-locale: true
+
+# Tree Chopping setting
+# If disable, ALL players (including non-VIP) have unlimited usage
+limitUsage: true
+# The number of times non-VIP players can chop down trees per day,
+max-uses-per-day: 50
+# Tree blocks that non-VIP players can chop down every day,
+max-blocks-per-day: 500
+# Cooldown time (second), use 0 to disable
+cooldownTime: 5
+
+# VIP setting
+# If disable, VIP have unlimited usage
+limitVipUsage: false
+# Will only work when you enable limitVipUsage
+vip-uses-per-day: 100
+vip-blocks-per-day: 1000
+# Cooldown time for VIP users (second), use 0 to disable
+vipCooldownTime: 2
+
+# MySQL setting
+# If "useMysql: false", plugin will use SQLite
+useMysql: false
+hostname: example.com
+port: 3306
+database: example
+username: root
+password: abc1234
+
+# Misc
+# Use visual effect
+visual-effect: true
+# damage tool when chopping tree
+toolDamage: true
+# How much durability should be decrease when player brock one block.
+toolDamageDecrease: 1
+# Seconds of tree-chop inactivity before the player must re-confirm their intent.
+idle-timeout: 300
+# Seconds the player has to chop any log (or run /atc confirm) after seeing the warning.
+confirmation-window: 10
+# Require confirmation when the broken log has no leaf blocks nearby.
+# Helps prevent accidentally chopping placed or stripped logs.
+enable-no-leaves-confirmation: true
+# Prevent AutoTreeChop from chopping logs with no nearby leaves without showing a confirmation prompt.
+prevent-no-leaves-chopping: false
+# Require confirmation after the player has been idle or rejoined with ATC enabled.
+enable-idle-confirmation: true
+# Radius (blocks) used to check whether a log has nearby leaves.
+# Increase if large custom trees are falsely flagged. Default 6 covers all vanilla trees.
+no-leaves-detection-radius: 6
+# Enable this if you want players must hold tools to use AutoTreeChop
+mustUseTool: false
+# Set the default AutoTreeChop state for new players.
+defaultTreeChop: false
+# Should plugin check for unbreaking enchantment?
+respectUnbreaking: true
+# Play a block break sound when ATC breaking every block
+playBreakSound: true
+# This controls whether players can toggle AutoTreeChop by running "/atc" command
+enable-command-toggle: true
+# This controls whether players can toggle AutoTreeChop by sneaking (pressing shift)
+enable-sneak-toggle: false
+# Should plugin show a message when player is sneaking?
+sneak-message: false
+# How many blocks to break per tick
+chop-batch-size: 50
+# Maximum tree size allowed (blocks)
+max-tree-size: 500
+# Maximum blocks to check during tree discovery
+max-discovery-blocks: 1000
+# Call BlockBreakEvent for each block
+# true = Better plugin compatibility
+call-block-break-event: true
+
+# Protection plugins setting
+# If you are using Residence, you can set which Flag players have access to AutoTreeChop in residence.
+residenceFlag: build
+# If you are using GriefPrevention,
+# you can set which Flag players have access to AutoTreeChop in GriefPrevention.
+griefPreventionFlag: Build
+# Stop chopping if the blocks are not connected (not part of the same tree)
+stopChoppingIfNotConnected: false
+# Stop chopping if the blocks are of different types
+stopChoppingIfDifferentTypes: false
+
+# Define which materials can be chop
+# You can add something else as you like
+# Fun fact: If you add "DIAMOND_ORE", this plugin can become an auto mining plugin, lol
+log-types:
+  - OAK_LOG
+  - BIRCH_LOG
+  - SPRUCE_LOG
+  - JUNGLE_LOG
+  - ACACIA_LOG
+  - DARK_OAK_LOG
+  - MANGROVE_LOG
+  - CHERRY_LOG
+  - PALE_OAK_LOG
+  - WARPED_STEM
+  - CRIMSON_STEM
+
+# Mangrove roots participate in the same tree as MANGROVE_LOG.
+# Use an empty list to disable root removal. ROOTED_DIRT is soil, not a tree root.
+root-types:
+  - MANGROVE_ROOTS
+  - MUDDY_MANGROVE_ROOTS
+
+# Leaf removal setting
+enable-leaf-removal: true
+# smart (recommended), radius (faster, less accurate)
+# and aggressive (guaranteed clean but may remove leaves from other trees)
+leaf-removal-mode: smart
+# Delay after tree chopping, 20ticks = 1 second
+leaf-removal-delay-ticks: 5
+# Blocks around the original log to search for leaves
+leaf-removal-radius: 10
+# Whether removed leaves should drop items
+leaf-removal-drop-items: false
+# Show particle effects when removing leaves
+leaf-removal-visual-effects: true
+# Process leaf removal asynchronously
+leaf-removal-async: true
+# How many leaves to process at once (performance)
+leaf-removal-batch-size: 20
+# Whether leaf removal counts towards daily block limit
+leaf-removal-counts-towards-limit: false
+# Define which materials count as leaves for removal
+leaf-types:
+  - OAK_LEAVES
+  - BIRCH_LEAVES
+  - SPRUCE_LEAVES
+  - JUNGLE_LEAVES
+  - ACACIA_LEAVES
+  - DARK_OAK_LEAVES
+  - MANGROVE_LEAVES
+  - CHERRY_LEAVES
+  - PALE_OAK_LEAVES
+  - WARPED_WART_BLOCK
+  - NETHER_WART_BLOCK
+
+# Additional foliage kept separate so upgrading preserves customized leaf-types lists.
+# Set to [] if these blocks should not be removed.
+additional-leaf-types:
+  - AZALEA_LEAVES
+  - FLOWERING_AZALEA_LEAVES
+
+# Replanting setting
+# Enable automatic sapling replanting after tree chopping
+enable-auto-replant: true
+# Delay before planting sapling (in ticks, 20 ticks = 1 second)
+replant-delay-ticks: 15
+# If true, players must have saplings in inventory to replant
+# If false, saplings are automatically provided
+require-sapling-in-inventory: false
+# Show visual effects when replanting saplings
+replant-visual-effect: true
+# Map log types to their corresponding sapling types
+# This defines both which logs can be replanted and which saplings are valid
+log-sapling-mapping:
+  OAK_LOG: OAK_SAPLING
+  BIRCH_LOG: BIRCH_SAPLING
+  SPRUCE_LOG: SPRUCE_SAPLING
+  JUNGLE_LOG: JUNGLE_SAPLING
+  ACACIA_LOG: ACACIA_SAPLING
+  DARK_OAK_LOG: DARK_OAK_SAPLING
+  MANGROVE_LOG: MANGROVE_PROPAGULE
+  CHERRY_LOG: CHERRY_SAPLING
+  PALE_OAK_LOG: PALE_OAK_SAPLING
+# Define valid soil types where saplings can be planted
+valid-soil-types:
+  - DIRT
+  - GRASS_BLOCK
+  - PODZOL
+  - COARSE_DIRT
+  - ROOTED_DIRT
+
+# Configuration file version - DO NOT MODIFY
+config-version: 3
