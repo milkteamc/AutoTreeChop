@@ -32,7 +32,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.logging.Level;
-import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
@@ -88,7 +87,7 @@ public class ModrinthUpdateChecker {
     /**
      * @param plugin    the plugin instance
      * @param projectId the Modrinth project ID (slug or ID)
-     * @param loader    the mod loader (e.g. "paper", "spigot")
+     * @param loader    the mod loader (e.g. "paper", "folia")
      */
     public ModrinthUpdateChecker(@NotNull AutoTreeChop plugin, @NotNull String projectId, @NotNull String loader) {
         this.plugin = plugin;
@@ -177,24 +176,20 @@ public class ModrinthUpdateChecker {
 
     /**
      * Send the update notification message to a player.
-     * Routes through {@link org.milkteamc.autotreechop.translation.TranslationManager}'s
-     * {@link net.kyori.adventure.platform.bukkit.BukkitAudiences} to avoid class loader conflicts
-     * with the shaded Adventure library.
+     * Uses Paper's native Adventure audience.
      * Called by {@link org.milkteamc.autotreechop.events.PlayerJoinListener}.
      */
     public void notifyPlayer(@NotNull Player player) {
         if (lastResult != UpdateCheckResult.NEW_VERSION_AVAILABLE) return;
 
-        Audience audience = plugin.getTranslationManager().getAdventure().player(player);
-
-        audience.sendMessage(Component.text("There is a new version of ")
+        player.sendMessage(Component.text("There is a new version of ")
                 .color(NamedTextColor.GRAY)
                 .append(Component.text(plugin.getName()).color(NamedTextColor.GOLD))
                 .append(Component.text(" available.").color(NamedTextColor.GRAY)));
 
-        buildLinkBar().ifPresent(audience::sendMessage);
+        buildLinkBar().ifPresent(player::sendMessage);
 
-        audience.sendMessage(Component.text("Latest: ")
+        player.sendMessage(Component.text("Latest: ")
                 .color(NamedTextColor.DARK_GRAY)
                 .append(Component.text(latestVersion).color(NamedTextColor.GREEN))
                 .append(Component.text(" | Your version: ").color(NamedTextColor.DARK_GRAY))

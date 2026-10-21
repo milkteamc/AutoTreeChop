@@ -20,25 +20,49 @@ package org.milkteamc.autotreechop.utils;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.logging.Logger;
 import org.bukkit.entity.Player;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.milkteamc.autotreechop.AutoTreeChop;
 import org.milkteamc.autotreechop.Config;
 import org.milkteamc.autotreechop.PlayerConfig;
+import org.milkteamc.autotreechop.configuration.ConfigSchema;
 
 class PermissionUtilsTest {
     private final Player player = mock(Player.class);
     private final PlayerConfig data = mock(PlayerConfig.class);
-    private final Config config = mock(Config.class);
+
+    @TempDir
+    Path temp;
+
+    private Config config;
+
+    private void change(String key, Object value) throws Exception {
+        Path file = temp.resolve("config.yml");
+        var edited = ConfigSchema.parse(Files.readString(file));
+        edited.set(key, value);
+        Files.writeString(file, edited.dump());
+        config.load();
+    }
 
     @BeforeEach
-    void setup() {
-        when(config.getLimitUsage()).thenReturn(true);
-        when(config.getLimitVipUsage()).thenReturn(true);
-        when(config.getMaxUsesPerDay()).thenReturn(50);
-        when(config.getVipUsesPerDay()).thenReturn(100);
-        when(config.getMaxBlocksPerDay()).thenReturn(100);
-        when(config.getVipBlocksPerDay()).thenReturn(1000);
+    void setup() throws Exception {
+        var plugin = mock(AutoTreeChop.class);
+        when(plugin.getDataFolder()).thenReturn(temp.toFile());
+        when(plugin.getLogger()).thenReturn(Logger.getAnonymousLogger());
+        when(plugin.getResource("config.yml")).thenAnswer(call -> getClass().getResourceAsStream("/config.yml"));
+        Files.writeString(temp.resolve("config.yml"), """
+                groups:
+                  default:
+                    max-blocks-per-day: 100
+                  vip:
+                    limit-usage: true
+                """);
+        config = new Config(plugin);
     }
 
     @Test
@@ -70,8 +94,8 @@ class PermissionUtilsTest {
     }
 
     @Test
-    void disabledLimitsAlsoApplyToLeafChecks() {
-        when(config.getLimitUsage()).thenReturn(false);
+    void disabledLimitsAlsoApplyToLeafChecks() throws Exception {
+        change("chopping.limit-usage", false);
         when(data.getDailyUses()).thenReturn(Integer.MAX_VALUE);
         when(data.getDailyBlocksBroken()).thenReturn(Integer.MAX_VALUE);
         assertTrue(PermissionUtils.canUse(player, data, config));
@@ -79,9 +103,9 @@ class PermissionUtilsTest {
     }
 
     @Test
-    void unlimitedVipRemainsUnlimited() {
+    void unlimitedVipRemainsUnlimited() throws Exception {
         when(player.hasPermission("autotreechop.vip")).thenReturn(true);
-        when(config.getLimitVipUsage()).thenReturn(false);
+        change("groups.vip.limit-usage", false);
         when(data.getDailyUses()).thenReturn(Integer.MAX_VALUE);
         when(data.getDailyBlocksBroken()).thenReturn(Integer.MAX_VALUE);
         assertTrue(PermissionUtils.canUse(player, data, config));

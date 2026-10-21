@@ -22,8 +22,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
-import net.kyori.adventure.audience.Audience;
-import net.kyori.adventure.platform.bukkit.BukkitAudiences;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import org.bukkit.command.CommandSender;
@@ -35,24 +33,11 @@ import org.milkteamc.autotreechop.AutoTreeChop;
  */
 public class TranslationManager {
 
-    private static final boolean HAS_PAPER_LOCALE_API;
-
-    static {
-        boolean hasApi = false;
-        try {
-            Player.class.getMethod("locale");
-            hasApi = true;
-        } catch (NoSuchMethodException e) {
-        }
-        HAS_PAPER_LOCALE_API = hasApi;
-    }
-
     private final AutoTreeChop plugin;
     private final StyleRegistry styleRegistry;
     private final MessageFormatter formatter;
     private final Map<Locale, Properties> translations = new ConcurrentHashMap<>();
     private final File langFolder;
-    private BukkitAudiences adventure;
 
     private Locale defaultLocale;
     private boolean useClientLocale;
@@ -62,7 +47,6 @@ public class TranslationManager {
         this.langFolder = new File(plugin.getDataFolder(), "lang");
         this.styleRegistry = new StyleRegistry(plugin);
         this.formatter = new MessageFormatter(styleRegistry);
-        this.adventure = BukkitAudiences.create(plugin);
     }
 
     /**
@@ -277,22 +261,12 @@ public class TranslationManager {
         }
     }
 
-    private Locale getPlayerLocale(Player player) {
-        if (HAS_PAPER_LOCALE_API) {
-            return player.locale();
-        } else {
-            @SuppressWarnings("deprecation")
-            String localeString = player.getLocale();
-            return parseLocale(localeString);
-        }
-    }
-
     /**
      * Gets the appropriate locale for a command sender
      */
     public Locale getLocale(CommandSender sender) {
         if (useClientLocale && sender instanceof Player player) {
-            Locale clientLocale = getPlayerLocale(player);
+            Locale clientLocale = player.locale();
 
             if (clientLocale != null) {
                 if (translations.containsKey(clientLocale)) {
@@ -388,8 +362,7 @@ public class TranslationManager {
             return; // Don't send empty messages
         }
 
-        Audience audience = adventure.sender(sender);
-        audience.sendMessage(component);
+        sender.sendMessage(component);
     }
 
     /**
@@ -431,19 +404,9 @@ public class TranslationManager {
     }
 
     /**
-     * Gets the Adventure audiences instance
-     */
-    public BukkitAudiences getAdventure() {
-        return adventure;
-    }
-
-    /**
      * Closes the translation manager and releases resources
      */
     public void close() {
-        if (adventure != null) {
-            adventure.close();
-        }
         translations.clear();
         formatter.clearCache();
     }

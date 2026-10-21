@@ -100,4 +100,22 @@ class BundledLanguagesTest {
         }
         assertFalse(Files.exists(temp.resolve("escape.properties")));
     }
+
+    @Test
+    void bundledLanguagesContainDistinctTreeRejectionMessages() throws Exception {
+        for (String language : List.of("en", "zh")) {
+            var properties = new java.util.Properties();
+            try (var input = getClass().getResourceAsStream("/lang/" + language + ".properties")) {
+                assertNotNull(input);
+                properties.load(new java.io.InputStreamReader(input, StandardCharsets.UTF_8));
+            }
+            String tooLarge = properties.getProperty("tree_too_large");
+            String discovery = properties.getProperty("tree_discovery_incomplete");
+            assertNotNull(tooLarge, language);
+            assertNotNull(discovery, language);
+            assertTrue(tooLarge.contains("<limit>"), language);
+            assertNotEquals(properties.getProperty("hitmaxblock"), tooLarge, language);
+            assertNotEquals(properties.getProperty("hitmaxblock"), discovery, language);
+        }
+    }
 }

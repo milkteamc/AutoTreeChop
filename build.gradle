@@ -2,13 +2,13 @@ plugins {
     id 'java'
     id 'maven-publish'
     id 'com.gradleup.shadow' version '9.6.1'
-    id 'xyz.jpenilla.run-paper' version '3.+'
-    id 'com.modrinth.minotaur' version '2.+'
-    id 'com.diffplug.spotless' version '8.+'
+    id 'xyz.jpenilla.run-paper' version '3.1.0'
+    id 'com.modrinth.minotaur' version '2.9.0'
+    id 'com.diffplug.spotless' version '8.10.2'
 }
 
 group = 'org.milkteamc'
-version = '1.7.5'
+version = '1.8.0'
 
 // Java Configuration
 java {
@@ -75,11 +75,9 @@ dependencies {
     testImplementation 'org.mockito:mockito-core:5.23.0'
     testImplementation 'io.papermc.paper:paper-api:1.20.4-R0.1-SNAPSHOT'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.2'
+    testRuntimeOnly 'org.xerial:sqlite-jdbc:3.49.1.0'
 
     compileOnly 'io.papermc.paper:paper-api:1.20.4-R0.1-SNAPSHOT'
-
-    implementation 'net.kyori:adventure-platform-bukkit:4.4.1'
-    implementation 'net.kyori:adventure-text-minimessage:4.26.1'
 
     implementation 'io.github.revxrsal:lamp.common:4.0.0-rc.18'
     implementation 'io.github.revxrsal:lamp.bukkit:4.0.0-rc.18'
@@ -100,6 +98,33 @@ dependencies {
 test {
     useJUnitPlatform()
     // Mockito appends to the bootstrap classpath; disable CDS for this test JVM.
+    jvmArgs '-Xshare:off'
+}
+
+configurations {
+    legacyPaperTestRuntime {
+        canBeConsumed = false
+        extendsFrom testRuntimeClasspath
+        resolutionStrategy {
+            force 'io.papermc.paper:paper-api:1.18.2-R0.1-SNAPSHOT'
+            eachDependency {
+                if (requested.group == 'net.kyori' && requested.name.startsWith('adventure-')) {
+                    useVersion '4.11.0'
+                }
+            }
+        }
+    }
+}
+
+tasks.register('testLegacyPaperMessages', Test) {
+    description = 'Verify native messages against Paper 1.18.2 and its Adventure version.'
+    group = 'verification'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.output + sourceSets.main.output + configurations.legacyPaperTestRuntime
+    filter {
+        includeTestsMatching 'org.milkteamc.autotreechop.translation.TranslationManagerTest'
+    }
+    useJUnitPlatform()
     jvmArgs '-Xshare:off'
 }
 
@@ -166,7 +191,6 @@ tasks.shadowJar {
     }
 
     relocate 'com.jeff_media.updatechecker', 'org.milkteamc.autotreechop.libs.updatechecker'
-    relocate 'net.kyori', 'org.milkteamc.autotreechop.libs.kyori'
     relocate 'com.zaxxer.hikari', 'org.milkteamc.autotreechop.libs.hikari'
     relocate 'org.bstats', 'org.milkteamc.autotreechop.libs.bstats'
     relocate 'com.github.Anon8281.universalScheduler', 'org.milkteamc.autotreechop.libs.universalScheduler'
@@ -210,8 +234,6 @@ modrinth {
     versionNumber = fullVersion
     versionName = "v${fullVersion}"
     changelog = """
-        > **⚠️ Deprecation Notice:** Spigot support is deprecated and may be removed as early as v1.8.0. Please consider migrating to Paper or Folia.
-
         🚨 **This is an ALPHA version - Use at your own risk!**
 
         **Branch:** `${gitBranch}`
@@ -229,8 +251,7 @@ modrinth {
     uploadFile = tasks.shadowJar.archiveFile
 
     gameVersions = [
-            '1.17', '1.17.1',
-            '1.18', '1.18.1', '1.18.2',
+            '1.18.2',
             '1.19', '1.19.1', '1.19.2', '1.19.3', '1.19.4',
             '1.20', '1.20.1', '1.20.2', '1.20.3', '1.20.4', '1.20.5', '1.20.6',
             '1.21', '1.21.1', '1.21.2', '1.21.3', '1.21.4', '1.21.5', '1.21.6',
@@ -238,7 +259,7 @@ modrinth {
             '26.1', '26.1.1', '26.1.2', '26.2', '26.3'
     ]
 
-    loaders = ['paper', 'purpur', 'folia', 'spigot']
+    loaders = ['paper', 'purpur', 'folia']
 
     dependencies {
         optional.project 'placeholderapi'
@@ -256,6 +277,20 @@ tasks.register('compileApiExample', JavaCompile) {
     options.encoding = 'UTF-8'
 }
 
+tasks.register('verifyAdventurePackaging') {
+    dependsOn tasks.shadowJar
+    inputs.file(tasks.shadowJar.archiveFile)
+    doLast {
+        def bundledAdventure = zipTree(tasks.shadowJar.archiveFile.get().asFile).matching {
+            include 'net/kyori/**'
+            include 'org/milkteamc/autotreechop/libs/kyori/**'
+        }
+        if (!bundledAdventure.isEmpty()) {
+            throw new GradleException('The plugin JAR must use Paper-provided Adventure, not bundle it.')
+        }
+    }
+}
+
 tasks.check {
-    dependsOn tasks.named('compileApiExample')
+    dependsOn tasks.named('compileApiExample'), tasks.named('verifyAdventurePackaging'), tasks.named('testLegacyPaperMessages')
 }

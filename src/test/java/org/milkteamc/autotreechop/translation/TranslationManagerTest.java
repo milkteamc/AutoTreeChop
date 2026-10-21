@@ -29,7 +29,9 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.logging.Logger;
-import net.kyori.adventure.platform.bukkit.BukkitAudiences;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
+import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.entity.Player;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -56,10 +58,7 @@ class TranslationManagerTest {
         });
         write("styles", "prefix=<green>\nstyleOnly=not a translation");
         write("en", "hello=Hello\nmissing=English fallback");
-        try (var audiences = mockStatic(BukkitAudiences.class)) {
-            audiences.when(() -> BukkitAudiences.create(plugin)).thenReturn(mock(BukkitAudiences.class));
-            manager = new TranslationManager(plugin);
-        }
+        manager = new TranslationManager(plugin);
     }
 
     private void write(String locale, String content) throws Exception {
@@ -69,6 +68,24 @@ class TranslationManagerTest {
     @AfterEach
     void close() {
         if (manager != null) manager.close();
+    }
+
+    @Test
+    void sendsLocalizedComponentsDirectlyToPaperPlayersAndConsole() throws Exception {
+        write("pt", "hello=Olá <name>");
+        write("en", "hello=Hello <name>\nempty=");
+        manager.initialize(Locale.ENGLISH, true);
+        Player player = mock(Player.class);
+        when(player.locale()).thenReturn(Locale.forLanguageTag("pt-BR"));
+        ConsoleCommandSender console = mock(ConsoleCommandSender.class);
+
+        manager.sendMessage(player, "hello", Placeholder.unparsed("name", "<Alex>"));
+        manager.sendMessage(console, "hello", Placeholder.unparsed("name", "<Alex>"));
+
+        verify(player).sendMessage(Component.text("Olá <Alex>"));
+        verify(console).sendMessage(Component.text("Hello <Alex>"));
+        manager.sendMessage(console, "empty");
+        verifyNoMoreInteractions(console);
     }
 
     @Test

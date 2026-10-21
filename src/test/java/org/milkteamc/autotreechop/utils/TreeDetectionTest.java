@@ -235,10 +235,12 @@ class TreeDetectionTest {
         var plugin = mock(org.milkteamc.autotreechop.AutoTreeChop.class);
         var data = mock(org.milkteamc.autotreechop.database.DataManager.class);
         var playerData = mock(org.milkteamc.autotreechop.PlayerConfig.class);
+        when(playerData.getPreferences()).thenReturn(org.milkteamc.autotreechop.PlayerPreferences.DEFAULTS);
         var player = mock(org.bukkit.entity.Player.class);
         var uuid = UUID.randomUUID();
         when(player.getUniqueId()).thenReturn(uuid);
         when(player.isOnline()).thenReturn(true);
+        when(player.hasPermission("autotreechop.replant")).thenReturn(true);
         when(plugin.getDataManager()).thenReturn(data);
         when(data.getPlayerConfig(uuid)).thenReturn(playerData);
         when(config.isAutoReplantEnabled()).thenReturn(true);

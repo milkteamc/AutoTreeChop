@@ -1,8 +1,9 @@
 # AutoTreeChop API
 
-AutoTreeChop exposes loaded players' enabled preference and daily usage. Integrations can
-read an immutable snapshot and change the preference with an explicit result. The API does
-not chop trees, load offline records, edit quotas, or report whether a save reached SQL.
+AutoTreeChop exposes loaded players' enabled preference and daily usage, plus online players'
+effective group policies and personal settings. Integrations can read immutable snapshots and change preferences
+with an explicit result. The API also exposes cancellable pre-chop and result-bearing post-chop events.
+It does not start chops, load offline records, edit quotas, or report whether a save reached SQL.
 
 ## Add the compile dependency
 
@@ -65,12 +66,79 @@ api.getPlayerState(playerId).ifPresentOrElse(
 );
 ```
 
+`PlayerState.enabled()` is the saved preference, not the current activation result.
+In `command-and-sneak` mode the player must also hold sneak; in `sneak` mode the current
+sneak state controls activation independently of that preference. Sneak-only and combined
+modes do not rewrite the preference. `disabled` prevents new chops regardless of the preference.
+The legacy `%autotreechop_status%` placeholder also
+continues to report the saved preference.
+
 `PlayerState` is immutable and detached from later player changes. Daily counters reset
 according to the server's local date when read. `isPlayerDataReady(UUID)` is a convenience
 check, not a reservation: the player can leave before your next operation. Always handle
 the result of that operation.
 
-## Set the preference
+## Read the effective group policy
+
+```java
+// Paper: main thread. Folia: this player's owning execution context.
+api.getPlayerPolicy(player).ifPresent(policy -> {
+    String group = policy.group();
+    String uses = policy.unlimited() ? "∞" : String.valueOf(policy.maxUsesPerDay());
+    String blocks = policy.unlimited() ? "∞" : String.valueOf(policy.maxBlocksPerDay());
+    int cooldownSeconds = policy.cooldownSeconds();
+    // Display the effective group settings in your UI.
+});
+```
+
+`PlayerPolicy` is an immutable snapshot using the same group resolution as chopping and
+`/atc usage`, including legacy VIP and global unlimited settings. Each call reflects current
+permissions and the latest successful configuration reload; earlier snapshots stay unchanged.
+When `unlimited()` is true, ignore both quota numbers. Cooldown still applies; its value is
+the configured duration, not remaining cooldown time. In Lite mode every policy is unlimited
+with no cooldown; the saved group settings take effect again when Lite mode is disabled.
+
+The result is empty when the player is offline or the plugin/config is unavailable. This
+query does not require loaded player data; use `getPlayerState(UUID)` separately for usage.
+The two queries are separate snapshots. A policy does not guarantee permission to chop or
+bypass enabled-state, usage, cooldown, tool, or protection checks.
+
+## Personal settings
+
+```java
+PlayerPreferences preferences = new PlayerPreferences(
+    PlayerPreferences.Activation.HOTKEY,
+    PlayerPreferences.Toggle.OFF,
+    PlayerPreferences.Toggle.DEFAULT,
+    PlayerPreferences.Toggle.DEFAULT
+);
+AutoTreeChopAPI.ChangeResult result = api.setPlayerPreferences(playerId, preferences);
+api.getPlayerPreferences(playerId).ifPresent(saved -> { /* Saved, immutable preferences. */ });
+// Paper: main thread. Folia: this player's owning execution context.
+api.getPlayerSettings(player).ifPresent(settings -> { /* Effective values and permissions. */ });
+```
+
+`PlayerPreferences` contains activation, sneak messages, leaf removal, and auto replant.
+Each field supports `DEFAULT`; use `PlayerPreferences.DEFAULTS` to reset all four.
+The `withActivation`, `withSneakMessages`, `withLeafRemoval`, and `withAutoReplant`
+methods return modified copies. The setter replaces all four fields, so coordinate writers
+when deriving updates from an earlier snapshot. Existing players start with all defaults;
+the SQLite/MySQL schema upgrade retains their enabled preference and usage counters.
+
+`getPlayerSettings(Player)` resolves defaults against the current server configuration.
+Its activation is never `DEFAULT`. Server mode `disabled` overrides personal modes;
+leaf removal and replanting require server enablement and, outside Lite mode, their
+feature permissions. Sneak messages use the server value as a default. These settings do not
+guarantee that chopping is currently allowed: posture, enabled preference, and tool checks
+still apply. Outside Lite mode, use permission, limits, and protection checks also apply.
+Both getters return empty when player data is unavailable.
+
+`setPlayerPreferences` is a privileged operation with the same result and persistence
+semantics as `setAutoTreeChopEnabled`. Changing activation clears pending confirmations;
+it does not reset the enabled preference or counters. Disabling leaves/replant also takes
+effect before subsequent leaf batches or delayed replanting.
+
+## Set the enabled preference
 
 ```java
 switch (api.setAutoTreeChopEnabled(playerId, true)) {
@@ -91,13 +159,48 @@ Normal periodic/quit/shutdown saving handles persistence. Unavailable mutations 
 queued for a later login and do not create default records. After a load failure, reconnect
 once the database is healthy to retry loading; this API does not initiate a reload.
 
+## Chopping events
+
+Listen for `TreeChopPreEvent` and `TreeChopPostEvent` from
+`org.milkteamc.autotreechop.api.event`. No service lookup is needed for event registration.
+
+```java
+@EventHandler
+public void beforeChop(TreeChopPreEvent event) {
+    if (event.getPlayer().hasPermission("myplugin.no-auto-chop")) event.setCancelled(true);
+}
+
+@EventHandler
+public void afterChop(TreeChopPostEvent event) {
+    event.getRemovedLogs().forEach((location, originalMaterial) -> {
+        // Award progress for this log, rather than for every planned log.
+    });
+}
+```
+
+The pre-event fires after tree discovery, protection/limit checks, and any required
+confirmation, but before removal, tool damage, and usage charges. Cancelling it prevents
+the batch and no post-event follows. `getPlannedLogs()` lists discovered logs, not a
+promise that each will break: later protection checks, block changes, or other plugins may
+prevent individual removals. The post-event fires once when the started batch ends, even
+if zero logs were removed. `getRemovedLogs()` contains only logs ATC actually removed,
+mapped to their material before removal. Leaves and replanted saplings are excluded.
+
+Locations returned by these events are detached copies. On Folia the post-event can run
+in a block region different from the player's current region; use the appropriate
+scheduler before accessing the player or unrelated world blocks. On Paper, events run
+on the server thread. A player can also be offline by the time the post-event fires.
+
 ## Threading and invalid arguments
 
 The UUID-based methods operate on synchronized in-memory data and can be called from any
 thread. They perform no SQL or world/entity operations. Calling plugins must still use the
 correct Paper/Folia scheduler for any player, inventory, message, or world work of their own.
-Use UUID methods in asynchronous code; call the legacy `Player` overloads from that player's
-own execution context. Null plugin, UUID, or Player arguments throw `NullPointerException`.
+Use UUID methods in asynchronous code; call `getPlayerPolicy(Player)`, `getPlayerSettings(Player)`, and the legacy `Player`
+overloads from that player's own execution context (Paper's main thread; the owning player
+context on Folia). An available policy/settings query throws `IllegalStateException` when
+called from the wrong context, before reading permissions. Null plugin, UUID, Player, or preferences
+arguments throw `NullPointerException`.
 
 ## Compatibility methods
 

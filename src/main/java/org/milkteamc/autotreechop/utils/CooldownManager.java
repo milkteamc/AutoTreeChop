@@ -19,21 +19,26 @@ package org.milkteamc.autotreechop.utils;
 
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.LongSupplier;
 import org.bukkit.entity.Player;
 import org.milkteamc.autotreechop.Config;
 
 public class CooldownManager {
 
     private final ConcurrentHashMap<UUID, Long> cooldowns = new ConcurrentHashMap<>();
+    private final LongSupplier clock;
 
-    public CooldownManager() {}
+    public CooldownManager() {
+        this(System::currentTimeMillis);
+    }
+
+    CooldownManager(LongSupplier clock) {
+        this.clock = clock;
+    }
 
     public void setCooldown(Player player, UUID playerUUID, Config config) {
-        if (player.hasPermission("autotreechop.vip")) {
-            cooldowns.put(playerUUID, System.currentTimeMillis() + (config.getVipCooldownTime() * 1000L));
-        } else {
-            cooldowns.put(playerUUID, System.currentTimeMillis() + (config.getCooldownTime() * 1000L));
-        }
+        cooldowns.put(
+                playerUUID, clock.getAsLong() + (config.resolvePolicy(player).cooldownSeconds() * 1000L));
     }
 
     public boolean isInCooldown(UUID playerUUID) {
@@ -41,7 +46,7 @@ public class CooldownManager {
         if (cooldownEnd == null) {
             return false;
         }
-        return System.currentTimeMillis() < cooldownEnd;
+        return clock.getAsLong() < cooldownEnd;
     }
 
     public long getRemainingCooldown(UUID playerUUID) {
@@ -49,7 +54,7 @@ public class CooldownManager {
         if (cooldownEnd == null) {
             return 0;
         }
-        long remainingTime = cooldownEnd - System.currentTimeMillis();
+        long remainingTime = cooldownEnd - clock.getAsLong();
         return Math.max(0, remainingTime / 1000);
     }
 }

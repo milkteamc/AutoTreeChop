@@ -17,8 +17,11 @@
  
 package org.milkteamc.autotreechop.command;
 
+import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import org.milkteamc.autotreechop.AutoTreeChop;
 import org.milkteamc.autotreechop.Config;
+import org.milkteamc.autotreechop.MessageKeys;
+import org.milkteamc.autotreechop.configuration.ConfigLoadException;
 import revxrsal.commands.annotation.Command;
 import revxrsal.commands.annotation.Subcommand;
 import revxrsal.commands.bukkit.actor.BukkitCommandActor;
@@ -39,14 +42,26 @@ public class ReloadCommand {
     @CommandPermission("autotreechop.reload")
     public void reload(BukkitCommandActor actor) {
 
-        config.load();
+        try {
+            config.load();
+        } catch (ConfigLoadException e) {
+            plugin.getLogger().warning("Configuration reload rejected: " + e.getMessage());
+            AutoTreeChop.sendMessage(
+                    actor.sender(), MessageKeys.CONFIG_RELOAD_FAILED, Placeholder.unparsed("reason", e.getMessage()));
+            return;
+        }
 
         plugin.getTranslationManager()
                 .reload(
                         config.getLocale() == null ? java.util.Locale.getDefault() : config.getLocale(),
                         config.isUseClientLocale());
 
-        actor.sender().sendMessage("Config reloaded successfully.");
-        actor.sender().sendMessage("Some features might need a fully restart to change properly!");
+        AutoTreeChop.sendMessage(actor.sender(), MessageKeys.CONFIG_RELOADED);
+        if (!config.getRestartRequiredSettings().isEmpty()) {
+            AutoTreeChop.sendMessage(
+                    actor.sender(),
+                    MessageKeys.CONFIG_RESTART_REQUIRED,
+                    Placeholder.unparsed("settings", String.join(", ", config.getRestartRequiredSettings())));
+        }
     }
 }

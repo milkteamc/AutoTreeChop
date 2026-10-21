@@ -24,10 +24,13 @@ import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
 public class GriefPreventionHook {
-    private final String flagName;
+    private final ClaimPermission permission;
 
     public GriefPreventionHook(String flagName) {
-        this.flagName = flagName;
+        this.permission = java.util.Arrays.stream(ClaimPermission.values())
+                .filter(value -> value.name().equalsIgnoreCase(flagName.trim()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Invalid GriefPrevention permission: " + flagName));
     }
 
     public boolean checkBuild(Player player, Location location) {
@@ -37,12 +40,12 @@ public class GriefPreventionHook {
             return true;
         }
 
-        if (claim.getOwnerID().equals(player.getUniqueId())
+        if (player.getUniqueId().equals(claim.getOwnerID())
                 || player.hasPermission("autotreechop.op")
                 || player.isOp()) {
             return true;
         }
 
-        return claim.hasExplicitPermission(player, ClaimPermission.valueOf(flagName));
+        return claim.hasExplicitPermission(player, permission);
     }
 }

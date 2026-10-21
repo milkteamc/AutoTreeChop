@@ -30,11 +30,14 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.milkteamc.autotreechop.command.AboutCommand;
 import org.milkteamc.autotreechop.command.ConfirmCommand;
 import org.milkteamc.autotreechop.command.ReloadCommand;
+import org.milkteamc.autotreechop.command.SettingsCommand;
 import org.milkteamc.autotreechop.command.ToggleCommand;
 import org.milkteamc.autotreechop.command.UsageCommand;
+import org.milkteamc.autotreechop.configuration.ConfigLoadException;
 import org.milkteamc.autotreechop.database.DataManager;
 import org.milkteamc.autotreechop.database.DatabaseManager;
 import org.milkteamc.autotreechop.events.BlockBreakListener;
+import org.milkteamc.autotreechop.events.PlayerHotkeyListener;
 import org.milkteamc.autotreechop.events.PlayerJoinListener;
 import org.milkteamc.autotreechop.events.PlayerQuitListener;
 import org.milkteamc.autotreechop.events.PlayerSneakListener;
@@ -48,6 +51,9 @@ import org.milkteamc.autotreechop.utils.TreeChopUtils;
 import revxrsal.commands.bukkit.BukkitLamp;
 
 public class AutoTreeChop extends JavaPlugin {
+
+    // Server type is fixed for the lifetime of this plugin class loader.
+    private static final boolean FOLIA_SERVER = detectFolia();
 
     private static AutoTreeChop instance;
 
@@ -66,6 +72,10 @@ public class AutoTreeChop extends JavaPlugin {
     private PluginDescriptionFile description;
 
     public static boolean isFolia() {
+        return FOLIA_SERVER;
+    }
+
+    private static boolean detectFolia() {
         try {
             Class.forName("io.papermc.paper.threadedregions.RegionizedServer");
             return true;
@@ -76,7 +86,9 @@ public class AutoTreeChop extends JavaPlugin {
 
     public static boolean isPaper() {
         try {
-            Class.forName("io.papermc.paper.configuration.Configuration");
+            // Public API marker also present on older Paper versions such as 1.18.2.
+            Class.forName("com.destroystokyo.paper.event.server.ServerTickEndEvent");
+            Class.forName("net.kyori.adventure.text.minimessage.MiniMessage");
             return true;
         } catch (ClassNotFoundException ex) {
             return false;
@@ -86,7 +98,7 @@ public class AutoTreeChop extends JavaPlugin {
     public static String getServerType() {
         if (isFolia()) return "folia";
         if (isPaper()) return "paper";
-        return "spigot";
+        return "unsupported";
     }
 
     public static void sendMessage(CommandSender sender, String messageKey, TagResolver... resolvers) {
@@ -104,10 +116,22 @@ public class AutoTreeChop extends JavaPlugin {
 
     @Override
     public void onEnable() {
+        if (!isPaper()) {
+            getLogger()
+                    .severe("AutoTreeChop requires Paper 1.18.2+ (or Folia/Purpur) with native MiniMessage. "
+                            + "Spigot is no longer supported.");
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
         instance = this;
 
-        saveDefaultConfig();
-        this.config = new Config(this);
+        try {
+            this.config = new Config(this);
+        } catch (ConfigLoadException e) {
+            getLogger().severe("AutoTreeChop could not load its configuration: " + e.getMessage());
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
         setupTranslation();
 
         this.cooldownManager = new CooldownManager();
@@ -124,15 +148,6 @@ public class AutoTreeChop extends JavaPlugin {
         registerCommands();
 
         setupIntegrations();
-
-        if (getServerType().equals("spigot")) {
-            getLogger().warning("=====================================================");
-            getLogger().warning(" You are running AutoTreeChop on Spigot.");
-            getLogger().warning(" Spigot support is deprecated and may be removed");
-            getLogger().warning(" as early as v1.8.0.");
-            getLogger().warning(" Please consider migrating to Paper or Folia.");
-            getLogger().warning("=====================================================");
-        }
 
         registerApi();
         getLogger().info("AutoTreeChop enabled!");
@@ -195,6 +210,7 @@ public class AutoTreeChop extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new PlayerQuitListener(this), this);
         getServer().getPluginManager().registerEvents(new BlockBreakListener(this), this);
         getServer().getPluginManager().registerEvents(new PlayerSneakListener(this), this);
+        getServer().getPluginManager().registerEvents(new PlayerHotkeyListener(this), this);
     }
 
     private void registerCommands() {
@@ -202,6 +218,7 @@ public class AutoTreeChop extends JavaPlugin {
         lamp.register(new ReloadCommand(this, config));
         lamp.register(new AboutCommand(this));
         lamp.register(new ToggleCommand(this));
+        lamp.register(new SettingsCommand(this));
         lamp.register(new UsageCommand(this, config));
         lamp.register(new ConfirmCommand(this));
     }
