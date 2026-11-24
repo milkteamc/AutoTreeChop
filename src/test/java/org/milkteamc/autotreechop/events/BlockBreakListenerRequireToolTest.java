@@ -123,7 +123,9 @@ class BlockBreakListenerRequireToolTest {
     }
 
     @ParameterizedTest
-    @EnumSource(value = Material.class, names = {"AIR", "IRON_AXE"})
+    @EnumSource(
+            value = Material.class,
+            names = {"AIR", "IRON_AXE"})
     void keepsAnEarlierPluginCancellation(Material held) throws Exception {
         requireTool(true);
         hold(held);
