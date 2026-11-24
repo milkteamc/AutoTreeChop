@@ -90,7 +90,7 @@ public class BlockBreakListener implements Listener {
 
         // Without a valid tool, chopTree() would bail out after we cancelled the event,
         // leaving the log unbreakable. Let vanilla handle the break instead.
-        if (config.getMustUseTool() && !TreeChopUtils.isTool(player)) {
+        if (config.getMustUseTool() && !TreeChopUtils.isTool(tool)) {
             return;
         }
 

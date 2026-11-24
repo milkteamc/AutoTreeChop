@@ -46,6 +46,7 @@ import org.milkteamc.autotreechop.database.DataManager;
 import org.milkteamc.autotreechop.database.DatabaseManager;
 import org.milkteamc.autotreechop.utils.AsyncTaskScheduler;
 import org.milkteamc.autotreechop.utils.CooldownManager;
+import org.milkteamc.autotreechop.utils.SessionManager;
 
 /**
  * With chopping.require-tool enabled, breaking a log without a tool must fall back to a vanilla
@@ -99,11 +100,34 @@ class BlockBreakListenerRequireToolTest {
     }
 
     private BlockBreakEvent breakLog() {
+        return breakLog(false);
+    }
+
+    private BlockBreakEvent breakLog(boolean alreadyCancelled) {
         var event = new BlockBreakEvent(block, player);
+        event.setCancelled(alreadyCancelled);
         try (var schedulers = mockConstruction(AsyncTaskScheduler.class)) {
             new BlockBreakListener(plugin).onBlockBreak(event);
+            verify(inventory).getItemInMainHand();
+            var scheduler = schedulers.constructed().get(0);
+            if (alreadyCancelled || !event.isCancelled()) {
+                verify(scheduler, never()).runTaskAsync(any());
+                verify(world, never()).isChunkLoaded(anyInt(), anyInt());
+            } else {
+                verify(scheduler).runTaskAsync(any());
+            }
+        } finally {
+            SessionManager.getInstance().finishLeafCheck(uuid);
         }
         return event;
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = Material.class, names = {"AIR", "IRON_AXE"})
+    void keepsAnEarlierPluginCancellation(Material held) throws Exception {
+        requireTool(true);
+        hold(held);
+        assertTrue(breakLog(true).isCancelled());
     }
 
     @ParameterizedTest

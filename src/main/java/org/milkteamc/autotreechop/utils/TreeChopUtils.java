@@ -142,8 +142,10 @@ public class TreeChopUtils {
     }
 
     public static boolean isTool(Player player) {
-        ItemStack item = player.getInventory().getItemInMainHand();
+        return isTool(player.getInventory().getItemInMainHand());
+    }
 
+    public static boolean isTool(ItemStack item) {
         if (item == null) {
             return false;
         }
