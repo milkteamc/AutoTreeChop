@@ -45,6 +45,7 @@ import org.milkteamc.autotreechop.utils.PermissionUtils;
 import org.milkteamc.autotreechop.utils.ProtectionCheckUtils.ProtectionHooks;
 import org.milkteamc.autotreechop.utils.RegionAccess;
 import org.milkteamc.autotreechop.utils.SessionManager;
+import org.milkteamc.autotreechop.utils.TreeChopUtils;
 
 public class BlockBreakListener implements Listener {
 
@@ -84,6 +85,12 @@ public class BlockBreakListener implements Listener {
         Material material = block.getType();
 
         if (!ActivationUtils.isActive(player, playerConfig, config) || !BlockDiscoveryUtils.isLog(material, config)) {
+            return;
+        }
+
+        // Without a valid tool, chopTree() would bail out after we cancelled the event,
+        // leaving the log unbreakable. Let vanilla handle the break instead.
+        if (config.getMustUseTool() && !TreeChopUtils.isTool(tool)) {
             return;
         }
 
